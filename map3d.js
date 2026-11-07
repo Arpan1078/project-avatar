@@ -24,6 +24,8 @@
        firebreak, reporter, route, lineFault, burnArea:  true/false
        homesInPath: a key of HOME_GROUPS or null (those homes turn orange)
        homesCard:   { group, title, sub } | null
+       goes:        GOES detections from satellite.js (drawn as ~2 km squares)
+       firms:       FIRMS VIIRS hotspots from satellite.js (drawn as ~375 m squares + ring)
      }
 
    HOW TO MOVE THINGS
@@ -220,6 +222,9 @@
     burn: '#6E665C', bg: '#15120F'
   };
   const col = (hex, a = 1) => Cesium.Color.fromCssColorString(hex).withAlpha(a);
+  // GOES pixel color by fire mask: low = yellow, medium = amber, high = orange,
+  // processed / saturated = red (cloud-contaminated = muted amber).
+  const GOES_MASK_COLOR = { 15: '#F2D13A', 14: '#F2A93A', 13: '#F26B2E', 10: '#E0352B', 11: '#E0352B', 12: '#B9A27A' };
   const NO_TOKEN_TITLE = 'Add your Cesium ion token to config.js';
 
 
@@ -501,7 +506,7 @@
 
   function buildEntities() {
     // Parent entity per chip: hiding the parent hides all its children.
-    for (const key of ['spread', 'houses', 'water', 'stations', 'power', 'burns', 'risk']) {
+    for (const key of ['spread', 'houses', 'water', 'stations', 'power', 'burns', 'risk', 'sat']) {
       layers[key] = add({ id: 'layer-' + key });
     }
     // Groups switched by the scenario / step, not by a chip.
@@ -562,6 +567,27 @@
     E.reporterLine = add({ parent: E.reporterGroup, polyline: groundLine([REPORTER, [0, 0]], col(HEX.cream, 0.85), 1.5, { length: 8 }, 4) });
     add({ parent: E.reporterGroup, position: pos(REPORTER), point: Object.assign(ON_GROUND(), { pixelSize: 11, color: col(HEX.cream), outlineColor: col(HEX.bg), outlineWidth: 1 }) });
 
+    // --- Satellite detections: fixed pools, filled from the map state ---
+    // GOES: big translucent squares (coarse, ~2 km). FIRMS VIIRS: small bright
+    // squares (~375 m) with a white ring, so they read as sharper and more precise.
+    E.goes = [];
+    for (let i = 0; i < 8; i++) {
+      E.goes.push({
+        fill: add({ parent: layers.sat, show: false, polygon: { hierarchy: posList(PLACEHOLDER), material: col(HEX.fire, 0.2), zIndex: 1 } }),
+        edge: add({ parent: layers.sat, show: false, polyline: { positions: posList(PLACEHOLDER), clampToGround: true, width: 1.5, zIndex: 5, material: col(HEX.fire, 0.95) } }),
+        key: ''
+      });
+    }
+    E.firms = [];
+    for (let i = 0; i < 6; i++) {
+      E.firms.push({
+        fill: add({ parent: layers.sat, show: false, polygon: { hierarchy: posList(PLACEHOLDER), material: col('#FFE08A', 0.9), zIndex: 9 } }),
+        dot: add({ parent: layers.sat, show: false, position: pos([0, 0]),
+          point: Object.assign(ON_GROUND(), { pixelSize: 7, color: col('#FFD23F'), outlineColor: col('#FFFFFF'), outlineWidth: 2 }) }),
+        key: ''
+      });
+    }
+
     // --- Where the power line came down / tripped ---
     E.faultDot = add({ position: pos(PLACES.line), point: Object.assign(ON_GROUND(), { pixelSize: 6, color: col(HEX.fireSoft), outlineColor: col(HEX.bg), outlineWidth: 1 }) });
   }
@@ -596,11 +622,114 @@
       E.homes.forEach((h, i) => { h.billboard.image = inPath.has(i) ? E.homeIcons.path : E.homeIcons.safe; });
     }
 
+    setSatellite(u.goes || [], u.firms || []);
+
     if (u.view !== curView) {
       const first = curView === null;
       curView = u.view;
       resetView(first ? 0 : 1.5);
     }
+  }
+
+
+  /* ---------- 6b. Satellite detections (GOES pixels, FIRMS hotspots) ---------- */
+
+  // Square of `sizeM` meters centered on a lat/lon, as Cesium positions.
+  function squareAround(lat, lon, sizeM) {
+    const dLat = sizeM / 2 / METERS_PER_DEG_LAT;
+    const dLon = sizeM / 2 / (METERS_PER_DEG_LAT * Math.cos(lat * Math.PI / 180));
+    return Cesium.Cartesian3.fromDegreesArray([lon - dLon, lat - dLat, lon + dLon, lat - dLat, lon + dLon, lat + dLat, lon - dLon, lat + dLat]);
+  }
+  const describe = o => (window.Satellite ? window.Satellite.describe(o) : '');
+  const goesSizeM = () => (window.Satellite ? window.Satellite.GOES_PIXEL_M : 2000);
+  const viirsSizeM = () => (window.Satellite ? window.Satellite.VIIRS_PIXEL_M : 375);
+
+  function setSatellite(goes, firms) {
+    satInfo.goes = goes;     // remembered for the hover / click hit test
+    satInfo.firms = firms;
+    E.goes.forEach((g, i) => {
+      const d = goes[i];
+      g.fill.show = g.edge.show = !!d;
+      if (!d) return;
+      const key = [d.latitude, d.longitude, d.fire_mask, d.frp_mw, d.scan_time].join();
+      if (key === g.key) return;
+      g.key = key;
+      const sq = squareAround(d.latitude, d.longitude, goesSizeM());
+      const c = GOES_MASK_COLOR[d.fire_mask] || HEX.fire;
+      g.fill.polygon.hierarchy = new Cesium.PolygonHierarchy(sq);
+      g.fill.polygon.material = col(c, 0.2);
+      g.edge.polyline.positions = sq.concat([sq[0]]);
+      g.edge.polyline.material = col(c, 0.95);
+    });
+    E.firms.forEach((f, i) => {
+      const h = firms[i];
+      f.fill.show = f.dot.show = !!h;
+      if (!h) return;
+      const key = [h.latitude, h.longitude, h.acq_date, h.acq_time].join();
+      if (key === f.key) return;
+      f.key = key;
+      f.fill.polygon.hierarchy = new Cesium.PolygonHierarchy(squareAround(h.latitude, h.longitude, viirsSizeM()));
+      f.dot.position = Cesium.Cartesian3.fromDegrees(h.longitude, h.latitude);
+    });
+    if (satInfo.el && !satInfo.el.hidden) { satInfo.el.hidden = true; satInfo.pinned = false; }   // data changed: close the info card
+  }
+
+  // Hover (mouse) or click (touch) a GOES square / FIRMS point to see its fields in plain words.
+  // Hit test on the ground (not object picking), so fires, cones or smoke drawn
+  // on top of a square never block it.
+  const satInfo = { el: null, pinned: false, lastMove: 0, goes: [], firms: [] };
+
+  function satAt(p) {
+    if (!cur || !cur.layers.sat) return null;
+    const scene = viewer.scene;
+    // FIRMS first (small, on top): within ~10 px of the hotspot on screen.
+    for (const h of satInfo.firms) {
+      const w = Cesium.SceneTransforms.worldToWindowCoordinates(scene, groundPosLL(h.latitude, h.longitude), scratchWin);
+      if (w && Math.hypot(w.x - p.x, w.y - p.y) < 10) return describe(h);
+    }
+    // GOES: is the ground point under the cursor inside a pixel square?
+    const hit = scene.globe.pick(scene.camera.getPickRay(p), scene);
+    if (!hit) return null;
+    const c = Cesium.Cartographic.fromCartesian(hit);
+    const lat = Cesium.Math.toDegrees(c.latitude), lon = Cesium.Math.toDegrees(c.longitude);
+    const half = goesSizeM() / 2;
+    for (const d of satInfo.goes) {
+      const dy = (lat - d.latitude) * METERS_PER_DEG_LAT;
+      const dx = (lon - d.longitude) * METERS_PER_DEG_LAT * Math.cos(d.latitude * Math.PI / 180);
+      if (Math.abs(dx) <= half && Math.abs(dy) <= half) return describe(d);
+    }
+    return null;
+  }
+
+  function buildSatInfo() {
+    satInfo.el = document.createElement('div');
+    satInfo.el.className = 'satinfo';
+    satInfo.el.hidden = true;
+    mapRoot.appendChild(satInfo.el);
+    const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+    const showAt = (p, click) => {
+      const text = satAt(p);
+      if (text) {
+        satInfo.el.textContent = text;
+        satInfo.el.hidden = false;
+        const W = viewer.scene.canvas.clientWidth;
+        const w = satInfo.el.offsetWidth;
+        satInfo.el.style.left = Math.min(p.x + 14, W - w - 8) + 'px';
+        satInfo.el.style.top = (p.y + 14) + 'px';
+      } else if (click || !satInfo.pinned) {
+        satInfo.el.hidden = true;
+      }
+      if (click) satInfo.pinned = !!text;
+    };
+    handler.setInputAction(m => {
+      if (satInfo.pinned) return;
+      const now = performance.now();
+      if (now - satInfo.lastMove < 60) return;
+      satInfo.lastMove = now;
+      showAt(m.endPosition, false);
+    }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+    handler.setInputAction(c => showAt(c.position, true), Cesium.ScreenSpaceEventType.LEFT_CLICK);
+    viewer.scene.canvas.addEventListener('mouseleave', () => { if (!satInfo.pinned) satInfo.el.hidden = true; });
   }
 
 
@@ -917,6 +1046,12 @@
     let h = viewer.scene.globe.getHeight(scratchCarto);
     if (h === undefined) h = heightAt(p[0], p[1]) * LOOK.verticalExaggeration;
     return Cesium.Cartesian3.fromDegrees(lon, lat, h);
+  }
+
+  function groundPosLL(lat, lon) {
+    Cesium.Cartographic.fromDegrees(lon, lat, 0, scratchCarto);
+    const h = viewer.scene.globe.getHeight(scratchCarto);
+    return Cesium.Cartesian3.fromDegrees(lon, lat, h === undefined ? targetHeightM : h);
   }
 
   function setShown(it, on) {
@@ -1323,6 +1458,7 @@
     buildFires();
     buildWind();
     buildLabels();
+    buildSatInfo();
     sampleHeights(terrainProvider);   // async; effects use a flat height until it finishes
     ready = true;
     // Show the latest dashboard state (render() runs before the map is ready).

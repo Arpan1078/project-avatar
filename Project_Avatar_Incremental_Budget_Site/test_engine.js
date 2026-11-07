@@ -1,0 +1,38 @@
+
+const assert=require('assert'),C=require('./data.json'),F=require('./engine.js');let n=0;
+function calc(v={},r={}){let s=F.fresh(C);Object.assign(s,v);Object.assign(s.prices,r);return F.calc(s,C);}
+function t(label,fn){fn();n++;console.log('PASS '+label);}const eq=(a,b)=>assert(Math.abs(a-b)<1e-6);
+t('Default one-year incremental budget',()=>assert(F.fresh(C).years===1));
+t('No app completion labor by default',()=>assert(!calc().rows.some(r=>r.label.includes('APPLICATION-only work'))));
+t('No application retainer by default',()=>assert(!calc().rows.some(r=>r.label==='APPLICATION-only support')));
+t('All responder wages zero',()=>assert(calc().volunteerWages===0&&calc().otherWages===0));
+t('Only application-only hourly work can be charged',()=>{let x=calc({}, {appHours:2,appRate:50});assert(x.rows.find(r=>r.label==='Additional APPLICATION-only work').amount===100);});
+t('Existing power and internet not repurchased',()=>assert(!calc().rows.some(r=>r.label.startsWith('NEW connection')||r.label==='NEW station backup power')));
+t('New connection only on request',()=>assert(calc({existingInternet:false}).rows.some(r=>r.label==='NEW connection equipment')));
+t('Existing hosting excluded if supplied',()=>assert(!calc({existingHosting:true}).rows.some(r=>r.label==='Hosting/data allowance')));
+t('Existing supplies uncharged',()=>assert(!calc().rows.some(r=>r.category==='Extra consumables')));
+t('River choice does not charge for river water',()=>{let a=calc(),b=calc({water:'river'});eq(a.total,b.total);assert(b.unconfirmed.some(t=>t.includes('Natural water')));});
+t('Lake permission confirmed clears source check',()=>assert(!calc({water:'pond',waterVerified:true}).unconfirmed.some(t=>t.includes('Natural water'))));
+t('New pump budgeted only if needed',()=>assert(calc({newPump:true}).rows.some(r=>r.label==='NEW water-source pump/adapter/hose')));
+t('Retardant inventory not bought again',()=>assert(!calc({agent:'retardant'}).rows.some(r=>r.category==='Extra consumables')));
+t('Extra replenishment counted explicitly',()=>assert(calc({agent:'retardant',buyAgents:true,newAgentLiters:100}).rows.find(r=>r.category==='Extra consumables').amount===75));
+t('Volunteer pilot not assumed free aircraft',()=>assert(calc({agMode:'volunteer',agHours:10}).rows.find(r=>r.label.startsWith('Aircraft operating EXPENSE')).amount===1500));
+t('Confirmed donated operation has no department flight expense',()=>assert(!calc({agMode:'volunteer',agHours:10,aviationCovered:true,aviationConfirmed:true}).rows.some(r=>r.category==='Aviation expenses')));
+t('Unconfirmed full donation flagged',()=>assert(calc({agMode:'volunteer',aviationCovered:true}).unconfirmed.some(t=>t.includes('UNCONFIRMED donor'))));
+t('Agency funding not invented',()=>assert(calc({agMode:'agency'}).unconfirmed.some(t=>t.includes('who pays'))));
+t('Mutual aid default not charged',()=>assert(!calc().rows.some(r=>r.category==='Mutual aid')));
+t('Extra mutual aid costs can be entered',()=>assert(calc({aidExtra:1000}).rows.find(r=>r.category==='Mutual aid').amount===1000));
+t('Mutual aid ETA retained',()=>assert(calc().aidMinutes===35));
+t('No guaranteed aid if unchecked',()=>assert(calc().unconfirmed.some(t=>t.includes('Mutual-aid timing'))));
+t('No new thermal purchase with existing aircraft',()=>assert(!calc({model:'existing'}).rows.some(r=>r.label==='Existing thermal drone'&&r.period==='setup')));
+t('No duplicate bundled battery purchase',()=>assert(!calc().rows.some(r=>r.label==='Future verification batteries')));
+t('Hardware retail price not reduced',()=>assert(calc().rows.find(r=>r.label.includes('Autel')).amount===5299));
+t('Suppression engineering not removed',()=>assert(calc({suppression:'t50',suppDrones:1}).rows.some(r=>r.label==='New payload engineering/validation')));
+t('Future replacement not terminal',()=>assert(!calc({years:5}).rows.some(r=>r.label.includes('replacement')&&r.period==='replacement')));
+t('Extra years produce replacement correctly',()=>assert.deepEqual(calc({years:10}).rows.find(r=>r.label==='Autel EVO II Dual 640T V3 replacement').years,[6]));
+t('Gross cash reconciles',()=>{let x=calc();eq(x.total,x.setup+x.flow.reduce((a,y)=>a+y.total,0));});
+t('Grant does not reduce gross cost',()=>{eq(calc({grant:1000}).total,calc().total);eq(calc().net-calc({grant:1000}).net,1000);});
+t('Negative custom cost rejected',()=>assert.throws(()=>calc({custom:[{name:'x',quantity:1,price:-1,period:'setup'}]})));
+t('Invalid ownership rejected',()=>assert.throws(()=>calc({owned:2})));
+console.log(n+' calculation checks passed.');
+console.log(JSON.stringify({newDrone:calc().total,existingDrone:calc({model:'existing'}).total,ownHosting:calc({model:'existing',existingHosting:true}).total}));

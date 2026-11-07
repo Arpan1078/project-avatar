@@ -1,0 +1,74 @@
+/*
+  Firewatch theme for the calculator, used only when it is shown inside the
+  Firewatch dashboard (firewatch-embed.js adds class "fw-embed" to <html>).
+  Every rule is scoped to html.fw-embed and to screens, so the standalone site
+  and its print layout are unchanged. Colors are the dashboard's own tokens.
+*/
+@media screen {
+  /* Dark Firewatch palette, whatever the calculator's own Appearance setting says. */
+  html.fw-embed,
+  html.fw-embed[data-theme] {
+    color-scheme: dark;
+    --bg: #15120F;
+    --paper: #221E19;          /* dashboard --panel */
+    --soft: #26211C;           /* dashboard --panel-2 */
+    --text: #EDE3CF;
+    --muted: #A89C88;
+    --line: #3A332B;
+    --accent: #F26B2E;         /* dashboard --fire */
+    --tint: rgba(242, 107, 46, 0.12);
+    --warning: #E8B04A;        /* dashboard --break */
+    --warningbg: #2B241B;
+    --green: #8FA9C2;          /* dashboard --calm: "fine" */
+  }
+  html.fw-embed body { background: var(--bg); font-family: 'Barlow', system-ui, sans-serif; }
+  html.fw-embed a { color: #F2A65A; }
+  html.fw-embed :focus-visible { outline: 2px solid #F2A65A; outline-offset: 2px; }
+
+  /* Header: the dashboard already shows the branding and fixes the theme, so only
+     the calculator's two pages remain, styled like the dashboard's tabs. */
+  html.fw-embed header { background: var(--paper); }
+  html.fw-embed .bar { padding: 0 22px; }
+  html.fw-embed .projectLogo,
+  html.fw-embed .appearance { display: none; }
+  html.fw-embed nav { gap: 0; }
+  html.fw-embed nav a { padding: 9px 16px 8px; border-radius: 0; border-bottom: 3px solid transparent; color: var(--muted); font-size: 13px; font-weight: 600; }
+  html.fw-embed nav a:hover { color: var(--text); }
+  html.fw-embed nav a.active { background: none; color: var(--text); border-bottom-color: var(--accent); }
+
+  html.fw-embed main { padding-top: 20px; }
+  html.fw-embed h1 { font-size: 24px; font-weight: 600; }
+  html.fw-embed h2 { font-size: 17px; font-weight: 600; }
+  html.fw-embed .field label,
+  html.fw-embed summary { font-weight: 600; }
+
+  /* Square corners and dashboard borders, like the dashboard's panels and controls. */
+  html.fw-embed .panel,
+  html.fw-embed .item,
+  html.fw-embed .model,
+  html.fw-embed .hint,
+  html.fw-embed .badge,
+  html.fw-embed .notice,
+  html.fw-embed .error,
+  html.fw-embed .teamLogo { border-radius: 0; }
+  html.fw-embed input,
+  html.fw-embed select,
+  html.fw-embed textarea { border-radius: 0; background: #1B1814; border-color: #5A5047; }
+  html.fw-embed input:focus,
+  html.fw-embed select:focus,
+  html.fw-embed textarea:focus { border-color: var(--text); }
+  html.fw-embed input[type=checkbox],
+  html.fw-embed input[type=radio] { accent-color: var(--accent); }
+  html.fw-embed button,
+  html.fw-embed .button { border-radius: 0; background: var(--soft); border-color: #5A5047; font-weight: 600; }
+  html.fw-embed button:hover,
+  html.fw-embed .button:hover { filter: none; border-color: var(--text); }
+  html.fw-embed .model.selected { border-color: var(--accent); background: var(--tint); }
+
+  /* Big total in the dashboard's number font. */
+  html.fw-embed .big { font-family: 'Barlow Condensed', sans-serif; font-weight: 600; letter-spacing: 0; }
+  html.fw-embed .price,
+  html.fw-embed .totalrow strong { font-weight: 600; }
+
+  html.fw-embed footer { background: var(--paper); padding: 14px; }
+}

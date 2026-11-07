@@ -47,6 +47,9 @@
   header { display: flex; align-items: center; gap: 22px; padding: 8px 6px; border-bottom: 1px solid var(--line); white-space: nowrap; overflow: hidden; }
   .brand { display: flex; align-items: center; gap: 10px; }
   .brand b { font-weight: 600; font-size: 18px; }
+  /* District name shortens with … when the header is full (narrower screens). */
+  .brand { min-width: 0; }
+  .brand > .muted { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
   .modes { display: flex; border: 1px solid #5A5047; }
   .modes button { min-height: 32px; padding: 4px 16px; border: none; background: transparent; color: var(--text); font-size: 14px; font-weight: 600; }
   .modes button.on { background: var(--text); color: #1B1814; }
@@ -122,7 +125,13 @@
   .chip { min-height: 30px; padding: 3px 12px; border-radius: 15px; border: 1px solid #5A5047; background: var(--map); color: var(--text); font-size: 13px; font-weight: 500; white-space: nowrap; }
   .chip.on { background: var(--text); color: #1B1814; border-color: var(--text); }
   /* Fills the space left on the toolbar's row; shortens with … instead of wrapping to a new row. */
-  .sim { margin-left: auto; font-size: 12px; color: var(--muted); }
+  /* Fills the space left on the toolbar's row; shortens with … instead of wrapping. */
+  .sim { flex: 1 1 0; min-width: 70px; text-align: right; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .datanote { margin: 8px 16px 0; font-size: 12px; color: var(--muted); }
+  /* Info card for a GOES pixel / FIRMS hotspot (hover or click on the map). */
+  .satinfo { position: absolute; z-index: 4; max-width: 360px; padding: 6px 10px; background: rgba(21, 18, 15, 0.95); border: 1px solid var(--line);
+    font-size: 12px; color: var(--text); pointer-events: none; white-space: normal; }
+  .satinfo[hidden] { display: none; }
 
   /* Map text (created by map3d.js): callout cards with leader lines, and small labels. */
   .maplabels { position: absolute; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
@@ -212,6 +221,20 @@
   .alert { width: 100%; max-width: 420px; background: var(--panel-2); border: 1px solid #4A4238; border-top: 6px solid var(--fire); padding: 16px 22px; }
   .alert .sms { margin-top: 10px; background: var(--text); color: #1B1814; padding: 12px 16px; font-size: 15px; line-height: 1.5; }
   .alert button { margin-top: 12px; min-height: 44px; width: 100%; background: var(--fire); color: #1B1814; border: none; font-size: 15px; font-weight: 600; }
+
+  /* Calculator tab. The budget calculator is a separate static app shown in an
+     iframe, so its own CSS and JS never touch the dashboard. The map is only
+     hidden (never re-created) while this view is open. */
+  .calcview { display: none; min-height: 0; grid-template-rows: auto minmax(0, 1fr); border: 1px solid var(--line); background: var(--bg); }
+  .app.calc { grid-template-rows: auto minmax(0, 1fr); }
+  .app.calc .calcview { display: grid; }
+  .app.calc #tiles, .app.calc #body, .app.calc .scenario, .app.calc #conditions { display: none; }
+  .calcbar { display: flex; align-items: center; gap: 12px; padding: 6px 12px; background: var(--panel); border-bottom: 1px solid var(--line); }
+  .calcbar b { font-size: 15px; font-weight: 600; }
+  .calcbar .btn-ghost { margin-left: auto; min-height: 30px; padding: 3px 12px; font-size: 13px; font-weight: 600; }
+  .calcbar .btn-ghost:hover { border-color: var(--text); }
+  .calcframe { display: block; width: 100%; height: 100%; border: 0; background: var(--bg); }
+  @media (max-width: 700px) { .app.calc .brand .muted { display: none; } }
 </style>
 </head>
 <body>
@@ -278,13 +301,27 @@
         <span><i style="width:14px;height:3px;background:#E8B04A"></i>Firebreak</span>
         <span><i style="width:14px;height:10px;border:1px dashed #EDE3CF"></i>District boundary</span>
         <span><svg width="18" height="8" viewBox="0 0 18 8" aria-hidden="true"><defs><linearGradient id="windGrad" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="13" y2="0"><stop offset="0" stop-color="#EDE3CF" stop-opacity="0"/><stop offset="1" stop-color="#EDE3CF" stop-opacity="0.9"/></linearGradient></defs><line x1="0" y1="4" x2="13" y2="4" stroke="url(#windGrad)" stroke-width="2"/><path d="M12 1 L17 4 L12 7 Z" fill="#EDE3CF"/></svg>Wind direction</span>
+        <span><i style="width:13px;height:13px;border:1.5px solid #F26B2E;background:rgba(242,107,46,0.2)"></i>GOES pixel (about 2 km)</span>
+        <span><i style="width:7px;height:7px;border-radius:50%;background:#FFD23F;box-shadow:0 0 0 2px #FFFFFF"></i>VIIRS hotspot (about 375 m)</span>
       </div>
 
       <footer id="footer"></footer>
     </div>
   </div>
+
+  <!-- Calculator tab: the department budget calculator (Project_Avatar_Incremental_Budget_Site/).
+       Its page is loaded into the iframe the first time the tab is opened. -->
+  <section class="calcview" id="calcView" aria-label="Budget calculator">
+    <div class="calcbar">
+      <b>Budget calculator</b>
+      <button type="button" class="btn-ghost" data-act="view:dashboard">Back to map</button>
+    </div>
+    <iframe class="calcframe" id="calcFrame" title="Department budget calculator"></iframe>
+  </section>
 </div>
 
+<!-- Satellite fire detections (simulated now, same format as NOAA GOES / NASA FIRMS). -->
+<script src="satellite.js"></script>
 <script src="map3d.js"></script>
 <script>
 /* ======================================================================
@@ -348,7 +385,7 @@ const SCENARIOS = {
       { label: 'Power lost on the line', pts: 30, from: 0 },
       { label: 'Red flag day',           pts: 15, from: 1 },
       { label: 'No burn permit nearby',  pts: 10, from: 1 },
-      { label: 'Satellite sees heat',    pts: 25, from: 2 },
+      { label: 'Satellite sees heat',    pts: 25, from: 2, sat: true },
       { label: 'Neighbor photo',         pts: 15, from: 5 }
     ],
     alerts: [
@@ -434,7 +471,7 @@ const SCENARIOS = {
     ],
     reasons: [
       { label: 'Power lost on the line', off: true },
-      { label: 'Satellite sees heat',       pts: 25, from: 2 },
+      { label: 'Satellite sees heat',       pts: 25, from: 2, sat: true },
       { label: 'Red flag day',              pts: 15, from: 2 },
       { label: 'No burn permit nearby',     pts: 10, from: 2 },
       { label: 'Nearby person sees smoke',  pts: 25, from: 3 }
@@ -600,10 +637,10 @@ const SCENARIOS = {
       { time: '12:30', ampm: 'pm', burnAcres: 40, escapeAcres: 0, caption: 'Wind picks up to SW 25, gusts 40. Firewatch keeps checking the burn’s edges against the registered area.' },
       { time: '12:48', ampm: 'pm', burnAcres: 48, escapeAcres: 3, heatOutside: true, caption: 'At 12:48 (assumed) the satellite sees new heat about half a mile northeast, outside the registered area.' },
       { time: '12:49', ampm: 'pm', burnAcres: 48, escapeAcres: 4, heatOutside: true, caption: 'Alert goes out to the chief, dispatch, the landowner running the burn and the downwind neighbors.' },
-      { time: '12:51', ampm: 'pm', burnAcres: 48, escapeAcres: 8, heatOutside: true, caption: 'At 12:51 (assumed) the landowner replies: “Yes, it jumped the road.” Dispatch pages the district.' }
+      { time: '12:51', ampm: 'pm', burnAcres: 48, escapeAcres: 8, heatOutside: true, caption: 'At 12:51 (assumed) the landowner replies: “Yes, it jumped the road.” Dispatch pages the district. A VIIRS pass at 12:50 (assumed) also sees the escape.' }
     ],
     reasons: [
-      { label: 'Satellite sees heat',          pts: 25,  from: 1 },
+      { label: 'Satellite sees heat',          pts: 25,  from: 1, sat: true },
       { label: 'Matches a registered burn',    from: 1, rule: k => burnMatchReason(k) },
       { label: 'Neighbor smoke report',        pts: 15,  from: 2,
         changes: [[4, { label: 'Neighbor report (was the burn)', pts: 0 }]] },   // that smoke was the planned burn
@@ -681,12 +718,17 @@ const SCENARIOS = {
   }
 };
 
+for (const key in SCENARIOS) SCENARIOS[key].key = key;
+
+// Short fire-mask words for the "Satellite sees heat (GOES, ...)" reason.
+const MASK_SHORT = { 10: 'processed fire', 11: 'saturated fire', 12: 'cloud-contaminated fire', 13: 'high probability', 14: 'medium probability', 15: 'low probability' };
+
 // Tabs, chips.
 const CHIPS = [
   { key: 'spread', label: 'Fire path' }, { key: 'houses', label: 'Homes' }, { key: 'water', label: 'Water' },
   { key: 'stations', label: 'Fire stations' }, { key: 'power', label: 'Power lines' },
   { key: 'burns', label: 'Permitted burns' }, { key: 'risk', label: 'Fire risk today' },
-  { key: 'wind', label: 'Wind' }
+  { key: 'wind', label: 'Wind' }, { key: 'sat', label: 'Satellite' }
 ];
 
 const TABS = [
@@ -698,13 +740,14 @@ const TABS = [
 const state = {
   scenario: 'real',
   powerData: true,     // "Co-op power data" switch (Real fire only)
+  view: 'dashboard',   // 'dashboard' (map) or 'calculator' (Calculator tab)
   mode: 'simple',
   step: 0,
   playing: false,
   tab: 'alerts',
   alertClosed: false,
   actionMsg: '',
-  layers: { spread: true, houses: true, water: true, stations: true, power: true, burns: false, risk: false, wind: true, conf: false }
+  layers: { spread: true, houses: true, water: true, stations: true, power: true, burns: false, risk: false, wind: true, sat: true, conf: false }
 };
 let timer = null;
 
@@ -773,6 +816,14 @@ function compute() {
   const full = state.mode === 'full';
   const ampm = stepAmPm(sc, now);
 
+  // Satellite detections for this moment (simulated now; same format as the real feeds).
+  const iso = Satellite.toIso(sc.key, now.time, ampm);
+  const goes = Satellite.getGoesDetections(sc.key, iso);
+  const firms = Satellite.getFirmsHotspots(sc.key, iso);
+  const goesScan = Satellite.getGoesScanTime(sc.key, iso);
+  const firmsPass = Satellite.getFirmsPassInfo(sc.key, iso);
+  const strongest = Satellite.strongest(goes);
+
   // Confidence: sum of the reasons that apply now (negative points allowed), kept in 0..100.
   let sum = 0;
   const reasons = sc.reasons.map(r => {
@@ -781,6 +832,7 @@ function compute() {
     let label = r.label, pts = r.pts;
     for (const [ck, ch] of r.changes || []) if (k >= ck) { if (ch.label) label = ch.label; if ('pts' in ch) pts = ch.pts; }
     if (r.rule) ({ label, pts } = r.rule(k));
+    if (r.sat && strongest) label = `Satellite sees heat (${firms.length ? 'GOES + VIIRS' : 'GOES'}, ${MASK_SHORT[strongest.fire_mask]})`;
     sum += pts;
     return {
       label,
@@ -821,7 +873,21 @@ function compute() {
   const v = { sc, k, now, ampm, full, conf, reasons, statusLabel, statusColor, peopleRows, alertRows, responding };
   v.tiles = sc.tiles(k, v);
   v.facts = sc.facts(k);
-  v.dataRows = sc.data(k);
+  // Data tab: the satellite rows come live from satellite.js.
+  const goesText = goesScan
+    ? `last scan ${Satellite.formatTime(goesScan)}, ` + (strongest
+      ? `${strongest.fire_mask_label}, ` + (goes.length === 1 ? `${Math.round(goes[0].frp_mw)} MW`
+        : `${goes.length} pixels, ${Math.round(goes.reduce((t, d) => t + d.frp_mw, 0))} MW total`)
+      : 'no fire seen')
+    : 'no scan yet';
+  const firmsText = firms.length
+    ? `hotspot ${Satellite.firmsTime(firms[0])}, ${firms[0].confidence}, ${firms[0].frp.toFixed(1)} MW`
+    : firmsPass.lastPass ? `no pass since ${Satellite.formatTime(firmsPass.lastPass)}` : 'no pass yet';
+  const otherRows = sc.data(k).filter(([name]) => !/^Satellite/.test(name));
+  v.dataRows = [otherRows[0], ['GOES-East', goesText], ['FIRMS VIIRS', firmsText]].concat(otherRows.slice(1));
+  v.firmsNote = firmsPass.note;
+  v.goes = goes;
+  v.firms = firms;
   v.compare = sc.compare.map(c => ({ label: c.label, ours: k >= c.from ? c.ours : '…', other: c.other, color: k >= c.from ? 'var(--fire)' : 'var(--dim)' }));
   v.rules = sc.rules ? sc.rules(k) : null;
   v.conditions = pickFrom(sc.conditions, k);
@@ -874,7 +940,10 @@ function asideInner(v) {
         <b>outside the registered area</b> or <b>still burning after the end time</b>.</div>`;
   } else {
     body = `<ul>${v.dataRows.map(([name, age]) => `
-      <li class="row" style="justify-content:space-between"><b>${name}</b><span class="muted">${age}</span></li>`).join('')}</ul>`;
+      <li class="row" style="justify-content:space-between"><b>${name}</b><span class="muted" style="text-align:right">${age}</span></li>`).join('')}</ul>
+      ${v.firmsNote ? `<div class="datanote">${v.firmsNote}</div>` : ''}
+      <div class="datanote">${Satellite.DATA_SOURCE === 'api' ? 'Live data from NOAA GOES Fire Detection and NASA FIRMS.'
+        : 'Simulated in the same format as NOAA GOES Fire Detection and NASA FIRMS. Ready for live data.'}</div>`;
   }
 
   return `
@@ -949,6 +1018,9 @@ const regions = {
   windText: document.querySelector('#windCompass .windtext'),
   footer: document.getElementById('footer')
 };
+// Calculator tab: the budget calculator's page, shown in #calcFrame.
+const CALCULATOR_URL = 'Project_Avatar_Incremental_Budget_Site/index.html';
+const calcFrame = document.getElementById('calcFrame');
 regions.scenarioSelect.innerHTML = SCENARIO_MENU.map(([key, label]) => `<option value="${key}">${label}</option>`).join('');
 
 function render(focusAct) {
@@ -956,9 +1028,13 @@ function render(focusAct) {
   const sc = v.sc;
   const chips = v.full ? CHIPS : CHIPS.concat([{ key: 'conf', label: 'Confidence' }]);
 
+  const dash = state.view === 'dashboard';
   regions.modes.innerHTML = `
-    <button type="button" class="${!v.full ? 'on' : ''}" aria-pressed="${!v.full}" data-act="mode:simple">Simple</button>
-    <button type="button" class="${v.full ? 'on' : ''}" aria-pressed="${v.full}" data-act="mode:full">Full</button>`;
+    <button type="button" class="${dash && !v.full ? 'on' : ''}" aria-pressed="${dash && !v.full}" data-act="mode:simple">Simple</button>
+    <button type="button" class="${dash && v.full ? 'on' : ''}" aria-pressed="${dash && v.full}" data-act="mode:full">Full</button>
+    <button type="button" class="${!dash ? 'on' : ''}" aria-pressed="${!dash}" data-act="view:calculator">Calculator</button>`;
+  // Calculator tab: hides the tiles and map area (the map keeps its state) and shows the calculator.
+  app.classList.toggle('calc', !dash);
   regions.scenarioSelect.value = state.scenario;
 
   // Header: day type badge and weather for this scenario and step.
@@ -1030,7 +1106,7 @@ function render(focusAct) {
     </div>`;
 
   // 3D map: only moves/resizes/hides existing objects.
-  Map3D.update(Object.assign({ layers: state.layers, wind: { towardDeg: v.wind.towardDeg, mph: v.wind.mph } }, sc.map(v.k, v)));
+  Map3D.update(Object.assign({ layers: state.layers, wind: { towardDeg: v.wind.towardDeg, mph: v.wind.mph }, goes: v.goes, firms: v.firms }, sc.map(v.k, v)));
 
   if (focusAct) {
     const el = app.querySelector(`[data-act="${focusAct}"]`);
@@ -1078,7 +1154,16 @@ app.addEventListener('click', e => {
 
   if (name === 'resetView') { Map3D.resetView(); return; }   // camera only, no re-render
 
-  if (name === 'mode') state.mode = arg;
+  if (name === 'mode') { state.mode = arg; state.view = 'dashboard'; }
+  else if (name === 'view') {
+    if (arg === 'calculator') {
+      stopTimer();   // don't keep playing the replay out of sight
+      if (!calcFrame.getAttribute('src')) calcFrame.src = CALCULATOR_URL;   // load once, keep its state
+    }
+    state.view = arg;
+    render(arg === 'dashboard' ? `mode:${state.mode}` : act);
+    return;
+  }
   else if (name === 'layer') state.layers[arg] = !state.layers[arg];
   else if (name === 'tab') state.tab = arg;
   else if (name === 'step') { stopTimer(); goTo(Number(arg)); }
