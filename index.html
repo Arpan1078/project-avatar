@@ -31,6 +31,7 @@
     --water-text: #9CC4E4;
     --break: #E8B04A;
     --power: #C9B98F;
+    --calm: #8FA9C2;      /* gray-blue: negative points, "no fire" outcomes */
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); }
@@ -50,7 +51,15 @@
   .modes button { min-height: 32px; padding: 4px 16px; border: none; background: transparent; color: var(--text); font-size: 14px; font-weight: 600; }
   .modes button.on { background: var(--text); color: #1B1814; }
   .flag { font-size: 13px; font-weight: 600; background: var(--warn); color: #fff; padding: 3px 10px; }
-  .weather { display: flex; gap: 20px; margin-left: auto; font-size: 14px; }
+  .badge-neutral { font-size: 13px; font-weight: 600; background: #4A4238; color: var(--text); padding: 3px 10px; }
+  .scenario { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+  .scenario select { min-height: 32px; padding: 2px 8px; background: var(--panel); color: var(--text); border: 1px solid #5A5047; font: 600 14px 'Barlow', sans-serif; cursor: pointer; }
+  .conditions { display: flex; align-items: center; gap: 22px; flex: 1 1 auto; min-width: 0; }
+  /* Badge + day note; the note shortens with … when the header is full. */
+  .condday { display: flex; align-items: center; gap: 10px; flex: 0 1 auto; min-width: 0; }
+  .condday > span:first-child { flex: none; }
+  .condnote { font-size: 13px; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .weather { display: flex; flex: none; gap: 20px; margin-left: auto; font-size: 14px; }
   .weather b { font-weight: 600; }
 
   .tiles { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; }
@@ -83,6 +92,18 @@
   .btn-light { background: var(--text); color: #1B1814; border: none; }
   .btn-ghost { background: none; color: var(--text); border: 1px solid #5A5047; }
   .action-msg { margin-top: 6px; font-size: 12px; color: var(--fire-soft); }
+  /* Planned-burn rule check under the confidence ring. */
+  .rulecheck { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 8px; font-size: 12px; font-weight: 600; }
+  .rulecheck .ok { color: var(--calm); }
+  .rulecheck .bad { color: var(--fire); }
+  /* Text message shown in the Alerts tab (confirm request, auto-reply). */
+  .smsnote { padding: 8px 16px; font-size: 12px; }
+  .smsbox { margin-top: 4px; padding: 7px 10px; background: var(--text); color: #1B1814; font-size: 13px; line-height: 1.4; }
+  .burnbadge { margin-left: 6px; padding: 1px 6px; font-size: 11px; font-weight: 600; }
+  .burnbadge.calm { background: rgba(143, 169, 194, 0.2); color: var(--calm); }
+  .burnbadge.fire { background: rgba(242, 107, 46, 0.2); color: var(--fire-soft); }
+  .burnrules { margin: 8px 16px; padding: 7px 10px; border-left: 3px solid var(--calm); font-size: 12px; color: var(--text-2); }
+  .burnrules b { font-weight: 600; color: var(--text); }
 
   .tabs { display: flex; border-bottom: 1px solid var(--line); }
   .tabs button { flex: 1 1 auto; min-height: 38px; padding: 0 6px; background: none; border: none; border-bottom: 3px solid transparent; color: var(--muted); font-size: 13px; font-weight: 600; white-space: nowrap; }
@@ -153,22 +174,39 @@
 
   .confcard { position: absolute; z-index: 2; top: 12px; left: 12px; width: 270px; background: rgba(34, 30, 25, 0.95); border: 1px solid var(--line); padding: 12px 14px; }
   .confcard h2 { margin: 0; font-size: 17px; font-weight: 600; }
+  /* End-of-scenario outcome card (top center of the map). */
+  .outcome { position: absolute; z-index: 2; top: 12px; left: 50%; transform: translateX(-50%); max-width: calc(100% - 24px); padding: 10px 18px; text-align: center;
+    background: rgba(34, 30, 25, 0.95); border: 1px solid var(--line); border-top: 4px solid var(--calm); }
+  .outcome-title { font-size: 16px; font-weight: 600; }
+  .outcome-sub { margin-top: 2px; font-size: 12px; color: var(--muted); }
 
   .legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 20px; padding: 6px 12px; border-top: 1px solid var(--line); font-size: 12px; color: var(--text-2); }
   .legend span { display: flex; align-items: center; gap: 6px; }
   .legend i { display: inline-block; }
 
   footer { background: var(--panel); border-top: 1px solid var(--line); padding: 10px 16px; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 8px 22px; align-items: center; }
+  .ctlcol { display: flex; flex-direction: column; gap: 6px; }
   .controls { display: flex; gap: 6px; }
+  /* "Co-op power data" on/off switch (Real fire only). */
+  .pswitch { display: flex; align-items: center; gap: 7px; padding: 0; background: none; border: none; color: var(--text-2); font-size: 12px; }
+  .pswitch b { font-weight: 600; color: var(--text); }
+  .pswitch-track { position: relative; width: 26px; height: 14px; border-radius: 7px; background: #4A4238; transition: background 0.15s; }
+  .pswitch-knob { position: absolute; top: 2px; left: 2px; width: 10px; height: 10px; border-radius: 5px; background: var(--text); transition: left 0.15s; }
+  .pswitch.on .pswitch-track { background: var(--fire); }
+  .pswitch.on .pswitch-knob { left: 14px; }
   .controls button { min-height: 38px; min-width: 60px; background: var(--panel-2); color: var(--text); border: 1px solid #4A4238; font-size: 14px; font-weight: 600; }
   .controls button.play { min-width: 74px; background: var(--fire); color: #1B1814; border: none; }
   .steps { display: flex; gap: 4px; margin-bottom: 4px; }
   .steps button { flex: 1 1 0; min-width: 0; min-height: 24px; padding: 0; border: none; border-top: 3px solid var(--line); background: none; color: var(--muted); font-size: 12px; font-weight: 600; }
   .steps button.done { border-top-color: #7A4A2E; }
   .steps button.on { border-top-color: var(--fire); color: var(--text); }
-  .caption { font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* Up to 3 lines (some scenario captions are long), then … */
+  .caption { font-size: 14px; font-weight: 500; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
+  .offnote { font-size: 12px; color: var(--calm); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .real { font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .compare { display: grid; grid-template-columns: auto auto auto; gap: 1px 14px; align-items: baseline; font-size: 13px; padding-left: 18px; border-left: 1px solid var(--line); }
+  .compare span { max-width: 150px; }
+  .body.full .compare { font-size: 12px; }
 
   .overlay { position: absolute; inset: 0; z-index: 5; background: rgba(14, 12, 10, 0.6); display: flex; align-items: center; justify-content: center; padding: 20px; }
   .alert { width: 100%; max-width: 420px; background: var(--panel-2); border: 1px solid #4A4238; border-top: 6px solid var(--fire); padding: 16px 22px; }
@@ -190,16 +228,10 @@
       <span class="muted" style="font-size:14px">Cottonwood Creek Fire District</span>
     </div>
     <div class="modes" id="modes" role="group" aria-label="Dashboard view"></div>
-    <div style="display:flex;align-items:center;gap:10px">
-      <span class="flag">Red flag warning</span>
-      <span class="muted" style="font-size:13px">Hot, dry and windy: fires spread fast today</span>
-    </div>
-    <div class="weather">
-      <div><span class="muted">Wind </span><b>S 35, gusts 55</b></div>
-      <div><span class="muted">Humidity </span><b>11%</b></div>
-      <div><span class="muted">Temp </span><b>78°F</b></div>
-      <div><span class="muted">Rain </span><b>none in 5 weeks</b></div>
-    </div>
+    <!-- "What if" scenario picker. Options are filled from SCENARIO_MENU. -->
+    <label class="scenario">Scenario <select id="scenarioSelect"></select></label>
+    <!-- Day badge + weather for the current scenario and step (re-rendered). -->
+    <div class="conditions" id="conditions"></div>
   </header>
 
   <section class="tiles" id="tiles" aria-label="Key numbers"></section>
@@ -255,44 +287,401 @@
 
 <script src="map3d.js"></script>
 <script>
-/* ---------- Scenario data (simulated Cottonwood Creek fire) ---------- */
-const STEPS = [
-  { time: '1:50', acres: '0',   rx: 3,  ry: 4,   caption: 'A gust drops the power line into dry grass. The co-op’s meters show the line lost power.', real: 'nobody knew.' },
-  { time: '1:51', acres: '5',   rx: 5,  ry: 7,   caption: 'Red flag day and no burn permit nearby, so Firewatch flags a possible fire.', real: 'nobody knew.' },
-  { time: '1:52', acres: '15',  rx: 8,  ry: 12,  caption: 'A weather satellite sees heat over the line. Confidence passes 70%.', real: 'nobody knew. Nobody was within four miles.' },
-  { time: '1:53', acres: '22',  rx: 10, ry: 15,  caption: 'Alerts go out by text to the chief, dispatch, the rancher downwind, the water truck and 3 homes.', real: 'nobody knew. The first 911 call was 28 minutes away.' },
-  { time: '1:56', acres: '45',  rx: 15, ry: 24,  caption: 'Dispatch pages the volunteers. Three of the five who are free reply.', real: 'nobody knew.' },
-  { time: '1:59', acres: '80',  rx: 20, ry: 34,  caption: 'A neighbor sends a photo. The rancher starts cutting a firebreak ahead of the fire.', real: 'nobody knew.' },
-  { time: '2:04', acres: '160', rx: 28, ry: 52,  caption: 'Brush 1 leaves the station. Nearby departments and the state get a heads-up.', real: 'nobody knew. A driver saw smoke at 2:17, with no signal.' },
-  { time: '2:22', acres: '600', rx: 52, ry: 110, caption: 'Brush 1 arrives. The firebreak is already ahead of the fire.', real: 'the 911 call had just come in. The truck left at 2:34.' }
+/* ======================================================================
+   SCENARIO DATA
+   Each scenario is one object in SCENARIOS below. Step numbers start at 0,
+   so "from: 3" means "from the 4th step on". Times, numbers and wording can
+   be edited here without touching the code further down.
+   Captions: every timing that is our assumption (not from the real day or
+   the scenario script) is marked "(assumed)".
+   ====================================================================== */
+
+// The scenario menu in the top bar (key in SCENARIOS, label shown).
+const SCENARIO_MENU = [
+  ['real',   'Real fire'],
+  ['outage', 'Power outage, no fire'],
+  ['burn',   'Planned burn']
 ];
 
-const REASONS = [
-  { label: 'Power lost on the line', pts: 30, from: 0 },
-  { label: 'Red flag day',           pts: 15, from: 1 },
-  { label: 'No burn permit nearby',  pts: 10, from: 1 },
-  { label: 'Satellite sees heat',    pts: 25, from: 2 },
-  { label: 'Neighbor photo',         pts: 15, from: 5 }
+// ---- Shared by the two Cottonwood Creek fire replays ----
+const COTTONWOOD_CONDITIONS = [
+  { from: 0, badge: 'Red flag warning', badgeClass: 'flag', note: 'Hot, dry and windy: fires spread fast today',
+    weather: [['Wind', 'S 35, gusts 55'], ['Humidity', '11%'], ['Temp', '78°F'], ['Rain', 'none in 5 weeks']] }
 ];
-
-const ALERTS = [
-  { who: 'Fire chief',          s: [[3, 'Text sent 1:53'], [4, 'Heading in']] },
-  { who: 'County 911 dispatch', s: [[3, 'Alert sent 1:53'], [4, 'Paged 1:56']] },
-  { who: 'Rancher downwind',    s: [[3, 'Text sent 1:53'], [5, 'Cutting firebreak']] },
-  { who: 'Lease water truck',   s: [[3, 'Text sent 1:53'], [5, 'Moving']] },
-  { who: '3 homes in the path', s: [[3, 'Warned 1:53']] },
-  { who: 'Nearby departments',  s: [[6, 'Heads-up 2:04']] },
-  { who: 'State fire desk',     s: [[6, 'Heads-up 2:04']] }
+const COTTONWOOD_WIND = [{ from: 0, dir: 'S', towardDeg: 20, mph: 35, text: '35 mph, gusts 55' }];
+const WEEKEND_BURNS = [
+  { title: 'Section 14 pasture', sub: 'Saturday, called in to dispatch, out by 6 pm' },
+  { title: 'Section 31 pasture', sub: 'Sunday, called in to dispatch, out by 5 pm' }
 ];
+const COTTONWOOD_HOMES_CARD = { group: 'fire', title: '3 homes in the fire path', sub: 'Rancher has a disc' };
+const HEAD_CARD = { tone: 'orange', title: 'Head of the fire', sub: 'lineDistance' };
 
-const PEOPLE = [
-  { who: 'Volunteer 1', note: 'farm',        s: [[4, 'Responding'], [6, 'On Brush 1']] },
-  { who: 'Volunteer 2', note: 'in town',     s: [[4, 'Responding'], [6, 'On Brush 1']] },
-  { who: 'Volunteer 3', note: 'co-op yard',  s: [[4, 'Responding'], [6, 'Bringing tanker']] },
-  { who: 'Volunteer 4', note: 'out of town', s: [[4, 'Can’t make it']], no: true },
-  { who: 'Volunteer 5', note: 'at work',     s: [] }
-];
+// ---- "Planned burn" registration (used by the planned-burn rules) ----
+const REGISTERED_BURN = {
+  place: 'Section 22',
+  startText: '10:00 am', endText: '2:00 pm',
+  endMin: 14 * 60,              // 2:00 pm, minutes after midnight
+  escapeMin: 12 * 60 + 47       // when the burn escaped: 12:47 pm (assumed)
+};
 
+const SCENARIOS = {
+
+  /* ------------------------------------------------------------------
+     1. REAL FIRE: the Cottonwood Creek fire with all data sources (unchanged)
+     ------------------------------------------------------------------ */
+  real: {
+    ampm: 'pm',
+    conditions: COTTONWOOD_CONDITIONS,
+    wind: COTTONWOOD_WIND,
+    compareCols: ['Firewatch', 'Real day'],
+    steps: [
+      { time: '1:50', acres: 0,   caption: 'A gust drops the power line into dry grass. The co-op’s meters show the line lost power.', real: 'nobody knew.' },
+      { time: '1:51', acres: 5,   caption: 'Red flag day and no burn permit nearby, so Firewatch flags a possible fire.', real: 'nobody knew.' },
+      { time: '1:52', acres: 15,  caption: 'A weather satellite sees heat over the line. Confidence passes 70%.', real: 'nobody knew. Nobody was within four miles.' },
+      { time: '1:53', acres: 22,  caption: 'Alerts go out by text to the chief, dispatch, the rancher downwind, the water truck and 3 homes.', real: 'nobody knew. The first 911 call was 28 minutes away.' },
+      { time: '1:56', acres: 45,  caption: 'Dispatch pages the volunteers. Three of the five who are free reply.', real: 'nobody knew.' },
+      { time: '1:59', acres: 80,  caption: 'A neighbor sends a photo. The rancher starts cutting a firebreak ahead of the fire.', real: 'nobody knew.' },
+      { time: '2:04', acres: 160, caption: 'Brush 1 leaves the station. Nearby departments and the state get a heads-up.', real: 'nobody knew. A driver saw smoke at 2:17, with no signal.' },
+      { time: '2:22', acres: 600, caption: 'Brush 1 arrives. The firebreak is already ahead of the fire.', real: 'the 911 call had just come in. The truck left at 2:34.' }
+    ],
+    reasons: [
+      { label: 'Power lost on the line', pts: 30, from: 0 },
+      { label: 'Red flag day',           pts: 15, from: 1 },
+      { label: 'No burn permit nearby',  pts: 10, from: 1 },
+      { label: 'Satellite sees heat',    pts: 25, from: 2 },
+      { label: 'Neighbor photo',         pts: 15, from: 5 }
+    ],
+    alerts: [
+      { who: 'Fire chief',          s: [[3, 'Text sent 1:53'], [4, 'Heading in']] },
+      { who: 'County 911 dispatch', s: [[3, 'Alert sent 1:53'], [4, 'Paged 1:56']] },
+      { who: 'Rancher downwind',    s: [[3, 'Text sent 1:53'], [5, 'Cutting firebreak']] },
+      { who: 'Lease water truck',   s: [[3, 'Text sent 1:53'], [5, 'Moving']] },
+      { who: '3 homes in the path', s: [[3, 'Warned 1:53']] },
+      { who: 'Nearby departments',  s: [[6, 'Heads-up 2:04']] },
+      { who: 'State fire desk',     s: [[6, 'Heads-up 2:04']] }
+    ],
+    // People: [step, status, counts as responding?]
+    people: {
+      intro: '5 of 18 volunteers can leave work this afternoon', pagedFrom: 4, notPaged: 'Not paged yet',
+      rows: [
+        { who: 'Volunteer 1', note: 'farm',        s: [[4, 'Responding', true], [6, 'On Brush 1', true]] },
+        { who: 'Volunteer 2', note: 'in town',     s: [[4, 'Responding', true], [6, 'On Brush 1', true]] },
+        { who: 'Volunteer 3', note: 'co-op yard',  s: [[4, 'Responding', true], [6, 'Bringing tanker', true]] },
+        { who: 'Volunteer 4', note: 'out of town', s: [[4, 'Can’t make it', false]] },
+        { who: 'Volunteer 5', note: 'at work',     s: [] }
+      ]
+    },
+    burnsTab: k => ({ items: WEEKEND_BURNS.concat([{ title: 'Today', sub: 'None. No burning on a red flag day.' }]) }),
+    data: k => [
+      ['Power outages (co-op)', 'Live'],
+      ['Satellite heat (GOES)', k >= 2 ? '1 min ago' : 'No heat yet'],
+      ['Satellite (VIIRS)', 'Last pass 3 h ago'],
+      ['Weather (NWS)', '5 min ago'],
+      ['Community reports', k >= 5 ? '1 photo, 1:59' : 'None yet'],
+      ['Air quality (AirNow)', 'Sensor too far'],
+      ['Burn permits', 'Today’s list']
+    ],
+    facts: k => [['Likely cause', 'Power line down'], ['Heading', 'N-NE, 2–3 mph'], ['Nearest water', 'Stock pond'],
+      ['Brush 1', k >= 7 ? 'On scene' : k >= 6 ? 'Driving' : k >= 4 ? 'Crew gathering' : 'At station']],
+    tiles: (k, v) => [
+      timeTile(v),
+      confTile(v),
+      { label: 'Area burned', value: v.now.acres, unit: 'acres', color: 'var(--fire)', note: k >= 3 ? 'Simulated estimate' : 'From the scenario' },
+      { label: 'Homes in path', value: k >= 1 ? 3 : 0, unit: '', color: k >= 1 ? 'var(--fire-soft)' : 'var(--text)', note: 'Next 60 min' },
+      { label: 'Volunteers responding', value: v.responding, unit: 'of 5', color: 'var(--text)', note: '18 on the roster' },
+      { label: 'Ahead of 911', value: k >= 7 ? '30' : k >= 3 ? '28' : '0', unit: 'min', color: k >= 3 ? 'var(--fire)' : 'var(--text)',
+        note: k >= 7 ? 'Truck arrived 30 min sooner' : k >= 3 ? 'Fire known before anyone called' : 'Counts once alerts go out' }
+    ],
+    // Footer comparison: Firewatch value shows from step `from`; `other` is the right-hand column.
+    compare: [
+      { label: 'Fire known',    ours: '1:53', from: 3, other: '2:21' },
+      { label: 'Truck leaves',  ours: '2:04', from: 6, other: '2:34' },
+      { label: 'Truck arrives', ours: '2:22', from: 7, other: '2:52' }
+    ],
+    popup: {
+      at: 3, time: '1:53 pm',
+      sms: ['<b>Likely wildfire, 80% confidence</b>', '11 mi NW of station, at the oil-lease line by Rd 14.', 'Cause: power line down.',
+        'Moving N-NE. Wind S 35, gusts 55.', '3 homes in the path. Nearest water: stock pond.'],
+      sentTo: 'Sent to the chief, county dispatch, the rancher downwind, the lease operator and 3 homes. Plain text, so it works on one bar of signal.'
+    },
+    map: (k, v) => ({
+      view: 'district',
+      fires: { A: { place: 'line', acres: v.now.acres, cones: k >= 1, card: HEAD_CARD }, B: null },
+      firebreak: k >= 5, reporter: k >= 5, route: k >= 6, lineFault: true, burnArea: false,
+      homesInPath: 'fire', homesCard: COTTONWOOD_HOMES_CARD
+    })
+  },
+
+  /* ------------------------------------------------------------------
+     1b. REAL FIRE with the co-op power data switched OFF.
+     Same fire, same growth (acres follow the same curve as the replay
+     above; 2:36 is extrapolated). Only detection changes.
+     ------------------------------------------------------------------ */
+  realNoPower: {
+    ampm: 'pm',
+    conditions: COTTONWOOD_CONDITIONS,
+    wind: COTTONWOOD_WIND,
+    compareCols: ['Firewatch', 'Real day'],
+    extraLine: 'Slower without power data, but still ahead of the 911 call. Every source is a bonus, not a requirement.',
+    steps: [
+      { time: '1:50', acres: 0,    caption: 'The line falls into dry grass. Power data is off: the outage isn’t seen.', real: 'nobody knew.' },
+      { time: '1:52', acres: 15,   caption: 'Red flag day is known, but there is nothing to tie it to yet. Firewatch sees nothing.', real: 'nobody knew. Nobody was within four miles.' },
+      { time: '2:04', acres: 160,  caption: 'At 2:04 (assumed) the fire is big enough for the weather satellite. Possible fire: Firewatch auto-texts enrolled people near the heat.', real: 'nobody knew.' },
+      { time: '2:07', acres: 200,  caption: 'At 2:07 (assumed) the rancher 1.2 miles north replies YES with a photo. 75%: alerts go out.', real: 'nobody knew.' },
+      { time: '2:10', acres: 250,  caption: 'Dispatch pages the district at 2:10 (assumed).', real: 'nobody knew.' },
+      { time: '2:18', acres: 390,  caption: 'Brush 1 leaves the station at 2:18 (assumed, same 8 min to gather a crew).', real: 'nobody knew. A driver saw smoke at 2:17, with no signal.' },
+      { time: '2:36', acres: 1500, caption: 'Brush 1 arrives at 2:36 (assumed, same 18 min drive), 16 minutes sooner than the real day.', real: 'the truck left at 2:34 and was still on the road.' }
+    ],
+    reasons: [
+      { label: 'Power lost on the line', off: true },
+      { label: 'Satellite sees heat',       pts: 25, from: 2 },
+      { label: 'Red flag day',              pts: 15, from: 2 },
+      { label: 'No burn permit nearby',     pts: 10, from: 2 },
+      { label: 'Nearby person sees smoke',  pts: 25, from: 3 }
+    ],
+    status: [['Nothing detected', 'text'], ['Nothing detected', 'text']],   // later steps use the usual thresholds
+    alerts: [
+      { who: 'Rancher 1.2 mi north',  s: [[2, 'Asked 2:04: see smoke?'], [3, 'Replied YES + photo']] },
+      { who: 'Fire chief',            s: [[3, 'Text sent 2:07'], [4, 'Heading in']] },
+      { who: 'County 911 dispatch',   s: [[3, 'Alert sent 2:07'], [4, 'Paged 2:10']] },
+      { who: 'Lease water truck',     s: [[3, 'Text sent 2:07']] },
+      { who: '3 homes in the path',   s: [[3, 'Warned 2:07']] },
+      { who: 'Nearby departments',    s: [[5, 'Heads-up 2:18']] },
+      { who: 'State fire desk',       s: [[5, 'Heads-up 2:18']] }
+    ],
+    people: {
+      intro: '5 of 18 volunteers can leave work this afternoon', pagedFrom: 4, notPaged: 'Not paged yet',
+      rows: [
+        { who: 'Volunteer 1', note: 'farm',        s: [[4, 'Responding', true], [5, 'On Brush 1', true]] },
+        { who: 'Volunteer 2', note: 'in town',     s: [[4, 'Responding', true], [5, 'On Brush 1', true]] },
+        { who: 'Volunteer 3', note: 'co-op yard',  s: [[4, 'Responding', true], [5, 'Bringing tanker', true]] },
+        { who: 'Volunteer 4', note: 'out of town', s: [[4, 'Can’t make it', false]] },
+        { who: 'Volunteer 5', note: 'at work',     s: [] }
+      ]
+    },
+    burnsTab: k => ({ items: WEEKEND_BURNS.concat([{ title: 'Today', sub: 'None. No burning on a red flag day.' }]) }),
+    data: k => [
+      ['Power outages (co-op)', 'Off (not available)'],
+      ['Satellite heat (GOES)', k >= 2 ? 'Heat seen 2:04' : 'No heat yet'],
+      ['Satellite (VIIRS)', 'Last pass 3 h ago'],
+      ['Weather (NWS)', '5 min ago'],
+      ['Community reports', k >= 3 ? 'YES + photo, 2:07' : k >= 2 ? '1 asked, waiting' : 'None yet'],
+      ['Air quality (AirNow)', 'Sensor too far'],
+      ['Burn permits', 'Today’s list']
+    ],
+    facts: k => [['Likely cause', k >= 3 ? 'Near the power line' : 'Not known yet'], ['Heading', k >= 2 ? 'N-NE, 2–3 mph' : '—'],
+      ['Nearest water', 'Stock pond'], ['Brush 1', k >= 6 ? 'On scene' : k >= 5 ? 'Driving' : k >= 4 ? 'Crew gathering' : 'At station']],
+    tiles: (k, v) => [
+      timeTile(v),
+      confTile(v),
+      { label: 'Area burned', value: v.now.acres.toLocaleString('en-US'), unit: 'acres', color: 'var(--fire)', note: k >= 3 ? 'Simulated estimate' : 'From the scenario' },
+      { label: 'Homes in path', value: k >= 2 ? 3 : 0, unit: '', color: k >= 2 ? 'var(--fire-soft)' : 'var(--text)', note: 'Next 60 min' },
+      { label: 'Volunteers responding', value: v.responding, unit: 'of 5', color: 'var(--text)', note: '18 on the roster' },
+      { label: 'Ahead of 911', value: k >= 6 ? '16' : k >= 3 ? '14' : '0', unit: 'min', color: k >= 3 ? 'var(--fire)' : 'var(--text)',
+        note: k >= 6 ? 'Truck arrived 16 min sooner' : k >= 3 ? 'Fire known before anyone called' : 'Counts once alerts go out' }
+    ],
+    compare: [
+      { label: 'Fire known',    ours: '2:07', from: 3, other: '2:21' },
+      { label: 'Truck leaves',  ours: '2:18', from: 5, other: '2:34' },
+      { label: 'Truck arrives', ours: '2:36', from: 6, other: '2:52' }
+    ],
+    popup: {
+      at: 3, time: '2:07 pm',
+      sms: ['<b>Likely wildfire, 75% confidence</b>', '11 mi NW of station, at the oil-lease line by Rd 14.', 'Seen by satellite, confirmed by a rancher nearby.',
+        'Moving N-NE. Wind S 35, gusts 55.', '3 homes in the path. Nearest water: stock pond.'],
+      sentTo: 'Sent to the chief, county dispatch, the rancher, the lease operator and 3 homes. Plain text, so it works on one bar of signal.'
+    },
+    map: (k, v) => ({
+      view: 'district',
+      fires: { A: { place: 'line', acres: v.now.acres, cones: k >= 2, card: HEAD_CARD }, B: null },
+      firebreak: false, reporter: false, route: k >= 5, lineFault: true, burnArea: false,
+      homesInPath: 'fire', homesCard: COTTONWOOD_HOMES_CARD
+    })
+  },
+
+  /* ------------------------------------------------------------------
+     2. POWER OUTAGE, NO FIRE: a windy day trips the line; nobody is paged.
+     ------------------------------------------------------------------ */
+  outage: {
+    ampm: 'am',
+    conditions: [
+      { from: 0, badge: 'Windy', badgeClass: 'badge-neutral', note: 'Windy Thursday in April',
+        weather: [['Wind', 'S 30, gusts 45'], ['Humidity', '30%']] }
+    ],
+    wind: [{ from: 0, dir: 'S', towardDeg: 20, mph: 30, text: '30 mph, gusts 45' }],
+    compareCols: ['Firewatch', 'Without Firewatch'],
+    steps: [
+      { time: '10:40', caption: 'A gust trips the same oil-lease power line. The co-op’s meters show the line lost power.' },
+      { time: '10:41', caption: 'Windy, but not a red flag day. Firewatch keeps watching the line.' },
+      { time: '10:45', caption: 'The weather satellite sees no heat over the line at 10:45 (assumed).' },
+      { time: '10:46', caption: 'Under 70%, so no alert. Firewatch texts 2 enrolled people near the line: “Power line down near you. Can you see smoke? Reply YES or NO.”' },
+      { time: '10:49', caption: 'At 10:49 (assumed) the rancher replies NO: no smoke.' },
+      { time: '10:52', caption: 'At 10:52 (assumed) the co-op reports power back on: the line reclosed, it was not down. Case closed.' }
+    ],
+    reasons: [
+      { label: 'Power lost on the line',      pts: 30,  from: 0 },
+      { label: 'Windy, not red flag',         pts: 5,   from: 1 },
+      { label: 'No satellite heat',           pts: 0,   from: 2 },
+      { label: 'Nearby person sees no smoke', pts: -20, from: 4 },
+      { label: 'Power restored',              pts: -10, from: 5 }
+    ],
+    status: [['Watching the line', 'text'], ['Watching the line', 'text'], ['Watching the line', 'text'],
+      ['Asking people nearby', 'text'], ['Watching the line', 'text'], ['No fire, case closed', 'calm']],
+    alerts: [
+      { who: 'Rancher near the line', s: [[3, 'Confirm request sent'], [4, 'Replied NO, no smoke']] },
+      { who: 'Lease operator',        s: [[3, 'Confirm request sent']] },
+      { who: 'Fire chief',            s: [[5, 'Not needed']], none: 'Not alerted' },
+      { who: 'County 911 dispatch',   s: [[5, 'Not needed']], none: 'Not alerted' },
+      { who: 'Volunteers',            s: [[5, 'Not paged']], none: 'Not paged' }
+    ],
+    alertNote: { from: 3, title: 'Confirm request (text, 10:46)', text: 'Power line down near you. Can you see smoke? Reply YES or NO.' },
+    people: {
+      intro: 'No one is paged unless an alert goes out', pagedFrom: Infinity, notPaged: 'Not paged',
+      rows: ['farm', 'in town', 'co-op yard', 'out of town', 'at work'].map((note, i) => ({ who: 'Volunteer ' + (i + 1), note, s: [] }))
+    },
+    burnsTab: k => ({ items: WEEKEND_BURNS.concat([{ title: 'Today', sub: 'None registered.' }]) }),
+    data: k => [
+      ['Power outages (co-op)', k >= 5 ? 'Power back on 10:52' : 'Line out since 10:40'],
+      ['Satellite heat (GOES)', k >= 2 ? 'No heat' : 'Checking'],
+      ['Satellite (VIIRS)', 'Last pass 2 h ago'],
+      ['Weather (NWS)', '5 min ago'],
+      ['Community reports', k >= 4 ? '1 reply: no smoke' : k >= 3 ? '2 asked, waiting' : 'None yet'],
+      ['Air quality (AirNow)', 'Sensor too far'],
+      ['Burn permits', 'None today']
+    ],
+    facts: k => [['Likely cause', k >= 5 ? 'Line reclosed' : 'Line tripped in wind'], ['Heading', 'No fire'],
+      ['Nearest water', 'Stock pond'], ['Brush 1', 'At station']],
+    tiles: (k, v) => [
+      timeTile(v),
+      confTile(v),
+      { label: 'Area burned', value: 0, unit: 'acres', color: 'var(--text)', note: 'No fire' },
+      { label: 'Homes in path', value: 0, unit: '', color: 'var(--text)', note: 'No fire' },
+      { label: 'Volunteers paged', value: 0, unit: 'of 5', color: 'var(--text)', note: 'No alert, no page' },
+      { label: 'False alarms avoided', value: k >= 5 ? 1 : 0, unit: '', color: k >= 5 ? 'var(--calm)' : 'var(--text)',
+        note: k >= 5 ? 'District not paged' : 'Counts when the case closes' }
+    ],
+    compare: [
+      { label: 'Outage',                      ours: '10:40', from: 0, other: '10:40' },
+      { label: 'District paged',              ours: 'No',    from: 5, other: 'Maybe, if someone calls in' },
+      { label: 'Volunteers pulled from work', ours: '0',     from: 5, other: 'Up to 5' }
+    ],
+    outcome: { at: 5, title: 'No alert sent. 0 volunteers pulled from work.', sub: 'Case closed at 10:52: the line reclosed, no fire.' },
+    map: k => ({
+      view: 'district',
+      fires: { A: null, B: null },
+      firebreak: false, reporter: false, route: false, lineFault: true, burnArea: false,
+      homesInPath: null, homesCard: null
+    })
+  },
+
+  /* ------------------------------------------------------------------
+     3. PLANNED BURN: a registered burn is watched, not paged; then it escapes.
+     ------------------------------------------------------------------ */
+  burn: {
+    ampm: 'am/pm',
+    layersOnEnter: { burns: true },          // show the registered burn area
+    conditions: [
+      { from: 0, badge: 'Burn day', badgeClass: 'badge-neutral', note: 'Breezy Wednesday in April',
+        weather: [['Wind', 'SW 15'], ['Humidity', '28%']] },
+      { from: 3, badge: 'Burn day', badgeClass: 'badge-neutral', note: 'Breezy Wednesday in April',
+        weather: [['Wind', 'SW 25, gusts 40'], ['Humidity', '28%']] }
+    ],
+    wind: [
+      { from: 0, dir: 'SW', towardDeg: 45, mph: 15, text: '15 mph' },
+      { from: 3, dir: 'SW', towardDeg: 45, mph: 25, text: '25 mph, gusts 40' }
+    ],
+    compareCols: ['Firewatch', 'Without Firewatch'],
+    // burnAcres = the planned burn inside Section 22; escapeAcres = new fire outside it.
+    // heatOutside = satellite heat outside the registered area (drives the rules).
+    steps: [
+      { time: '9:00',  ampm: 'am', burnAcres: 0,  escapeAcres: 0, caption: 'The landowner registers a burn by text: Section 22, 10:00 am to 2:00 pm, crew of 3 on site.' },
+      { time: '10:05', ampm: 'am', burnAcres: 2,  escapeAcres: 0, caption: 'At 10:05 (assumed) the satellite sees heat at Section 22. It matches the registered burn, so no alert.' },
+      { time: '10:20', ampm: 'am', burnAcres: 8,  escapeAcres: 0, caption: 'At 10:20 (assumed) a neighbor texts a smoke photo. Firewatch matches it to the burn and replies automatically. No alert.' },
+      { time: '12:30', ampm: 'pm', burnAcres: 40, escapeAcres: 0, caption: 'Wind picks up to SW 25, gusts 40. Firewatch keeps checking the burn’s edges against the registered area.' },
+      { time: '12:48', ampm: 'pm', burnAcres: 48, escapeAcres: 3, heatOutside: true, caption: 'At 12:48 (assumed) the satellite sees new heat about half a mile northeast, outside the registered area.' },
+      { time: '12:49', ampm: 'pm', burnAcres: 48, escapeAcres: 4, heatOutside: true, caption: 'Alert goes out to the chief, dispatch, the landowner running the burn and the downwind neighbors.' },
+      { time: '12:51', ampm: 'pm', burnAcres: 48, escapeAcres: 8, heatOutside: true, caption: 'At 12:51 (assumed) the landowner replies: “Yes, it jumped the road.” Dispatch pages the district.' }
+    ],
+    reasons: [
+      { label: 'Satellite sees heat',          pts: 25,  from: 1 },
+      { label: 'Matches a registered burn',    from: 1, rule: k => burnMatchReason(k) },
+      { label: 'Neighbor smoke report',        pts: 15,  from: 2,
+        changes: [[4, { label: 'Neighbor report (was the burn)', pts: 0 }]] },   // that smoke was the planned burn
+      { label: 'Wind increasing',              pts: 10,  from: 3 },
+      { label: 'Heat outside registered area', pts: 45,  from: 4 },
+      { label: 'Landowner confirms escape',    pts: 15,  from: 6 }
+    ],
+    status: [['Burn registered', 'calm'], ['Planned burn, being watched', 'calm'], ['Planned burn, being watched', 'calm'],
+      ['Planned burn, watching edges', 'calm'], ['Possible escaped burn', 'fire'], ['Possible escaped burn', 'fire'], ['Escaped burn, confirmed', 'fire']],
+    confLabel: 'Wildfire confidence',
+    alerts: [
+      { who: 'Landowner (running the burn)', s: [[0, 'Burn registered 9:00'], [5, 'Text sent 12:49'], [6, 'Replied: jumped the road']] },
+      { who: 'Neighbor (smoke photo)',       s: [[2, 'Auto-reply sent 10:20']] },
+      { who: 'Fire chief',                   s: [[5, 'Text sent 12:49']] },
+      { who: 'County 911 dispatch',          s: [[5, 'Alert sent 12:49'], [6, 'Paged district 12:51']] },
+      { who: 'Downwind neighbors (2 homes)', s: [[5, 'Warned 12:49']] }
+    ],
+    alertNote: { from: 2, title: 'Auto-reply to the neighbor (10:20)', text: 'This is a registered burn in Section 22, scheduled until 2:00 pm. Reply FIRE if you see it spreading.' },
+    people: {
+      intro: '5 of 18 volunteers can leave work today', pagedFrom: 6, notPaged: 'Not paged',
+      rows: ['farm', 'in town', 'co-op yard', 'out of town', 'at work'].map((note, i) => ({ who: 'Volunteer ' + (i + 1), note, s: [[6, 'Paged 12:51', false]] }))
+    },
+    burnsTab: k => ({
+      items: [
+        { title: 'Section 22 pasture', sub: 'Today 10:00 am to 2:00 pm. Registered by text at 9:00, crew of 3 on site.',
+          badge: k >= 4 ? 'Possible escape' : 'Active today', badgeTone: k >= 4 ? 'fire' : 'calm' }
+      ].concat(WEEKEND_BURNS)
+    }),
+    data: k => [
+      ['Power outages (co-op)', 'Live, none'],
+      ['Satellite heat (GOES)', k >= 4 ? 'Heat outside burn, 12:48' : k >= 1 ? 'Heat at Section 22' : 'No heat yet'],
+      ['Satellite (VIIRS)', 'Last pass 2 h ago'],
+      ['Weather (NWS)', '5 min ago'],
+      ['Community reports', k >= 6 ? 'Landowner: jumped the road' : k >= 2 ? '1 smoke photo, 10:20' : 'None yet'],
+      ['Air quality (AirNow)', 'Sensor too far'],
+      ['Burn permits', 'Section 22 active']
+    ],
+    facts: k => [['Likely cause', k >= 4 ? 'Escaped planned burn' : 'Registered burn'], ['Heading', 'NE, with the wind'],
+      ['Burn crew', '3 on site'], ['Brush 1', k >= 6 ? 'Crew gathering' : 'At station']],
+    tiles: (k, v) => [
+      timeTile(v),
+      confTile(v),
+      { label: 'Area burned', value: v.now.burnAcres + v.now.escapeAcres, unit: 'acres', color: 'var(--fire)',
+        note: k >= 4 ? 'Burn + escape, simulated' : 'Planned burn, simulated' },
+      { label: 'Homes in path', value: k >= 4 ? 2 : 0, unit: '', color: k >= 4 ? 'var(--fire-soft)' : 'var(--text)', note: 'Next 60 min' },
+      { label: 'Volunteers responding', value: v.responding, unit: 'of 5', color: 'var(--text)', note: k >= 6 ? 'Paged 12:51' : 'Not paged' },
+      k >= 4
+        ? { label: 'Escape caught', value: escapeCaughtMinutes(), unit: 'min', color: 'var(--fire)', note: 'After the escape (12:47, assumed)' }
+        : { label: 'Planned burns not paged', value: 1, unit: '', color: 'var(--calm)', note: 'Smoke there is expected' }
+    ],
+    compare: [
+      { label: 'Smoke reports',                      ours: 'Answered automatically', from: 2, other: 'Each one paged or called back' },
+      { label: 'District paged for the planned burn', ours: 'No',                    from: 1, other: 'Possibly' },
+      { label: 'Escape noticed',                     ours: '12:48',                  from: 4, other: 'When someone calls' }
+    ],
+    popup: {
+      at: 5, time: '12:49 pm',
+      sms: ['<b>Planned burn may have escaped, 80% confidence</b>', 'New fire 0.5 mi NE of Section 22 burn, outside the registered area.',
+        'Wind SW 25, gusts 40.', 'Nearest homes: 2, about 1.2 mi NE.'],
+      sentTo: 'Sent to the chief, county dispatch, the landowner running the burn and 2 downwind homes. Plain text, so it works on one bar of signal.'
+    },
+    rules: k => (k >= 1 ? burnRules(k) : null),
+    map: (k, v) => ({
+      view: 'burn',
+      fires: {
+        A: v.now.escapeAcres ? { place: 'escape', acres: v.now.escapeAcres, cones: true,
+          card: { tone: 'orange', title: k >= 6 ? 'Escaped burn, confirmed' : 'Possible escaped burn', sub: 'Outside the registered area' } } : null,
+        B: v.now.burnAcres ? { place: 'burn', acres: v.now.burnAcres,
+          card: { tone: 'cream', title: 'Planned burn', sub: 'Section 22, until 2:00 pm' } } : null
+      },
+      firebreak: false, reporter: false, route: false, lineFault: false, burnArea: true,
+      homesInPath: k >= 4 ? 'escape' : null,
+      homesCard: k >= 4 ? { group: 'escape', title: '2 homes downwind', sub: '1.2 to 1.6 mi NE of the escape' } : null
+    })
+  }
+};
+
+// Tabs, chips.
 const CHIPS = [
   { key: 'spread', label: 'Fire path' }, { key: 'houses', label: 'Homes' }, { key: 'water', label: 'Water' },
   { key: 'stations', label: 'Fire stations' }, { key: 'power', label: 'Power lines' },
@@ -307,6 +696,8 @@ const TABS = [
 
 /* ---------- State ---------- */
 const state = {
+  scenario: 'real',
+  powerData: true,     // "Co-op power data" switch (Real fire only)
   mode: 'simple',
   step: 0,
   playing: false,
@@ -317,76 +708,125 @@ const state = {
 };
 let timer = null;
 
+// The scenario data in use (Real fire switches variant with the power-data switch).
+function scenario() {
+  return state.scenario === 'real' && !state.powerData ? SCENARIOS.realNoPower : SCENARIOS[state.scenario];
+}
+
 /* ---------- Helpers ---------- */
 function pickStatus(list, k) {
   let out = null;
   for (const [from, text] of list) if (k >= from) out = text;
   return out;
 }
+// Last entry of a [{ from, ... }] list that applies at step k.
+function pickFrom(list, k) {
+  let out = list[0];
+  for (const e of list) if (k >= e.from) out = e;
+  return out;
+}
+// "12:48" + "pm" -> minutes after midnight.
+function toMinutes(time, ampm) {
+  const [h, m] = time.split(':').map(Number);
+  return ((h % 12) + (ampm === 'pm' ? 12 : 0)) * 60 + m;
+}
+const stepAmPm = (sc, s) => s.ampm || sc.ampm;
+
+/* ---------- Planned-burn rules ----------
+   A registered burn counts as planned (and is NOT paged) only while BOTH hold:
+     1. all heat is inside the registered area, and
+     2. it is before the registered end time.
+   If heat shows up outside the area, or the burn is still burning after the
+   end time, it stops counting as planned and is treated as a possible wildfire. */
+function burnRules(k) {
+  const sc = SCENARIOS.burn, s = sc.steps[k];
+  const inside = !s.heatOutside;
+  const beforeEnd = toMinutes(s.time, stepAmPm(sc, s)) <= REGISTERED_BURN.endMin;
+  return [
+    { label: 'Inside registered area', ok: inside },
+    { label: `Before ${REGISTERED_BURN.endText} end time`, ok: beforeEnd }
+  ];
+}
+function burnMatchReason(k) {
+  const [inside, beforeEnd] = burnRules(k).map(r => r.ok);
+  if (inside && beforeEnd) return { label: 'Matches a registered burn', pts: -30 };
+  if (!inside) return { label: 'No longer matches the burn', pts: 0 };
+  return { label: 'Still burning after the end time', pts: 0 };
+}
+// Minutes from the (assumed) escape to the first heat seen outside the area.
+function escapeCaughtMinutes() {
+  const sc = SCENARIOS.burn;
+  const first = sc.steps.find(s => s.heatOutside);
+  return toMinutes(first.time, stepAmPm(sc, first)) - REGISTERED_BURN.escapeMin;
+}
+
+// Shared tiles.
+const timeTile = v => ({ label: 'Time', value: v.now.time, unit: v.ampm, color: 'var(--text)', note: 'Simulated clock' });
+const confTile = v => ({ label: v.sc.confLabel || 'Confidence', value: v.conf, unit: '%', color: v.conf >= 70 ? 'var(--fire)' : 'var(--text)', note: 'Alerts go out at 70%' });
+
+const TONE = { fire: 'var(--fire)', calm: 'var(--calm)', text: 'var(--text)' };
 
 function compute() {
-  const k = state.step;
-  const now = STEPS[k];
+  const sc = scenario();
+  const k = Math.min(state.step, sc.steps.length - 1);
+  const now = sc.steps[k];
   const full = state.mode === 'full';
+  const ampm = stepAmPm(sc, now);
 
-  let conf = 0;
-  const reasons = REASONS.map(r => {
-    const on = k >= r.from;
-    if (on) conf += r.pts;
-    return { label: r.label, pts: on ? '+' + r.pts : '—', color: on ? 'var(--text)' : 'var(--dim)' };
+  // Confidence: sum of the reasons that apply now (negative points allowed), kept in 0..100.
+  let sum = 0;
+  const reasons = sc.reasons.map(r => {
+    if (r.off) return { label: r.label, pts: 'off', color: 'var(--dim)' };
+    if (k < r.from) return { label: r.label, pts: '—', color: 'var(--dim)' };
+    let label = r.label, pts = r.pts;
+    for (const [ck, ch] of r.changes || []) if (k >= ck) { if (ch.label) label = ch.label; if ('pts' in ch) pts = ch.pts; }
+    if (r.rule) ({ label, pts } = r.rule(k));
+    sum += pts;
+    return {
+      label,
+      pts: pts > 0 ? '+' + pts : pts < 0 ? '-' + Math.abs(pts) : '+0',
+      color: pts > 0 ? 'var(--text)' : pts < 0 ? 'var(--calm)' : 'var(--dim)'
+    };
   });
-  const statusLabel = conf < 50 ? 'Watching the line' : conf < 70 ? 'Possible fire' : conf < 90 ? 'Likely wildfire' : 'Confirmed wildfire';
-  const statusColor = conf < 70 ? 'var(--text)' : 'var(--fire)';
+  const conf = Math.max(0, Math.min(100, sum));
+
+  let statusLabel, statusColor;
+  if (sc.status && sc.status[k]) {
+    statusLabel = sc.status[k][0];
+    statusColor = TONE[sc.status[k][1]];
+  } else {
+    statusLabel = conf < 50 ? 'Watching the line' : conf < 70 ? 'Possible fire' : conf < 90 ? 'Likely wildfire' : 'Confirmed wildfire';
+    statusColor = conf < 70 ? 'var(--text)' : 'var(--fire)';
+  }
 
   let responding = 0;
-  const peopleRows = PEOPLE.map(p => {
-    const s = pickStatus(p.s, k);
-    const yes = s && !p.no;
+  const peopleRows = sc.people.rows.map(p => {
+    let s = null, yes = false;
+    for (const [from, text, ok] of p.s) if (k >= from) { s = text; yes = !!ok; }
     if (yes) responding++;
     return {
       who: p.who, note: p.note,
-      status: s || (k >= 4 ? 'No reply' : 'Not paged yet'),
+      status: s || (k >= sc.people.pagedFrom ? 'No reply' : sc.people.notPaged),
       color: yes ? 'var(--fire-soft)' : 'var(--dim)',
       dot: yes ? 'var(--fire)' : s ? 'var(--dim)' : '#4A4238'
     };
   });
 
-  const alertRows = ALERTS.map(a => {
+  const alertRows = sc.alerts.map(a => {
     const s = pickStatus(a.s, k);
-    return { who: a.who, status: s || 'Not sent yet', color: s ? 'var(--fire-soft)' : 'var(--dim)', dot: s ? 'var(--fire)' : '#4A4238' };
+    const quiet = !s || /^Not /.test(s);
+    return { who: a.who, status: s || a.none || 'Not sent yet', color: quiet ? 'var(--dim)' : 'var(--fire-soft)', dot: quiet ? '#4A4238' : 'var(--fire)' };
   });
 
-  const aheadVal = k >= 7 ? '30' : k >= 3 ? '28' : '0';
-  const aheadNote = k >= 7 ? 'Truck arrived 30 min sooner' : k >= 3 ? 'Fire known before anyone called' : 'Counts once alerts go out';
-
-  const tiles = [
-    { label: 'Time', value: now.time, unit: 'pm', color: 'var(--text)', note: 'Simulated clock' },
-    { label: 'Confidence', value: conf, unit: '%', color: conf >= 70 ? 'var(--fire)' : 'var(--text)', note: 'Alerts go out at 70%' },
-    { label: 'Area burned', value: now.acres, unit: 'acres', color: 'var(--fire)', note: k >= 3 ? 'Simulated estimate' : 'From the scenario' },
-    { label: 'Homes in path', value: k >= 1 ? 3 : 0, unit: '', color: k >= 1 ? 'var(--fire-soft)' : 'var(--text)', note: 'Next 60 min' },
-    { label: 'Volunteers responding', value: responding, unit: 'of 5', color: 'var(--text)', note: '18 on the roster' },
-    { label: 'Ahead of 911', value: aheadVal, unit: 'min', color: k >= 3 ? 'var(--fire)' : 'var(--text)', note: aheadNote }
-  ];
-
-  const dataRows = [
-    { name: 'Power outages (co-op)', age: 'Live' },
-    { name: 'Satellite heat (GOES)', age: k >= 2 ? '1 min ago' : 'No heat yet' },
-    { name: 'Satellite (VIIRS)', age: 'Last pass 3 h ago' },
-    { name: 'Weather (NWS)', age: '5 min ago' },
-    { name: 'Community reports', age: k >= 5 ? '1 photo, 1:59' : 'None yet' },
-    { name: 'Air quality (AirNow)', age: 'Sensor too far' },
-    { name: 'Burn permits', age: 'Today’s list' }
-  ];
-
-  const compare = [
-    { label: 'Fire known',    ours: k >= 3 ? '1:53' : '…', real: '2:21', color: k >= 3 ? 'var(--fire)' : 'var(--dim)' },
-    { label: 'Truck leaves',  ours: k >= 6 ? '2:04' : '…', real: '2:34', color: k >= 6 ? 'var(--fire)' : 'var(--dim)' },
-    { label: 'Truck arrives', ours: k >= 7 ? '2:22' : '…', real: '2:52', color: k >= 7 ? 'var(--fire)' : 'var(--dim)' }
-  ];
-
-  const brushStatus = k >= 7 ? 'On scene' : k >= 6 ? 'Driving' : k >= 4 ? 'Crew gathering' : 'At station';
-
-  return { k, now, full, conf, reasons, statusLabel, statusColor, peopleRows, alertRows, tiles, dataRows, compare, brushStatus };
+  const v = { sc, k, now, ampm, full, conf, reasons, statusLabel, statusColor, peopleRows, alertRows, responding };
+  v.tiles = sc.tiles(k, v);
+  v.facts = sc.facts(k);
+  v.dataRows = sc.data(k);
+  v.compare = sc.compare.map(c => ({ label: c.label, ours: k >= c.from ? c.ours : '…', other: c.other, color: k >= c.from ? 'var(--fire)' : 'var(--dim)' }));
+  v.rules = sc.rules ? sc.rules(k) : null;
+  v.conditions = pickFrom(sc.conditions, k);
+  v.wind = pickFrom(sc.wind, k);
+  return v;
 }
 
 /* ---------- Pieces ---------- */
@@ -407,36 +847,44 @@ function reasonList(v) {
     `<li style="color:${r.color}"><span>${r.label}</span><b>${r.pts}</b></li>`).join('')}</ul>`;
 }
 
+// Planned-burn rule check ("Inside registered area ✓  Before 2:00 pm end time ✓").
+function ruleCheck(v) {
+  if (!v.rules) return '';
+  return `<div class="rulecheck">${v.rules.map(r =>
+    `<span class="${r.ok ? 'ok' : 'bad'}">${r.label} ${r.ok ? '✓' : '✗'}</span>`).join('')}</div>`;
+}
+
 function asideInner(v) {
   let body = '';
   if (state.tab === 'alerts') {
+    const note = v.sc.alertNote && v.k >= v.sc.alertNote.from
+      ? `<div class="smsnote"><div class="muted">${v.sc.alertNote.title}</div><div class="smsbox">${v.sc.alertNote.text}</div></div>` : '';
     body = `<ul>${v.alertRows.map(a => `
-      <li class="row"><span class="dot" style="background:${a.dot}"></span><span class="who">${a.who}</span><span style="color:${a.color}">${a.status}</span></li>`).join('')}</ul>`;
+      <li class="row"><span class="dot" style="background:${a.dot}"></span><span class="who">${a.who}</span><span style="color:${a.color}">${a.status}</span></li>`).join('')}</ul>${note}`;
   } else if (state.tab === 'people') {
-    body = `<div class="tabintro">5 of 18 volunteers can leave work this afternoon</div><ul>${v.peopleRows.map(p => `
+    body = `<div class="tabintro">${v.sc.people.intro}</div><ul>${v.peopleRows.map(p => `
       <li class="row"><span class="dot" style="background:${p.dot}"></span><span style="flex:1 1 auto"><b>${p.who}</b> <span class="muted">${p.note}</span></span><span style="color:${p.color}">${p.status}</span></li>`).join('')}</ul>`;
   } else if (state.tab === 'burns') {
+    const bt = v.sc.burnsTab(v.k);
     body = `<div class="tabintro">Burns farmers called in on purpose, so smoke there is not a false alarm</div>
-      <ul>
-        <li class="burn"><div>Section 14 pasture</div><div>Saturday, called in to dispatch, out by 6 pm</div></li>
-        <li class="burn"><div>Section 31 pasture</div><div>Sunday, called in to dispatch, out by 5 pm</div></li>
-        <li class="burn" style="border-bottom:none"><div>Today</div><div>None. No burning on a red flag day.</div></li>
-      </ul>`;
+      <ul>${bt.items.map(b => `
+        <li class="burn"><div>${b.title}${b.badge ? ` <span class="burnbadge ${b.badgeTone}">${b.badge}</span>` : ''}</div><div>${b.sub}</div></li>`).join('')}
+      </ul>
+      <div class="burnrules">A registered burn stops counting as planned, and is treated as a possible wildfire, if it is
+        <b>outside the registered area</b> or <b>still burning after the end time</b>.</div>`;
   } else {
-    body = `<ul>${v.dataRows.map(d => `
-      <li class="row" style="justify-content:space-between"><b>${d.name}</b><span class="muted">${d.age}</span></li>`).join('')}</ul>`;
+    body = `<ul>${v.dataRows.map(([name, age]) => `
+      <li class="row" style="justify-content:space-between"><b>${name}</b><span class="muted">${age}</span></li>`).join('')}</ul>`;
   }
 
   return `
     <section class="status" aria-label="Fire status">
       <h2 style="color:${v.statusColor}">${v.statusLabel}</h2>
       <div class="ringrow">${ring(v.conf, 112, 32)}${reasonList(v)}</div>
+      ${ruleCheck(v)}
       <div class="note">Alerts go out automatically at 70%</div>
       <div class="facts">
-        <div><div>Likely cause</div><div>Power line down</div></div>
-        <div><div>Heading</div><div>N-NE, 2–3 mph</div></div>
-        <div><div>Nearest water</div><div>Stock pond</div></div>
-        <div><div>Brush 1</div><div>${v.brushStatus}</div></div>
+        ${v.facts.map(([label, value]) => `<div><div>${label}</div><div>${value}</div></div>`).join('')}
       </div>
       <div class="actions">
         <button type="button" class="btn-light" data-act="ask">Ask nearby people</button>
@@ -455,34 +903,34 @@ function confCard(v) {
   <section class="confcard" aria-label="Fire status">
     <h2 style="color:${v.statusColor}">${v.statusLabel}</h2>
     <div class="ringrow" style="gap:12px;margin-top:8px">${ring(v.conf, 92, 26)}${reasonList(v)}</div>
+    ${ruleCheck(v)}
     <div class="facts" style="margin-top:10px;padding-top:8px">
-      <div><div>Likely cause</div><div style="font-size:13px">Power line down</div></div>
-      <div><div>Heading</div><div style="font-size:13px">N-NE, 2–3 mph</div></div>
+      ${v.facts.slice(0, 2).map(([label, value]) => `<div><div>${label}</div><div style="font-size:13px">${value}</div></div>`).join('')}
     </div>
   </section>`;
 }
 
-function alertHtml() {
+function alertHtml(p) {
   return `
   <div class="overlay">
     <div class="alert" role="alertdialog" aria-label="Firewatch alert sent">
       <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px">
         <div style="font-weight:600;font-size:18px">Firewatch alert sent</div>
-        <div class="muted" style="font-size:13px">1:53 pm</div>
+        <div class="muted" style="font-size:13px">${p.time}</div>
       </div>
       <div class="muted" style="font-size:13px;margin-top:4px">This is the text people get on their phones:</div>
       <div class="sms">
-        <div style="font-weight:600">Likely wildfire, 80% confidence</div>
-        <div>11 mi NW of station, at the oil-lease line by Rd 14.</div>
-        <div>Cause: power line down.</div>
-        <div>Moving N-NE. Wind S 35, gusts 55.</div>
-        <div>3 homes in the path. Nearest water: stock pond.</div>
+        ${p.sms.map(line => line.startsWith('<b>') ? `<div style="font-weight:600">${line.slice(3, -4)}</div>` : `<div>${line}</div>`).join('')}
         <div style="text-decoration:underline">Open map</div>
       </div>
-      <div class="muted" style="margin-top:10px;font-size:13px">Sent to the chief, county dispatch, the rancher downwind, the lease operator and 3 homes. Plain text, so it works on one bar of signal.</div>
+      <div class="muted" style="margin-top:10px;font-size:13px">${p.sentTo}</div>
       <button type="button" data-act="closeAlert">Close</button>
     </div>
   </div>`;
+}
+
+function outcomeHtml(o) {
+  return `<section class="outcome" aria-label="Outcome"><div class="outcome-title">${o.title}</div><div class="outcome-sub">${o.sub}</div></section>`;
 }
 
 /* ---------- Render ---------- */
@@ -491,21 +939,39 @@ function alertHtml() {
 const app = document.getElementById('app');
 const regions = {
   modes: document.getElementById('modes'),
+  conditions: document.getElementById('conditions'),
+  scenarioSelect: document.getElementById('scenarioSelect'),
   tiles: document.getElementById('tiles'),
   body: document.getElementById('body'),
   aside: document.getElementById('aside'),
   toolbar: document.getElementById('toolbar'),
   overlays: document.getElementById('mapOverlays'),
+  windText: document.querySelector('#windCompass .windtext'),
   footer: document.getElementById('footer')
 };
+regions.scenarioSelect.innerHTML = SCENARIO_MENU.map(([key, label]) => `<option value="${key}">${label}</option>`).join('');
 
 function render(focusAct) {
   const v = compute();
+  const sc = v.sc;
   const chips = v.full ? CHIPS : CHIPS.concat([{ key: 'conf', label: 'Confidence' }]);
 
   regions.modes.innerHTML = `
     <button type="button" class="${!v.full ? 'on' : ''}" aria-pressed="${!v.full}" data-act="mode:simple">Simple</button>
     <button type="button" class="${v.full ? 'on' : ''}" aria-pressed="${v.full}" data-act="mode:full">Full</button>`;
+  regions.scenarioSelect.value = state.scenario;
+
+  // Header: day type badge and weather for this scenario and step.
+  const c = v.conditions;
+  regions.conditions.innerHTML = `
+    <div class="condday">
+      <span class="${c.badgeClass}">${c.badge}</span>
+      <span class="condnote muted">${c.note}</span>
+    </div>
+    <div class="weather">
+      ${c.weather.map(([label, value]) => `<div><span class="muted">${label} </span><b>${value}</b></div>`).join('')}
+    </div>`;
+  regions.windText.innerHTML = `<b>Wind from ${v.wind.dir},</b><br>${v.wind.text}`;
 
   regions.tiles.innerHTML = v.tiles.map(t => `
     <div class="tile">
@@ -528,33 +994,43 @@ function render(focusAct) {
 
   regions.overlays.innerHTML =
     (!v.full && state.layers.conf ? confCard(v) : '') +
-    (v.k === 3 && !state.alertClosed ? alertHtml() : '');
+    (sc.outcome && v.k >= sc.outcome.at ? outcomeHtml(sc.outcome) : '') +
+    (sc.popup && v.k === sc.popup.at && !state.alertClosed ? alertHtml(sc.popup) : '');
+
+  const powerSwitch = state.scenario === 'real' ? `
+      <button type="button" class="pswitch ${state.powerData ? 'on' : ''}" aria-pressed="${state.powerData}" data-act="power">
+        <span class="pswitch-track"><span class="pswitch-knob"></span></span>Co-op power data: <b>${state.powerData ? 'On' : 'Off'}</b>
+      </button>` : '';
 
   regions.footer.innerHTML = `
-    <div class="controls">
-      <button type="button" data-act="back">Back</button>
-      <button type="button" class="play" data-act="play">${state.playing ? 'Pause' : 'Play'}</button>
-      <button type="button" data-act="next">Next</button>
+    <div class="ctlcol">
+      <div class="controls">
+        <button type="button" data-act="back">Back</button>
+        <button type="button" class="play" data-act="play">${state.playing ? 'Pause' : 'Play'}</button>
+        <button type="button" data-act="next">Next</button>
+      </div>
+      ${powerSwitch}
     </div>
     <div style="min-width:0">
       <div class="steps">
-        ${STEPS.map((s, i) => `<button type="button" class="${i === v.k ? 'on' : i < v.k ? 'done' : ''}" aria-label="Go to ${s.time} pm" data-act="step:${i}">${s.time}</button>`).join('')}
+        ${sc.steps.map((s, i) => `<button type="button" class="${i === v.k ? 'on' : i < v.k ? 'done' : ''}" aria-label="Go to ${s.time} ${stepAmPm(sc, s)}" data-act="step:${i}">${s.time}</button>`).join('')}
       </div>
       <div class="caption">${v.now.caption}</div>
-      <div class="real">What really happened at ${v.now.time}: ${v.now.real}</div>
+      ${v.now.real ? `<div class="real">What really happened at ${v.now.time}: ${v.now.real}</div>` : ''}
+      ${sc.extraLine ? `<div class="offnote">${sc.extraLine}</div>` : ''}
     </div>
     <div class="compare">
       <span></span>
-      <span style="font-size:12px;font-weight:600;color:var(--fire)">Firewatch</span>
-      <span class="muted" style="font-size:12px">Real day</span>
+      <span style="font-size:12px;font-weight:600;color:var(--fire)">${sc.compareCols[0]}</span>
+      <span class="muted" style="font-size:12px">${sc.compareCols[1]}</span>
       ${v.compare.map(c => `
         <span class="muted">${c.label}</span>
         <span style="font-weight:600;color:${c.color}">${c.ours}</span>
-        <span class="muted">${c.real}</span>`).join('')}
+        <span class="muted">${c.other}</span>`).join('')}
     </div>`;
 
-  // 3D map: only moves/resizes/hides existing entities.
-  Map3D.update({ k: v.k, acres: v.now.acres, nSteps: STEPS.length, layers: state.layers });
+  // 3D map: only moves/resizes/hides existing objects.
+  Map3D.update(Object.assign({ layers: state.layers, wind: { towardDeg: v.wind.towardDeg, mph: v.wind.mph } }, sc.map(v.k, v)));
 
   if (focusAct) {
     const el = app.querySelector(`[data-act="${focusAct}"]`);
@@ -569,17 +1045,26 @@ function stopTimer() {
 }
 
 function goTo(i) {
-  state.step = Math.max(0, Math.min(STEPS.length - 1, i));
+  state.step = Math.max(0, Math.min(scenario().steps.length - 1, i));
   state.alertClosed = false;
   state.actionMsg = '';
 }
 
+// Switching scenario (or the power-data switch) restarts playback at step 1.
+function setScenario(key) {
+  stopTimer();
+  state.scenario = key;
+  // Layers a scenario turns on by itself (Planned burn shows Permitted burns).
+  state.layers.burns = !!(SCENARIOS[key].layersOnEnter && SCENARIOS[key].layersOnEnter.burns);
+  goTo(0);
+}
+
 function togglePlay() {
   if (state.playing) { stopTimer(); return; }
-  if (state.step >= STEPS.length - 1) goTo(0);
+  if (state.step >= scenario().steps.length - 1) goTo(0);
   state.playing = true;
   timer = setInterval(() => {
-    if (state.step >= STEPS.length - 1) { stopTimer(); render(); return; }
+    if (state.step >= scenario().steps.length - 1) { stopTimer(); render(); return; }
     goTo(state.step + 1);
     render();
   }, 2800);
@@ -600,11 +1085,17 @@ app.addEventListener('click', e => {
   else if (name === 'back') { stopTimer(); goTo(state.step - 1); }
   else if (name === 'next') { stopTimer(); goTo(state.step + 1); }
   else if (name === 'play') togglePlay();
+  else if (name === 'power') { stopTimer(); state.powerData = !state.powerData; goTo(0); }
   else if (name === 'closeAlert') state.alertClosed = true;
   else if (name === 'ask') state.actionMsg = 'Texted 4 people within 5 miles: “Can you see smoke? Reply YES or NO.”';
   else if (name === 'false') state.actionMsg = 'Marked as a false alarm. Alerts stop.';
 
   render(act);
+});
+
+regions.scenarioSelect.addEventListener('change', e => {
+  setScenario(e.target.value);
+  render();
 });
 
 render();

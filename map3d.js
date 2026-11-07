@@ -3,27 +3,44 @@
 
    How it fits together:
    - index.html calls Map3D.init(...) once. That creates ONE Cesium viewer
-     and every map object (fire, homes, water, roads, wind...).
+     and every map object (fires, homes, water, roads, wind...).
    - Every time the dashboard state changes, index.html calls
-     Map3D.update({ k, acres, nSteps, layers }). That only changes
-     existing objects (positions, sizes, show/hide). Nothing is rebuilt.
-   - Map3D.resetView() flies the camera back to the starting view.
+     Map3D.update(mapState) with a description of what the map should show
+     for the current scenario and step (see "MAP STATE" below). That only
+     changes existing objects (positions, sizes, show/hide). Nothing is rebuilt.
+   - Map3D.resetView() flies the camera back to the scenario's starting view.
+
+   MAP STATE (built in index.html, one per scenario step):
+     {
+       layers:      { spread, houses, water, stations, power, burns, risk, wind }  chip on/off
+       view:        'district' | 'burn'          which CAMERAS preset to use
+       wind:        { towardDeg, mph }           direction the wind blows TO, speed
+       fires: {
+         A: { place, acres, cones, card } | null    fire with forecast cones
+         B: { place, acres, card } | null           a second fire (e.g. the planned burn)
+       }
+         place = a key of PLACES; card = { tone: 'orange'|'cream', title, sub }
+         (sub 'lineDistance' = live distance of the fire head from the power line)
+       firebreak, reporter, route, lineFault, burnArea:  true/false
+       homesInPath: a key of HOME_GROUPS or null (those homes turn orange)
+       homesCard:   { group, title, sub } | null
+     }
 
    HOW TO MOVE THINGS
-   Every feature is placed in MILES EAST and MILES NORTH of the fire start,
-   written as [east, north]. Negative east = west, negative north = south.
+   Every feature is placed in MILES EAST and MILES NORTH of the Cottonwood
+   Creek fire start, written as [east, north]. Negative east = west,
+   negative north = south.
    - To move the whole district somewhere else, change ORIGIN only.
    - To move one feature, change its [east, north] pair in section 2.
-   Some fire-related features (firebreak) are placed in the WIND FRAME
-   instead: "along" = miles downwind of the fire start, "across" = miles to
-   the right of the wind. Those are marked where they are defined.
+   Fire shapes and the firebreak are built in the WIND FRAME: "along" =
+   miles downwind of the fire's start point, "across" = miles to the right.
    ===================================================================== */
 (function () {
   'use strict';
 
   /* ---------- 1. Anchor point and unit conversion ---------- */
 
-  // The fire start (where the power line drops into the grass).
+  // The Cottonwood Creek fire start (where the power line drops into the grass).
   // Real terrain: Red Hills / Gyp Hills, western Barber County, Kansas.
   // Creek valleys here sit around 520 m with ridges at 560 to 600 m.
   const ORIGIN = { lat: 37.200, lon: -98.985 };
@@ -75,18 +92,19 @@
     [0.15, -0.20]
   ];
 
-  // Homes. path: true = in the fire path (orange).
-  // The 3 path homes sit about 2.2 to 2.5 mi downwind (NNE): inside the
-  // 60-minute cone from 1:51 on, and ahead of the fire and firebreak at 2:22.
+  // Homes. HOME_GROUPS below says which ones turn orange ("in the path").
   const HOMES = [
-    { at: [0.48, 2.45], path: true },
-    { at: [0.95, 2.02], path: true },   // the rancher (has a disc)
-    { at: [0.62, 2.20], path: true },
-    { at: [5.80, -1.60], path: false },
-    { at: [-5.60, 0.40], path: false },
-    { at: [10.50, 4.00], path: false },
-    { at: [-7.60, 4.60], path: false }
+    [0.48, 2.45],     // 0  \
+    [0.95, 2.02],     // 1   > 3 homes ~2.2 to 2.5 mi downwind (NNE) of the
+    [0.62, 2.20],     // 2  /  Cottonwood Creek fire start (1 = the rancher)
+    [5.80, -1.60],    // 3
+    [-5.60, 0.40],    // 4
+    [10.50, 4.00],    // 5
+    [-7.60, 4.60],    // 6
+    [5.90, -4.40],    // 7  \  2 homes ~1.2 and ~1.6 mi NE (downwind) of the
+    [6.20, -4.15]     // 8  /  planned-burn escape
   ];
+  const HOME_GROUPS = { fire: [0, 1, 2], escape: [7, 8] };
 
   // Water sources.
   const STOCK_POND = { at: [-0.55, 1.15], semiMajorM: 130, semiMinorM: 85 };
@@ -102,13 +120,30 @@
     { at: [-4.4, -3.6], radiusMi: 0.35, label: 'Permitted burn, Sun (out)' }
   ];
 
-  // Wind: from the south at 35 mph, gusts 55, blowing toward the NNE.
-  // The fire spreads (and the forecast cones point) the same way: FIRE uses
-  // WIND.towardDeg, so changing it here turns the streaks, compass, fire AND cones.
+  // "Planned burn" scenario: the registered burn area. A half-mile square
+  // (160 acres) of pasture about 4 mi NW of the fire station, just SW of the
+  // gravel road, so an escape to the NE "jumps the road".
+  const SECTION_22 = {
+    center: [4.6, -5.6],
+    halfMi: 0.25,                          // 0.5 mi x 0.5 mi = 160 acres
+    label: 'Registered burn: Section 22, 10:00 am to 2:00 pm'
+  };
+
+  // Where each fire starts (a fire grows downwind from its start point).
+  const PLACES = {
+    line:   [0, 0],                                                        // Cottonwood Creek fire
+    burn:   [SECTION_22.center[0] - 0.18, SECTION_22.center[1] - 0.18],     // lit in the SW of Section 22
+    escape: [SECTION_22.center[0] + 0.42, SECTION_22.center[1] + 0.42]      // 0.6 mi NE of the section center, across the road
+  };
+
+  // Wind (defaults; each scenario sets its own direction and speed).
+  // The fire shapes, forecast cones, streaks and compass all follow the
+  // direction set here, so they always agree.
   const WIND = {
     towardDeg: 20,           // direction the wind blows TO (clockwise from north)
+    referenceMph: 35,        // streaks move at speedMiPerSec at this wind speed
     // Streak animation (miles and seconds). Map speed is sped up so motion is
-    // visible at district scale: a streak crosses the district in ~50 s.
+    // visible at district scale: a streak crosses the district in ~50 s at 35 mph.
     speedMiPerSec: 0.45,
     spacingAcrossMi: 1.5,    // streak grid spacing across the wind...
     spacingAlongMi: 2.1,     // ...and along it (each streak is jittered randomly)
@@ -121,24 +156,23 @@
     gustAlpha: 0.75, gustSeconds: 2.6, gustEveryMin: 5, gustEveryMax: 10, gustRadiusMi: 3.5
   };
 
-  // Fire shape. Acres come from STEPS in index.html. The fire is stretched
-  // downwind: its back stays at the power line, its head runs NNE.
-  // At 2:22 (600 acres) it is about 1.6 mi long and 0.7 mi wide.
+  // Fire shape. The fire is stretched downwind: its back stays at its start
+  // point, its head runs with the wind. Bigger fires get more stretched.
+  // At 600 acres it is about 1.6 mi long and 0.7 mi wide.
   const FIRE = {
-    bearingDeg: WIND.towardDeg,   // north-northeast, same as the wind
-    minAcres: 0.5,      // so the 1:50 spark is still visible
-    ratioStart: 1.8,    // length / width at the first step
-    ratioEnd: 2.2,      // length / width at the last step
-    tailFraction: 0.1,  // how far the fire backs up behind the line (share of half-length)
+    minAcres: 0.5,      // so a just-started fire is still visible
+    ratioSmall: 1.8,    // length / width of a tiny fire
+    ratioLarge: 2.2,    // length / width at 600 acres and up
+    tailFraction: 0.1,  // how far the fire backs up behind its start (share of half-length)
     headBulge: 0.22,    // >0 makes the head wider and the back narrower (teardrop)
     points: 140,        // perimeter points
     noiseSeed: 11,      // change for a differently shaped (but still stable) perimeter
-    growSeconds: 0.8,   // how long the fire takes to grow to the next step's size
-    embers: 110,        // max glowing ember dots inside the burned area
-    smokePuffs: 36      // smoke billboards drifting downwind from the head
+    growSeconds: 0.8,   // how long a fire takes to grow to the next step's size
+    embers: 110,        // max glowing ember dots inside a burned area
+    smokePuffs: 36      // smoke billboards drifting downwind from a head
   };
 
-  // Fire path forecast cones. They start at the HEAD of the fire and point
+  // Fire path forecast cones. They start at the HEAD of fire A and point
   // downwind. The facts panel says the head moves 2 to 3 mph, so ~1.25 mi per 30 min.
   // widen/extraMi: half-width at the far edge = fire half-width * widen + extraMi.
   const CONES = [
@@ -146,20 +180,18 @@
     { key: 'c30', label: 'in 30 min', aheadMi: 1.25, widen: 1.6, extraMi: 0.3, fill: 0.14, edge: 0.7,  z: 3 }
   ];
 
-  // Firebreak the rancher discs (shown from 1:59). WIND FRAME: it runs across
-  // the fire's path, perpendicular to the wind, between the fire head
-  // (~1.5 mi downwind at 2:22) and the 3 homes (~2.2 to 2.5 mi downwind).
+  // Firebreak the rancher discs (Cottonwood Creek fire, from 1:59). WIND FRAME:
+  // it runs across the fire's path, perpendicular to the wind, between the fire
+  // head (~1.5 mi downwind at 2:22) and the 3 homes (~2.2 to 2.5 mi downwind).
   const FIREBREAK_WIND = { alongMi: 1.85, halfLengthMi: 0.75, wobbleMi: 0.025 };
 
-  // Starting camera: looking NNE, tilted 45 degrees down, framing the fire,
-  // the station and the area the fire spreads into.
-  // The target sits between the fire and the station, so the station (near
-  // edge) and the 60-minute cone (far edge) both fit on a 1440 x 900 screen.
-  const CAMERA = {
-    target: [3.5, -2.8],   // point the camera looks at (miles east/north)
-    headingDeg: 20,        // direction the camera faces (clockwise from north)
-    pitchDeg: -45,         // tilt (-90 = straight down)
-    rangeM: 32000          // distance from the target, in meters (tested in Simple and Full view)
+  // Starting cameras, looking downwind, tilted 45 degrees down.
+  //   district: the fire, the station and the area the fire spreads into
+  //             (fits on a 1440 x 900 screen in Simple and Full view).
+  //   burn:     closer view of Section 22, the escape and the homes downwind.
+  const CAMERAS = {
+    district: { target: [3.5, -2.8], headingDeg: 20, pitchDeg: -45, rangeM: 32000 },
+    burn:     { target: [5.1, -5.6], headingDeg: 30, pitchDeg: -45, rangeM: 12500 }
   };
 
   // Scene look.
@@ -194,19 +226,28 @@
   /* ---------- 4. Geometry helpers ---------- */
 
   const rad = d => d * Math.PI / 180;
-  const SIN_B = Math.sin(rad(FIRE.bearingDeg));
-  const COS_B = Math.cos(rad(FIRE.bearingDeg));
 
-  // Wind frame -> [east, north]. along = miles downwind of the fire start,
-  // across = miles to the right of the wind.
-  function fireFrame(along, across) {
-    return [along * SIN_B + across * COS_B, along * COS_B - across * SIN_B];
+  // Current wind direction (sin/cos of the bearing the wind blows toward).
+  let SIN_B = 0, COS_B = 1;
+  function setBearing(deg) {
+    WIND.towardDeg = deg;
+    SIN_B = Math.sin(rad(deg));
+    COS_B = Math.cos(rad(deg));
+  }
+  setBearing(WIND.towardDeg);
+
+  // Wind frame -> [east, north]. along = miles downwind, across = miles to
+  // the right of the wind. Optional origin offsets the result.
+  function fireFrame(along, across, origin) {
+    const e = along * SIN_B + across * COS_B, n = along * COS_B - across * SIN_B;
+    return origin ? [origin[0] + e, origin[1] + n] : [e, n];
   }
   // [east, north] -> wind frame [along, across].
   const toWindFrame = p => [p[0] * SIN_B + p[1] * COS_B, p[0] * COS_B - p[1] * SIN_B];
 
   const lerp = (p, q, t) => [p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t];
   const closed = pts => pts.concat([pts[0]]);
+  const centerOf = pts => [pts.reduce((s, p) => s + p[0], 0) / pts.length, pts.reduce((s, p) => s + p[1], 0) / pts.length];
 
   function circle(center, rMi, n = 48) {
     const pts = [];
@@ -244,12 +285,12 @@
   }
   const BUMP = Array.from({ length: FIRE.points }, (_, i) => bump((2 * Math.PI * i) / FIRE.points));
 
-  // Fire size for a step. a = half-length, b = half-width, c = center
+  // Fire size from acres. a = half-length, b = half-width, c = center
   // distance downwind of the start (all miles).
-  function fireSize(acres, k, nSteps) {
+  function fireSize(acres) {
     const ac = Math.max(parseFloat(acres) || 0, FIRE.minAcres);
-    const t = nSteps > 1 ? k / (nSteps - 1) : 1;
-    const ratio = FIRE.ratioStart + (FIRE.ratioEnd - FIRE.ratioStart) * t;
+    const t = Math.min(1, Math.max(0, Math.log(ac / FIRE.minAcres) / Math.log(600 / FIRE.minAcres)));
+    const ratio = FIRE.ratioSmall + (FIRE.ratioLarge - FIRE.ratioSmall) * t;
     const a = Math.sqrt((ac / 640) * ratio / Math.PI);   // 640 acres per sq mi
     return { a, b: a / ratio, c: a * (1 - FIRE.tailFraction), acres: ac };
   }
@@ -261,8 +302,8 @@
     return [s.c + s.a * ct * m * r, s.b * Math.sin(th) * (1 + FIRE.headBulge * ct) * m * r];
   }
 
-  // Full fire geometry for a size: outline, head point, center.
-  function fireGeometry(s) {
+  // Full fire geometry for a size and start point: outline, head point, center.
+  function fireGeometry(s, origin) {
     const local = [];
     let head = [-1e9, 0];
     for (let i = 0; i < FIRE.points; i++) {
@@ -271,30 +312,30 @@
       if (p[0] > head[0]) head = p;
     }
     return {
-      s,
-      outline: local.map(p => fireFrame(p[0], p[1])),
-      headW: head,                         // head in the wind frame [along, across]
-      head: fireFrame(head[0], head[1]),   // head in [east, north]
-      center: fireFrame(s.c, 0)
+      s, origin,
+      outline: local.map(p => fireFrame(p[0], p[1], origin)),
+      headW: head,                                 // head in the wind frame [along, across]
+      head: fireFrame(head[0], head[1], origin),   // head in [east, north]
+      center: fireFrame(s.c, 0, origin)
     };
   }
 
   // Forecast cone from the fire head out to a curved front edge.
   function coneGeometry(g, cone) {
-    const [h0, hc] = g.headW;
+    const [h0, hc] = g.headW, o = g.origin;
     const base = Math.max(g.s.b * 0.5, 0.04);
     const far = h0 + cone.aheadMi;
     const hw = g.s.b * cone.widen + cone.extraMi;
     const front = [];
     for (let j = 0; j <= 12; j++) {
       const u = -1 + j / 6;                       // -1 .. 1 across the front
-      front.push(fireFrame(far - 0.25 * hw * u * u, hc + hw * u));
+      front.push(fireFrame(far - 0.25 * hw * u * u, hc + hw * u, o));
     }
-    const left = fireFrame(h0, hc - base), right = fireFrame(h0, hc + base);
+    const left = fireFrame(h0, hc - base, o), right = fireFrame(h0, hc + base, o);
     return {
       fill: [left].concat(front, [right]),
       edge: [left].concat(front, [right]),   // open: no line across the fire head
-      tip: fireFrame(far + 0.08, hc)         // label spot just past the outer edge
+      tip: fireFrame(far + 0.08, hc, o)      // label spot just past the outer edge
     };
   }
 
@@ -314,17 +355,18 @@
     return inside;
   }
 
-  const FIREBREAK = (() => {
+  // Firebreak points for the current wind direction (in front of the line fire).
+  function firebreakPoints() {
     const f = FIREBREAK_WIND, pts = [];
     for (let i = 0; i <= 8; i++) {
-      pts.push(fireFrame(f.alongMi + f.wobbleMi * Math.sin(i * 1.7), -f.halfLengthMi + (2 * f.halfLengthMi * i) / 8));
+      pts.push(fireFrame(f.alongMi + f.wobbleMi * Math.sin(i * 1.7), -f.halfLengthMi + (2 * f.halfLengthMi * i) / 8, PLACES.line));
     }
     return pts;
-  })();
+  }
 
-  const PATH_HOMES_CENTER = (() => {
-    const ph = HOMES.filter(h => h.path);
-    return [ph.reduce((s, h) => s + h.at[0], 0) / ph.length, ph.reduce((s, h) => s + h.at[1], 0) / ph.length];
+  const SECTION_22_CORNERS = (() => {
+    const [x, y] = SECTION_22.center, h = SECTION_22.halfMi;
+    return [[x - h, y - h], [x + h, y - h], [x + h, y + h], [x - h, y + h]];
   })();
 
 
@@ -387,19 +429,20 @@
   let viewer = null;
   let ready = false;
   let pending = null;       // last update() call made before the viewer was ready
-  let cur = { k: 0, layers: {}, acres: '0', nSteps: 8 };   // last applied dashboard state
-  let lastStep = -1;
+  let cur = null;           // last applied map state
+  let curView = null;
   let targetHeightM = 550;  // replaced by a terrain sample at startup
   let msgEl = null;
   let compassEl = null;     // wind compass card (HTML, over the map)
   let mapRoot = null;       // the .map element (for HTML labels)
 
   const layers = {};        // parent entity per "Show on map" chip
-  const E = {};             // entities that change per step
+  const E = {};             // entities that change with the scenario or step
+  const slots = {};         // fire slots A and B (see section 7)
 
   function add(opts) { return viewer.entities.add(opts); }
 
-  // Tiny placeholder shape for entities whose real geometry is set per step.
+  // Tiny placeholder shape for entities whose real geometry is set later.
   const PLACEHOLDER = [[0, 0], [0.01, 0], [0, 0.01]];
 
   // Shared settings for markers pinned to the ground and drawn over hills.
@@ -439,7 +482,7 @@
     }
     if (out) {
       heights = Float32Array.from(out, q => (Number.isFinite(q.height) ? q.height : targetHeightM));
-      fx.emberA = NaN;   // re-seat embers on the real terrain
+      for (const id in slots) slots[id].emberA = NaN;   // re-seat embers on the real terrain
     }
   }
   function heightAt(e, n) {
@@ -461,9 +504,10 @@
     for (const key of ['spread', 'houses', 'water', 'stations', 'power', 'burns', 'risk']) {
       layers[key] = add({ id: 'layer-' + key });
     }
-    // Groups that depend on the time step, not on a chip.
+    // Groups switched by the scenario / step, not by a chip.
     E.breakGroup = add({ id: 'step-firebreak' });
     E.reporterGroup = add({ id: 'step-reporter' });
+    E.burnAreaGroup = add({ id: 'burn-area', parent: layers.burns });
 
     // --- District boundary (always on) ---
     add({ polyline: groundLine(closed(DISTRICT_CORNERS), col(HEX.cream, 0.55), 2, { length: 16 }) });
@@ -484,15 +528,9 @@
       add({ parent: layers.burns, position: pos(b.at), ellipse: { semiMajorAxis: b.radiusMi * METERS_PER_MILE, semiMinorAxis: b.radiusMi * METERS_PER_MILE, material: col(HEX.burn, 0.35), zIndex: 1 } });
       add({ parent: layers.burns, polyline: groundLine(closed(circle(b.at, b.radiusMi)), col(HEX.muted), 1.5, { length: 8 }) });
     }
-
-    // --- Fire path forecast cones (geometry set per step) ---
-    for (const c of CONES) {
-      E[c.key] = {
-        fill: add({ parent: layers.spread, polygon: { hierarchy: posList(PLACEHOLDER), material: col(HEX.fire, c.fill), zIndex: c.z } }),
-        edge: add({ parent: layers.spread, polyline: groundLine(PLACEHOLDER, col(HEX.fire, c.edge), 1.5, { length: 12 }, 1) }),
-        tip: [0, 0]
-      };
-    }
+    // Registered burn area (Planned burn scenario): gray dashed square.
+    add({ parent: E.burnAreaGroup, polygon: { hierarchy: posList(SECTION_22_CORNERS), material: col(HEX.burn, 0.22), zIndex: 1 } });
+    add({ parent: E.burnAreaGroup, polyline: groundLine(closed(SECTION_22_CORNERS), col('#C9C2B6'), 2, { length: 10 }, 1) });
 
     // --- Power line with pole markers ---
     add({ parent: layers.power, polyline: groundLine([POWER_LINE.from, POWER_LINE.to], col(HEX.power), 2) });
@@ -507,112 +545,109 @@
     add({ parent: layers.stations, position: pos(MUTUAL_AID), billboard: billboard(squareIcon(12, null, HEX.cream, 1.5)) });
     E.route = add({ parent: layers.stations, polyline: groundLine(ROUTE, col(HEX.cream, 0.95), 3, { length: 12, pattern: 0xF0F0 }, 2) });
 
-    // --- Homes ---
-    const homePath = squareIcon(9, HEX.fireSoft, HEX.fire, 1.5);
-    const homeSafe = squareIcon(9, HEX.cream, HEX.cream, 1.5);
-    for (const h of HOMES) add({ parent: layers.houses, position: pos(h.at), billboard: billboard(h.path ? homePath : homeSafe) });
+    // --- Homes (orange when in the path, see HOME_GROUPS) ---
+    E.homeIcons = { path: squareIcon(9, HEX.fireSoft, HEX.fire, 1.5), safe: squareIcon(9, HEX.cream, HEX.cream, 1.5) };
+    E.homes = HOMES.map(h => add({ parent: layers.houses, position: pos(h), billboard: billboard(E.homeIcons.safe) }));
+    E.homesPath = undefined;
 
-    // --- Firebreak (from 1:59), across the wind ahead of the fire ---
-    add({ parent: E.breakGroup, polyline: groundLine(FIREBREAK, col(HEX.brk), 4, { length: 18, pattern: 0xFFF0 }, 3) });
+    // --- Firebreak (Cottonwood Creek fire), across the wind ahead of the fire ---
+    E.firebreak = add({ parent: E.breakGroup, polyline: groundLine(firebreakPoints(), col(HEX.brk), 4, { length: 18, pattern: 0xFFF0 }, 3) });
 
     // --- Water ---
     add({ parent: layers.water, position: pos(STOCK_POND.at), ellipse: { semiMajorAxis: STOCK_POND.semiMajorM, semiMinorAxis: STOCK_POND.semiMinorM, material: col(HEX.water, 0.8), zIndex: 7 } });
     add({ parent: layers.water, position: pos(WATER_TRUCK), billboard: billboard(rectIcon(16, 9, HEX.water, HEX.waterText)) });
     add({ parent: layers.water, position: pos(TANK), billboard: billboard(ringIcon(6, HEX.water, 2)) });
 
-    // --- Neighbor photo report (from 1:59) ---
+    // --- Neighbor photo report (Cottonwood Creek fire, from 1:59) ---
     E.reporterLine = add({ parent: E.reporterGroup, polyline: groundLine([REPORTER, [0, 0]], col(HEX.cream, 0.85), 1.5, { length: 8 }, 4) });
     add({ parent: E.reporterGroup, position: pos(REPORTER), point: Object.assign(ON_GROUND(), { pixelSize: 11, color: col(HEX.cream), outlineColor: col(HEX.bg), outlineWidth: 1 }) });
 
-    // --- The fire itself (always on) ---
-    E.headGlow = add({ position: pos([0, 0]), ellipse: { semiMajorAxis: 1, semiMinorAxis: 1, material: col(HEX.fireEdge, 0.14), zIndex: 4 } });
-    E.fireFill = add({ polygon: { hierarchy: posList(PLACEHOLDER), zIndex: 6,
-      material: new Cesium.ImageMaterialProperty({ image: smokyTexture(), transparent: true }) } });
-    // Edge: a wide soft glow under a thin bright core line.
-    E.fireGlow = add({ polyline: { positions: posList(PLACEHOLDER), clampToGround: true, width: 16, zIndex: 10,
-      material: new Cesium.PolylineGlowMaterialProperty({ color: col(HEX.fireEdge, 0.85), glowPower: 0.2, taperPower: 1 }) } });
-    E.fireCore = add({ polyline: groundLine(PLACEHOLDER, col(HEX.fireEdge), 2.5, null, 11) });
-    // Where the line came down.
-    add({ position: pos([0, 0]), point: Object.assign(ON_GROUND(), { pixelSize: 6, color: col(HEX.fireSoft), outlineColor: col(HEX.bg), outlineWidth: 1 }) });
+    // --- Where the power line came down / tripped ---
+    E.faultDot = add({ position: pos(PLACES.line), point: Object.assign(ON_GROUND(), { pixelSize: 6, color: col(HEX.fireSoft), outlineColor: col(HEX.bg), outlineWidth: 1 }) });
   }
 
-  // Update all fire-shaped geometry for one fire size (called at step changes
-  // and a few times while the fire grows to the next size).
-  function setFireGeometry(g) {
-    E.fireFill.polygon.hierarchy = new Cesium.PolygonHierarchy(posList(g.outline));
-    const ring = posList(closed(g.outline));
-    E.fireGlow.polyline.positions = ring;
-    E.fireCore.polyline.positions = ring;
-
-    const glowR = (0.08 + g.s.b * 0.7) * METERS_PER_MILE;
-    E.headGlow.position = pos(fireFrame(g.headW[0] - g.s.a * 0.15, g.headW[1]));
-    E.headGlow.ellipse.semiMajorAxis = glowR;
-    E.headGlow.ellipse.semiMinorAxis = glowR;
-
-    for (const c of CONES) {
-      const cg = coneGeometry(g, c);
-      E[c.key].fill.polygon.hierarchy = new Cesium.PolygonHierarchy(posList(cg.fill));
-      E[c.key].edge.polyline.positions = posList(cg.edge);
-      E[c.key].tip = cg.tip;
-      E[c.key].pts = cg.fill;
-    }
-    E.reporterLine.polyline.positions = posList([REPORTER, g.center]);
-  }
-
-  function applyStep(k, acres, nSteps) {
-    const target = fireSize(acres, k, nSteps);
-    const now = performance.now() / 1000;
-    if (!fx.size || lastStep < 0) {
-      fx.from = fx.to = fx.size = target;
-      fx.t0 = now - FIRE.growSeconds;
-      setFireGeometry(fireGeometry(target));
-    } else {
-      fx.from = fx.size;          // grow (or shrink, going Back) from the current size
-      fx.to = target;
-      fx.t0 = now;
-      fx.lastGeomT = 0;
-    }
-    fx.headText = null;           // refresh the "Head of the fire" card text
-
-    for (const c of CONES) {
-      const on = k >= 1;          // forecast starts once a fire is suspected (1:51)
-      E[c.key].fill.show = E[c.key].edge.show = on;
-    }
-    E.route.show = k >= 6;        // Brush 1 leaves at 2:04
-    E.breakGroup.show = k >= 5;   // rancher starts the disc line at 1:59
-    E.reporterGroup.show = k >= 5; // neighbor photo at 1:59
-  }
-
-  function apply(u) {
+  function applyState(u) {
     cur = u;
     for (const key in layers) layers[key].show = !!u.layers[key];
     setWindVisible(u.layers.wind !== false);
-    if (u.k !== lastStep) { applyStep(u.k, u.acres, u.nSteps); lastStep = u.k; }
+
+    // Wind direction and speed. A new direction re-shapes fires, cones and the firebreak.
+    if (u.wind && u.wind.towardDeg !== WIND.towardDeg) {
+      setBearing(u.wind.towardDeg);
+      wind.domain = windDomain();
+      E.firebreak.polyline.positions = posList(firebreakPoints());
+      for (const id in slots) slots[id].reshape = true;
+      wind.lastHeading = NaN;
+    }
+    if (u.wind) wind.speedFactor = u.wind.mph / WIND.referenceMph;
+
+    setFire(slots.A, u.fires.A);
+    setFire(slots.B, u.fires.B);
+
+    E.breakGroup.show = !!u.firebreak;
+    E.reporterGroup.show = !!u.reporter;
+    E.route.show = !!u.route;
+    E.faultDot.show = !!u.lineFault;
+    E.burnAreaGroup.show = !!u.burnArea;
+
+    if (u.homesInPath !== E.homesPath) {
+      E.homesPath = u.homesInPath;
+      const inPath = new Set(HOME_GROUPS[u.homesInPath] || []);
+      E.homes.forEach((h, i) => { h.billboard.image = inPath.has(i) ? E.homeIcons.path : E.homeIcons.safe; });
+    }
+
+    if (u.view !== curView) {
+      const first = curView === null;
+      curView = u.view;
+      resetView(first ? 0 : 1.5);
+    }
   }
 
 
-  /* ---------- 7. Fire effects: growth, embers, smoke (animated every frame) ---------- */
+  /* ---------- 7. Fires: shape, growth, glowing edge, embers, smoke ---------- */
 
-  const fx = {
-    size: null, from: null, to: null, t0: 0, lastGeomT: 0, geom: null,
-    embers: [], emberColl: null, emberA: NaN,
-    smoke: [], smokeColl: null, headText: null
-  };
-  const scratchColor = new Cesium.Color();
+  // A fire "slot" is one complete fire (fill, glowing edge, head glow, embers,
+  // smoke, and for slot A the forecast cones). Slot A is the main fire
+  // (Cottonwood Creek, or the escape); slot B is a second fire (the planned burn).
+  function makeFireSlot(id, withCones) {
+    const sl = {
+      id, withCones, on: false, placeKey: null, origin: [0, 0], spec: null,
+      size: null, from: null, to: null, t0: 0, lastGeomT: 0, geom: null, reshape: false,
+      emberA: NaN, emberCount: 0, embers: [], smoke: [], cones: {}
+    };
+    sl.group = add({ id: 'fire-' + id, show: false });
+    sl.headGlow = add({ parent: sl.group, position: pos([0, 0]), ellipse: { semiMajorAxis: 1, semiMinorAxis: 1, material: col(HEX.fireEdge, 0.14), zIndex: 4 } });
+    sl.fill = add({ parent: sl.group, polygon: { hierarchy: posList(PLACEHOLDER), zIndex: 6,
+      material: new Cesium.ImageMaterialProperty({ image: smokyTexture(), transparent: true }) } });
+    // Edge: a wide soft glow under a thin bright core line.
+    sl.glow = add({ parent: sl.group, polyline: { positions: posList(PLACEHOLDER), clampToGround: true, width: 16, zIndex: 10,
+      material: new Cesium.PolylineGlowMaterialProperty({ color: col(HEX.fireEdge, 0.85), glowPower: 0.2, taperPower: 1 }) } });
+    sl.core = add({ parent: sl.group, polyline: groundLine(PLACEHOLDER, col(HEX.fireEdge), 2.5, null, 11) });
 
-  function buildFireFx() {
-    const rnd = seeded(23);
-    fx.emberColl = viewer.scene.primitives.add(new Cesium.PointPrimitiveCollection());
+    if (withCones) {
+      for (const c of CONES) {
+        sl.cones[c.key] = {
+          fill: add({ parent: layers.spread, show: false, polygon: { hierarchy: posList(PLACEHOLDER), material: col(HEX.fire, c.fill), zIndex: c.z } }),
+          edge: add({ parent: layers.spread, show: false, polyline: groundLine(PLACEHOLDER, col(HEX.fire, c.edge), 1.5, { length: 12 }, 1) }),
+          tip: [0, 0], pts: null
+        };
+      }
+    }
+
+    // Embers: fixed spots inside the fire shape (denser near the edge).
+    const rnd = seeded(id === 'A' ? 23 : 31);
+    sl.emberColl = viewer.scene.primitives.add(new Cesium.PointPrimitiveCollection());
+    sl.emberColl.show = false;
     for (let i = 0; i < FIRE.embers; i++) {
       const th = rnd() * 2 * Math.PI;
-      fx.embers.push({
+      sl.embers.push({
         th,
         r: 0.96 * Math.pow(rnd(), 0.3),    // biased toward 1: denser near the edge
         m: bump(th),
         phase: rnd() * 6.283,
         speed: 2 + rnd() * 5,
         hot: rnd() < 0.3,
-        point: fx.emberColl.add({
+        point: sl.emberColl.add({
           pixelSize: 2 + rnd() * 1.5, color: col(HEX.ember), outlineColor: col(HEX.fireEdge, 0.3), outlineWidth: 1.5, show: false,
           // Smaller and fainter from far away, so a small fire is not just an orange blob.
           scaleByDistance: new Cesium.NearFarScalar(2000, 1.6, 35000, 0.45),
@@ -620,52 +655,126 @@
         })
       });
     }
-
+    // Smoke puffs.
     const puff = smokePuffTexture();
-    fx.smokeColl = viewer.scene.primitives.add(new Cesium.BillboardCollection());
+    sl.smokeColl = viewer.scene.primitives.add(new Cesium.BillboardCollection());
+    sl.smokeColl.show = false;
     for (let i = 0; i < FIRE.smokePuffs; i++) {
-      fx.smoke.push({ i, rot: rnd() * 6.283, bb: fx.smokeColl.add({ image: puff, sizeInMeters: true, width: 10, height: 10, color: new Cesium.Color(0.62, 0.6, 0.57, 0), show: false }) });
+      sl.smoke.push({ i, rot: rnd() * 6.283, bb: sl.smokeColl.add({ image: puff, sizeInMeters: true, width: 10, height: 10, color: new Cesium.Color(0.62, 0.6, 0.57, 0), show: false }) });
     }
+    return sl;
+  }
+
+  function buildFires() {
+    slots.A = makeFireSlot('A', true);
+    slots.B = makeFireSlot('B', false);
     viewer.scene.preUpdate.addEventListener(fireTick);
   }
 
+  // Show / hide / resize one fire slot from its map-state spec.
+  function setFire(sl, spec) {
+    sl.spec = spec;
+    if (!spec) {
+      if (sl.on) {
+        sl.on = false;
+        sl.group.show = false;
+        for (const k in sl.cones) sl.cones[k].fill.show = sl.cones[k].edge.show = false;
+        sl.emberColl.show = false;
+        sl.smokeColl.show = false;
+      }
+      return;
+    }
+    const target = fireSize(spec.acres);
+    const now = performance.now() / 1000;
+    if (!sl.on || sl.placeKey !== spec.place || !sl.size) {
+      // New fire (or moved): appear at its size straight away.
+      sl.placeKey = spec.place;
+      sl.origin = PLACES[spec.place];
+      sl.from = sl.to = sl.size = target;
+      sl.t0 = now - FIRE.growSeconds;
+      sl.geom = fireGeometry(target, sl.origin);
+      setFireGeometry(sl, sl.geom);
+      sl.emberA = NaN;
+    } else if (target.acres !== sl.to.acres) {
+      sl.from = sl.size;       // grow (or shrink, going Back) from the current size
+      sl.to = target;
+      sl.t0 = now;
+      sl.lastGeomT = 0;
+    }
+    sl.on = true;
+    sl.group.show = true;
+    sl.emberColl.show = true;
+    sl.smokeColl.show = true;
+    for (const k in sl.cones) sl.cones[k].fill.show = sl.cones[k].edge.show = !!spec.cones;
+  }
+
+  // Update the ground shapes of one fire (fill, edge, head glow, cones).
+  function setFireGeometry(sl, g) {
+    sl.fill.polygon.hierarchy = new Cesium.PolygonHierarchy(posList(g.outline));
+    const ring = posList(closed(g.outline));
+    sl.glow.polyline.positions = ring;
+    sl.core.polyline.positions = ring;
+
+    const glowR = (0.08 + g.s.b * 0.7) * METERS_PER_MILE;
+    sl.headGlow.position = pos(fireFrame(g.headW[0] - g.s.a * 0.15, g.headW[1], g.origin));
+    sl.headGlow.ellipse.semiMajorAxis = glowR;
+    sl.headGlow.ellipse.semiMinorAxis = glowR;
+
+    for (const c of CONES) {
+      if (!sl.cones[c.key]) continue;
+      const cg = coneGeometry(g, c);
+      sl.cones[c.key].fill.polygon.hierarchy = new Cesium.PolygonHierarchy(posList(cg.fill));
+      sl.cones[c.key].edge.polyline.positions = posList(cg.edge);
+      sl.cones[c.key].tip = cg.tip;
+      sl.cones[c.key].pts = cg.fill;
+    }
+    if (sl.id === 'A') E.reporterLine.polyline.positions = posList([REPORTER, g.center]);
+  }
+
+  const scratchColor = new Cesium.Color();
   // Cheap hash -> 0..1, used for per-puff randomness that changes each cycle.
   const hash = (a, b) => { const x = Math.sin(a * 127.1 + b * 311.7) * 43758.5453; return x - Math.floor(x); };
   const ease = t => t * t * (3 - 2 * t);
 
   function fireTick() {
-    if (!fx.size) return;
     const now = performance.now() / 1000;
+    for (const id in slots) {
+      const sl = slots[id];
+      if (sl.on) tickFire(sl, now);
+    }
+  }
 
+  function tickFire(sl, now) {
     // 1. Grow smoothly from the previous step's size to this step's size.
-    const p = Math.min(1, (now - fx.t0) / FIRE.growSeconds);
+    const p = Math.min(1, (now - sl.t0) / FIRE.growSeconds);
     const e = ease(p);
     const s = {
-      a: fx.from.a + (fx.to.a - fx.from.a) * e,
-      b: fx.from.b + (fx.to.b - fx.from.b) * e,
-      c: fx.from.c + (fx.to.c - fx.from.c) * e,
-      acres: fx.from.acres + (fx.to.acres - fx.from.acres) * e
+      a: sl.from.a + (sl.to.a - sl.from.a) * e,
+      b: sl.from.b + (sl.to.b - sl.from.b) * e,
+      c: sl.from.c + (sl.to.c - sl.from.c) * e,
+      acres: sl.from.acres + (sl.to.acres - sl.from.acres) * e
     };
-    fx.size = s;
-    fx.geom = fireGeometry(s);
+    sl.size = s;
+    sl.geom = fireGeometry(s, sl.origin);
     // Ground shapes are rebuilt at most ~7 times per growth (they are costly).
-    if (fx.from !== fx.to && (p >= 1 || now - fx.lastGeomT > 0.13)) {
-      setFireGeometry(fx.geom);
-      fx.lastGeomT = now;
-      if (p >= 1) fx.from = fx.to;
+    if (sl.reshape || (sl.from !== sl.to && (p >= 1 || now - sl.lastGeomT > 0.13))) {
+      setFireGeometry(sl, sl.geom);
+      sl.lastGeomT = now;
+      if (p >= 1) sl.from = sl.to;
+      if (sl.reshape) { sl.reshape = false; sl.emberA = NaN; }
     }
 
     // 2. Embers: fixed spots inside the fire shape, scaled with it, flickering.
     const visible = Math.round(Math.min(FIRE.embers, 4 + Math.sqrt(s.acres) * 4.2));
-    const reseat = s.a !== fx.emberA || visible !== fx.emberCount;   // only when the fire changed size
-    for (let i = 0; i < fx.embers.length; i++) {
-      const em = fx.embers[i];
+    const reseat = s.a !== sl.emberA || visible !== sl.emberCount;   // only when the fire changed size
+    for (let i = 0; i < sl.embers.length; i++) {
+      const em = sl.embers[i];
       const on = i < visible;
       em.point.show = on;
       if (!on) continue;
       if (reseat) {
         const l = fireLocal(s, em.th, em.r, em.m);
-        em.point.position = airPos(fireFrame(l[0], l[1]), 4);
+        em.point.position = airPos(fireFrame(l[0], l[1], sl.origin), 4);
       }
       const f = 0.5 + 0.5 * Math.sin(now * em.speed + em.phase);
       const g = 0.7 + 0.3 * Math.sin(now * em.speed * 2.3 + em.phase * 1.7);
@@ -673,22 +782,22 @@
       scratchColor.alpha = 0.35 + 0.65 * f * g;
       em.point.color = scratchColor;
     }
-    fx.emberA = s.a;
-    fx.emberCount = visible;
+    sl.emberA = s.a;
+    sl.emberCount = visible;
 
     // 3. Smoke: puffs rise from the head and drift downwind, growing and fading.
     const life = 9;
     const intensity = Math.min(1, 0.2 + s.acres / 150);
     const scale = 0.25 + 0.75 * Math.min(1, s.a / 0.8);
-    const [h0, hc] = fx.geom.headW;
-    for (const pf of fx.smoke) {
-      const age = now + (pf.i * life) / fx.smoke.length;
+    const [h0, hc] = sl.geom.headW;
+    for (const pf of sl.smoke) {
+      const age = now + (pf.i * life) / sl.smoke.length;
       const cycle = Math.floor(age / life);
       const q = (age % life) / life;                     // 0..1 through this puff's life
       const across = hc + (hash(pf.i, cycle) - 0.5) * 1.6 * s.b * (1 + 2 * q);
       const along = h0 - s.a * 0.3 + q * (0.6 + 1.8 * scale);
       const sizeM = (0.2 + 1.2 * q) * scale * METERS_PER_MILE;
-      pf.bb.position = airPos(fireFrame(along, across), 120 + 650 * q);
+      pf.bb.position = airPos(fireFrame(along, across, sl.origin), 120 + 650 * q);
       pf.bb.width = pf.bb.height = sizeM;
       pf.bb.rotation = pf.rot + q * 0.6;
       pf.bb.color = new Cesium.Color(0.52, 0.5, 0.47, 0.34 * intensity * Math.pow(Math.sin(Math.PI * q), 1.2));
@@ -715,24 +824,39 @@
     labels.root = root;
     labels.svg = root.querySelector('svg');
 
-    const L = cur => cur.layers;
+    const L = c => c.layers;
+    const fireCard = id => ({
+      text: () => {
+        const sl = slots[id], c = sl.spec && sl.spec.card;
+        if (!c) return null;
+        return { tone: c.tone || 'orange', title: c.title, sub: c.sub === 'lineDistance' ? headText(sl) : c.sub };
+      },
+      at: () => (slots[id].on && slots[id].geom ? slots[id].geom.head : null)
+    });
+
     // Cards, in placement priority order. pref = where the card sits relative to its point.
-    card({ id: 'head', tone: 'orange', title: 'Head of the fire', sub: () => headText(),
-      at: () => (fx.geom ? fx.geom.head : null), show: () => true, pref: ['left', 'up', 'right'] });
-    card({ id: 'homes', tone: 'cream', title: '3 homes in the fire path', sub: () => 'Rancher has a disc',
-      at: () => PATH_HOMES_CENTER, show: c => L(c).houses, pref: ['right', 'up', 'left'] });
-    card({ id: 'station', tone: 'cream', title: 'Cottonwood Creek station', sub: () => '18 on the roster, 5 who can leave work',
-      at: () => STATION, show: c => L(c).stations, pref: ['up', 'left', 'right'] });
+    card(Object.assign({ id: 'fireA', pref: ['left', 'up', 'right'], show: c => !!c.fires.A }, fireCard('A')));
+    card(Object.assign({ id: 'fireB', pref: ['left', 'up', 'right'], show: c => !!c.fires.B }, fireCard('B')));
+    card({ id: 'homes', pref: ['right', 'up', 'left'],
+      show: c => L(c).houses && !!c.homesCard,
+      text: () => ({ tone: 'cream', title: cur.homesCard.title, sub: cur.homesCard.sub }),
+      at: () => centerOf(HOME_GROUPS[cur.homesCard.group].map(i => HOMES[i])) });
+    card({ id: 'station', pref: ['up', 'left', 'right'], show: c => L(c).stations,
+      text: () => ({ tone: 'cream', title: 'Cottonwood Creek station', sub: '18 on the roster, 5 who can leave work' }),
+      at: () => STATION });
 
     // Small labels, highest priority first.
-    tag({ text: 'in 30 min', tone: 'fire', at: () => E.c30.tip, show: c => L(c).spread && c.k >= 1, pref: ['up', 'right', 'left', 'down'], far: 70000 });
-    tag({ text: 'in 60 min', tone: 'fire', at: () => E.c60.tip, show: c => L(c).spread && c.k >= 1, pref: ['up', 'left', 'right', 'down'], far: 70000 });
-    tag({ text: 'Firebreak', tone: 'brk', at: () => FIREBREAK[0], alt: () => FIREBREAK[FIREBREAK.length - 1], show: c => c.k >= 5, pref: ['left', 'down', 'right', 'up'], far: 70000 });
-    tag({ text: 'Neighbor photo, 1:59', tone: 'cream', at: () => REPORTER, show: c => c.k >= 5, pref: ['right', 'down', 'up'] });
+    const conesOn = c => L(c).spread && !!c.fires.A && !!c.fires.A.cones;
+    tag({ text: 'in 30 min', tone: 'fire', at: () => slots.A.cones.c30.tip, show: conesOn, pref: ['up', 'right', 'left', 'down'], far: 70000 });
+    tag({ text: 'in 60 min', tone: 'fire', at: () => slots.A.cones.c60.tip, show: conesOn, pref: ['up', 'left', 'right', 'down'], far: 70000 });
+    tag({ text: SECTION_22.label, tone: 'muted', at: () => [SECTION_22.center[0] - SECTION_22.halfMi, SECTION_22.center[1] - SECTION_22.halfMi],
+      show: c => L(c).burns && c.burnArea, pref: ['down', 'left', 'up'], far: 70000 });
+    tag({ text: 'Firebreak', tone: 'brk', at: () => firebreakPoints()[0], alt: () => firebreakPoints()[8], show: c => c.firebreak, pref: ['left', 'down', 'right', 'up'], far: 70000 });
+    tag({ text: 'Neighbor photo, 1:59', tone: 'cream', at: () => REPORTER, show: c => c.reporter, pref: ['right', 'down', 'up'] });
     tag({ text: 'Lease water truck', tone: 'water', at: () => WATER_TRUCK, show: c => L(c).water, pref: ['right', 'down', 'left'] });
     tag({ text: 'Stock pond', tone: 'water', at: () => STOCK_POND.at, show: c => L(c).water, pref: ['left', 'down', 'up'] });
     tag({ text: 'Tank', tone: 'water', at: () => TANK, show: c => L(c).water, pref: ['left', 'down', 'right'] });
-    tag({ text: '11 mi of gravel to the fire', tone: 'muted', at: () => ROUTE[7], show: c => L(c).stations && c.k >= 6, pref: ['left', 'right', 'down'] });
+    tag({ text: '11 mi of gravel to the fire', tone: 'muted', at: () => ROUTE[7], show: c => L(c).stations && c.route, pref: ['left', 'right', 'down'] });
     tag({ text: 'Oil-lease power line', tone: 'power', at: () => lerp(POWER_LINE.from, POWER_LINE.to, 0.25), show: c => L(c).power, pref: ['down', 'up'] });
     tag({ text: 'Mutual aid, 30 to 40 min', tone: 'muted', at: () => MUTUAL_AID, show: c => L(c).stations, pref: ['right', 'down', 'up'] });
     tag({ text: 'High risk today: power line over dry grass', tone: 'brk', at: () => E.riskLabelAt, show: c => L(c).risk, pref: ['down', 'up'] });
@@ -741,25 +865,22 @@
     viewer.scene.postRender.addEventListener(layoutLabels);
   }
 
-  function headText() {
-    if (!fx.geom) return '';
-    const d = distanceToPowerLine(fx.geom.head);
+  function headText(sl) {
+    if (!sl.geom) return '';
+    const d = distanceToPowerLine(sl.geom.head);
     return d < 0.05 ? 'At the power line' : d.toFixed(1) + ' miles from the line';
   }
 
   function card(o) {
     const el = document.createElement('div');
-    el.className = 'callout ' + o.tone;
+    el.className = 'callout';
     el.innerHTML = '<b></b><span></span>';
-    el.querySelector('b').textContent = o.title;
     const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
     const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-    line.setAttribute('class', 'leader ' + o.tone);
-    dot.setAttribute('class', 'leaderdot ' + o.tone);
     dot.setAttribute('r', '3');
     labels.svg.append(line, dot);
     labels.root.appendChild(el);
-    labels.items.push(Object.assign({ kind: 'card', el, line, dot, subEl: el.querySelector('span'), subText: null, size: null, shown: false }, o));
+    labels.items.push(Object.assign({ kind: 'card', el, line, dot, titleEl: el.querySelector('b'), subEl: el.querySelector('span'), key: null, size: null, shown: false }, o));
   }
   function tag(o) {
     const el = document.createElement('div');
@@ -767,6 +888,23 @@
     el.textContent = o.text;
     labels.root.appendChild(el);
     labels.items.push(Object.assign({ kind: 'tag', el, size: null, shown: false, far: SMALL_LABEL_MAX_DISTANCE_M }, o));
+  }
+
+  // Refresh a card's text and color (re-measured only when something changed).
+  function setCardText(it) {
+    const t = it.text();
+    if (!t) return false;
+    const key = t.tone + '|' + t.title + '|' + t.sub;
+    if (key !== it.key) {
+      it.key = key;
+      it.el.className = 'callout ' + t.tone;
+      it.line.setAttribute('class', 'leader ' + t.tone);
+      it.dot.setAttribute('class', 'leaderdot ' + t.tone);
+      it.titleEl.textContent = t.title;
+      it.subEl.textContent = t.sub || '';
+      it.size = null;
+    }
+    return true;
   }
 
   const scratchCarto = new Cesium.Cartographic();
@@ -791,6 +929,7 @@
   const overlaps = (a, b, pad) => a.x < b.x + b.w + pad && b.x < a.x + a.w + pad && a.y < b.y + b.h + pad && b.y < a.y + a.h + pad;
 
   function layoutLabels() {
+    if (!cur) return;
     const scene = viewer.scene, cam = scene.camera;
     const W = scene.canvas.clientWidth, H = scene.canvas.clientHeight;
     const now = performance.now();
@@ -800,7 +939,8 @@
     // 1. Project every label's point.
     const live = [];
     for (const it of labels.items) {
-      const p = it.show(cur) ? it.at() : null;
+      let p = it.show(cur) ? it.at() : null;
+      if (p && it.kind === 'card' && !setCardText(it)) p = null;
       if (!p) { setShown(it, false); continue; }
       const world = groundPos(p);
       const win = Cesium.SceneTransforms.worldToWindowCoordinates(scene, world, scratchWin);
@@ -820,17 +960,17 @@
     // 2. Things labels must not cover: on-map controls and every label's own point.
     const rootRect = labels.root.getBoundingClientRect();
     const blocks = [];
-    for (const sel of ['.resetview', '#windCompass', '#cesiumCredits', '.confcard']) {
+    for (const sel of ['.resetview', '#windCompass', '#cesiumCredits', '.confcard', '.outcome']) {
       const el = mapRoot.querySelector(sel);
       if (!el || el.hidden || !el.offsetParent) continue;
       const r = el.getBoundingClientRect();
       if (r.width && r.height) blocks.push({ x: r.left - rootRect.left, y: r.top - rootRect.top, w: r.width, h: r.height });
     }
     const dots = live.map(l => ({ x: l.x - 5, y: l.y - 5, w: 10, h: 10, owner: l.it }));
-    // Cards must not cover the fire or its forecast cones.
+    // Cards must not cover the fires or the forecast cones.
     const keepOut = [];
-    if (fx.geom) keepOut.push(screenBox(fx.geom.outline.filter((_, i) => i % 10 === 0)));
-    if (cur.layers.spread && cur.k >= 1 && E.c60.pts) keepOut.push(screenBox(E.c60.pts));
+    for (const id in slots) if (slots[id].on && slots[id].geom) keepOut.push(screenBox(slots[id].geom.outline.filter((_, i) => i % 10 === 0)));
+    if (cur.layers.spread && cur.fires.A && cur.fires.A.cones && slots.A.cones.c60.pts) keepOut.push(screenBox(slots.A.cones.c60.pts));
     const clearOfFire = box => !keepOut.some(b => b && overlaps(box, b, 4));
     const placed = [];
     const free = (box, owner, pad) =>
@@ -838,13 +978,11 @@
       !placed.some(b => overlaps(box, b, pad)) && !blocks.some(b => overlaps(box, b, 4)) &&
       !dots.some(d => d.owner !== owner && overlaps(box, d, 1));
 
-    // 3. Cards first (in priority order); nudge outward until they fit.
+    // 3. Cards first (in priority order); search outward until they fit.
     for (const l of live.filter(l => l.it.kind === 'card')) {
       const it = l.it;
-      const sub = it.sub();
-      if (sub !== it.subText) { it.subText = sub; it.subEl.textContent = sub; it.size = null; }
       const size = measure(it);
-      // Search outward from the point; nearest free spot wins, preferred sides first.
+      // Nearest free spot wins, preferred sides first.
       let box = null;
       search:
       for (let d = 0; d <= 260; d += 8) {
@@ -935,9 +1073,10 @@
   // The streaks are a fixed pool of polylines in ONE PolylineCollection.
   // Each frame we only move them; nothing is created or destroyed.
   const wind = {
-    on: true, collection: null, streaks: [], gusts: [], domain: null,
+    on: true, collection: null, streaks: [], gusts: [], domain: null, span: 20,
     normalMat: null, gustMat: null,
-    t0: 0, nextGust: 0, gustStart: -1,
+    t0: 0, lastT: 0, travel: 0, speedFactor: 1,
+    nextGust: 0, gustStart: -1,
     lastHeading: NaN
   };
 
@@ -961,7 +1100,7 @@
     });
   }
 
-  // District bounding box in the wind frame (streaks wrap around inside it).
+  // District bounding box in the wind frame (used to place gust clusters).
   function windDomain() {
     const w = DISTRICT_CORNERS.map(toWindFrame);
     const al = w.map(q => q[0]), ac = w.map(q => q[1]);
@@ -969,15 +1108,18 @@
   }
 
   function buildWind() {
-    const D = windDomain();
-    wind.domain = D;
+    // The streak grid is a square around the district, so it covers the
+    // district whichever way the wind blows.
+    const span = Math.max(...DISTRICT_CORNERS.map(p => Math.hypot(p[0], p[1]))) + 1;
+    wind.span = span;
+    wind.domain = windDomain();
     wind.normalMat = streakMaterial(WIND.alpha);
     wind.gustMat = streakMaterial(0);
     wind.collection = viewer.scene.primitives.add(new Cesium.PolylineCollection());
 
     // Evenly spaced grid with random jitter, so it looks natural.
-    for (let ac = D.cMin; ac < D.cMax; ac += WIND.spacingAcrossMi) {
-      for (let al = D.aMin; al < D.aMax; al += WIND.spacingAlongMi) {
+    for (let ac = -span; ac < span; ac += WIND.spacingAcrossMi) {
+      for (let al = -span; al < span; al += WIND.spacingAlongMi) {
         wind.streaks.push({
           across: ac + Math.random() * WIND.spacingAcrossMi,
           along0: al + Math.random() * WIND.spacingAlongMi,
@@ -996,17 +1138,18 @@
         line: wind.collection.add({ width: WIND.gustWidth, material: wind.gustMat, show: false })
       });
     }
-    wind.t0 = performance.now() / 1000;
+    wind.t0 = wind.lastT = performance.now() / 1000;
     wind.nextGust = 3;
     viewer.scene.preUpdate.addEventListener(windTick);
     viewer.scene.postRender.addEventListener(updateCompass);
   }
 
-  // Place one streak for time t. Hidden if any part is outside the district.
-  function placeStreak(s, t) {
-    const D = wind.domain, span = D.aMax - D.aMin;
-    const raw = s.along0 + s.speed * t - D.aMin;
-    const head = D.aMin + (((raw % span) + span) % span);
+  // Place one streak. `travel` = how far the air has moved so far (scaled by
+  // wind speed), so a change of speed never makes streaks jump. Streaks wrap
+  // around within +-span; hidden if any part is outside the district.
+  function placeStreak(s, travel, t, span) {
+    const raw = s.along0 + s.speed * travel + span;
+    const head = (((raw % (2 * span)) + 2 * span) % (2 * span)) - span;
     const across = s.across + 0.08 * Math.sin(t * 0.6 + s.phase);   // gentle sway
     const hp = fireFrame(head, across), tp = fireFrame(head - s.len, across);
     const show = insideDistrict(hp) && insideDistrict(tp);
@@ -1024,23 +1167,26 @@
     }
     for (const g of wind.gusts) {
       g.across = center[1] + (Math.random() - 0.5) * 2 * WIND.gustRadiusMi;
-      g.along0 = center[0] + (Math.random() - 0.5) * 2 * WIND.gustRadiusMi - g.speed * t;
+      g.along0 = center[0] + (Math.random() - 0.5) * 2 * WIND.gustRadiusMi - g.speed * wind.travel;
     }
     wind.gustStart = t;
     wind.nextGust = t + WIND.gustEveryMin + Math.random() * (WIND.gustEveryMax - WIND.gustEveryMin);
   }
 
   function windTick() {
+    const nowS = performance.now() / 1000;
+    const t = nowS - wind.t0;
+    wind.travel += (nowS - wind.lastT) * wind.speedFactor;
+    wind.lastT = nowS;
     if (!wind.on) return;
-    const t = performance.now() / 1000 - wind.t0;
-    for (const s of wind.streaks) placeStreak(s, t);
+    for (const s of wind.streaks) placeStreak(s, wind.travel, t, wind.span);
 
     if (t >= wind.nextGust) startGust(t);
     const p = wind.gustStart < 0 ? 1 : (t - wind.gustStart) / WIND.gustSeconds;
     const gustOn = p < 1;
     wind.gustMat.uniforms.color.alpha = gustOn ? WIND.gustAlpha * Math.sin(Math.PI * p) : 0;  // fade in, then out
     for (const g of wind.gusts) {
-      if (gustOn) placeStreak(g, t); else g.line.show = false;
+      if (gustOn) placeStreak(g, wind.travel, t, 1e6); else g.line.show = false;
     }
   }
 
@@ -1068,11 +1214,12 @@
 
   function resetView(duration = 1.5) {
     if (!ready) return;
-    const [lon, lat] = lonLat(CAMERA.target);
+    const cam = CAMERAS[curView] || CAMERAS.district;
+    const [lon, lat] = lonLat(cam.target);
     const center = Cesium.Cartesian3.fromDegrees(lon, lat, targetHeightM);
     viewer.camera.cancelFlight();
     viewer.camera.flyToBoundingSphere(new Cesium.BoundingSphere(center, 0), {
-      offset: new Cesium.HeadingPitchRange(rad(CAMERA.headingDeg), rad(CAMERA.pitchDeg), CAMERA.rangeM),
+      offset: new Cesium.HeadingPitchRange(rad(cam.headingDeg), rad(cam.pitchDeg), cam.rangeM),
       duration
     });
   }
@@ -1167,28 +1314,27 @@
 
     // Ground height at the camera target, so the starting view is centered on the hills.
     try {
-      const [lon, lat] = lonLat(CAMERA.target);
+      const [lon, lat] = lonLat(CAMERAS.district.target);
       const [s] = await Cesium.sampleTerrainMostDetailed(terrainProvider, [Cesium.Cartographic.fromDegrees(lon, lat)]);
       if (s && Number.isFinite(s.height)) targetHeightM = s.height;
     } catch (e) { /* keep the default height */ }
 
     buildEntities();
-    buildFireFx();
+    buildFires();
     buildWind();
     buildLabels();
     sampleHeights(terrainProvider);   // async; effects use a flat height until it finishes
     ready = true;
     // Show the latest dashboard state (render() runs before the map is ready).
-    apply(pending || { k: 0, acres: '0', nSteps: 8, layers: {} });
+    applyState(pending || { layers: {}, view: 'district', wind: { towardDeg: 20, mph: 35 }, fires: { A: null, B: null } });
     pending = null;
-    resetView(0);
     hideMsg();
   }
 
   // Called by index.html on every render. Cheap: only touches existing objects.
   function update(u) {
     if (!ready) { pending = u; return; }
-    apply(u);
+    applyState(u);
   }
 
   window.Map3D = { init, update, resetView: () => resetView(1.5) };
