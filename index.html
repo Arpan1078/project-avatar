@@ -7,6 +7,11 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600&display=swap">
+<!-- CesiumJS (3D map), pinned version. To upgrade, change 1.146.0 in BOTH lines. -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cesium@1.146.0/Build/Cesium/Widgets/widgets.css">
+<script src="https://cdn.jsdelivr.net/npm/cesium@1.146.0/Build/Cesium/Cesium.js"></script>
+<!-- Your Cesium ion token. config.js is git-ignored; copy config.example.js to create it. -->
+<script src="config.js"></script>
 <style>
   :root {
     --bg: #15120F;
@@ -58,6 +63,7 @@
   .body { min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
   .body.full { grid-template-columns: 340px minmax(0, 1fr); }
 
+  aside[hidden] { display: none; }
   aside { min-height: 0; overflow: hidden; background: var(--panel); border: 1px solid var(--line); display: grid; grid-template-rows: auto auto minmax(0, 1fr); }
   .status { padding: 14px 16px; border-bottom: 1px solid var(--line); }
   .status h2 { margin: 0; font-size: 18px; font-weight: 600; text-align: center; }
@@ -96,11 +102,33 @@
   .chip.on { background: var(--text); color: #1B1814; border-color: var(--text); }
   .sim { margin-left: auto; font-size: 12px; color: var(--muted); }
 
-  .map { position: relative; min-height: 0; overflow: hidden; }
-  .map > svg { position: absolute; inset: 0; width: 100%; height: 100%; }
-  .map text { font-family: 'Barlow', sans-serif; font-size: 12px; }
+  .map { position: relative; min-height: 0; overflow: hidden; background: var(--map); }
+  /* The Cesium viewer lives here. It is created once and never re-rendered. */
+  #cesiumContainer { position: absolute; inset: 0; }
+  #cesiumContainer .cesium-viewer, #cesiumContainer .cesium-widget { width: 100%; height: 100%; }
 
-  .confcard { position: absolute; top: 12px; left: 12px; width: 270px; background: rgba(34, 30, 25, 0.95); border: 1px solid var(--line); padding: 12px 14px; }
+  /* Required Cesium / data credits, kept small in the bottom-left corner. */
+  .credits { position: absolute; left: 8px; bottom: 6px; z-index: 2; max-width: 70%; padding: 2px 6px; background: rgba(21, 18, 15, 0.6); font-size: 10px; line-height: 1.3; color: var(--muted); }
+  .credits img { max-height: 18px; vertical-align: middle; }
+  .credits a { color: var(--muted); }
+
+  .resetview { position: absolute; top: 10px; right: 10px; z-index: 2; min-height: 30px; padding: 3px 12px; background: rgba(34, 30, 25, 0.92); color: var(--text); border: 1px solid #5A5047; font-size: 13px; font-weight: 600; }
+  .resetview:hover { border-color: var(--text); }
+
+  /* Wind compass card, bottom right (credits are bottom left, so they never overlap). */
+  .windcard { position: absolute; right: 10px; bottom: 10px; z-index: 2; display: flex; align-items: center; gap: 10px; padding: 8px 12px 8px 8px; background: rgba(34, 30, 25, 0.92); border: 1px solid var(--line); font-size: 13px; line-height: 1.3; color: var(--text-2); pointer-events: none; }
+  .windcard[hidden] { display: none; }
+  .windcard b { font-weight: 600; color: var(--text); }
+
+  /* Message shown instead of a blank map (missing token, loading, errors). */
+  .mapmsg { position: absolute; inset: 0; z-index: 3; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 20px; text-align: center; background: var(--map); }
+  .mapmsg[hidden] { display: none; }
+  .mapmsg-title { font-size: 18px; font-weight: 600; color: var(--fire-soft); }
+  .mapmsg.loading .mapmsg-title { color: var(--muted); font-weight: 500; }
+  .mapmsg-detail { max-width: 460px; font-size: 13px; color: var(--muted); }
+  .mapmsg code { color: var(--text); }
+
+  .confcard { position: absolute; z-index: 2; top: 12px; left: 12px; width: 270px; background: rgba(34, 30, 25, 0.95); border: 1px solid var(--line); padding: 12px 14px; }
   .confcard h2 { margin: 0; font-size: 17px; font-weight: 600; }
 
   .legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 20px; padding: 6px 12px; border-top: 1px solid var(--line); font-size: 12px; color: var(--text-2); }
@@ -119,15 +147,90 @@
   .real { font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .compare { display: grid; grid-template-columns: auto auto auto; gap: 1px 14px; align-items: baseline; font-size: 13px; padding-left: 18px; border-left: 1px solid var(--line); }
 
-  .overlay { position: absolute; inset: 0; background: rgba(14, 12, 10, 0.6); display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .overlay { position: absolute; inset: 0; z-index: 5; background: rgba(14, 12, 10, 0.6); display: flex; align-items: center; justify-content: center; padding: 20px; }
   .alert { width: 100%; max-width: 420px; background: var(--panel-2); border: 1px solid #4A4238; border-top: 6px solid var(--fire); padding: 16px 22px; }
   .alert .sms { margin-top: 10px; background: var(--text); color: #1B1814; padding: 12px 16px; font-size: 15px; line-height: 1.5; }
   .alert button { margin-top: 12px; min-height: 44px; width: 100%; background: var(--fire); color: #1B1814; border: none; font-size: 15px; font-weight: 600; }
 </style>
 </head>
 <body>
-<div id="app"></div>
+<!--
+  Page layout. The parts with an id="..." are re-filled by render() on every
+  state change. Everything else, including the 3D map container, is created
+  once here and never replaced.
+-->
+<div id="app" class="app">
+  <header>
+    <div class="brand">
+      <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="#F26B2E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c1 4 5 5 5 10a5 5 0 0 1-10 0c0-3 2-4 2-7 2 1 3 3 3 5"/></svg>
+      <b>Firewatch</b>
+      <span class="muted" style="font-size:14px">Cottonwood Creek Fire District</span>
+    </div>
+    <div class="modes" id="modes" role="group" aria-label="Dashboard view"></div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <span class="flag">Red flag warning</span>
+      <span class="muted" style="font-size:13px">Hot, dry and windy: fires spread fast today</span>
+    </div>
+    <div class="weather">
+      <div><span class="muted">Wind </span><b>S 35, gusts 55</b></div>
+      <div><span class="muted">Humidity </span><b>11%</b></div>
+      <div><span class="muted">Temp </span><b>78°F</b></div>
+      <div><span class="muted">Rain </span><b>none in 5 weeks</b></div>
+    </div>
+  </header>
 
+  <section class="tiles" id="tiles" aria-label="Key numbers"></section>
+
+  <div class="body" id="body">
+    <aside id="aside" hidden></aside>
+    <div class="mapwrap">
+      <div class="toolbar" id="toolbar"></div>
+
+      <main class="map">
+        <!-- 3D map (Cesium). Filled by map3d.js; never touched by render(). -->
+        <div id="cesiumContainer" role="img" aria-label="3D map of the Cottonwood Creek district with the fire, power line, homes, water and station"></div>
+        <div id="cesiumCredits" class="credits"></div>
+        <button type="button" class="resetview" data-act="resetView">Reset view</button>
+        <!-- Wind compass (bottom right). map3d.js rotates the arrow with the camera
+             and hides the card when the "Wind" chip is off. -->
+        <div id="windCompass" class="windcard" hidden>
+          <!-- Dial centered at (28, 28). "N" sits outside the ring so the arrow never hides it. -->
+          <svg width="56" height="56" viewBox="0 0 56 56" aria-hidden="true">
+            <circle cx="28" cy="28" r="18" fill="none" stroke="#5A5047" stroke-width="1.5"/>
+            <g data-wind="north">
+              <line x1="28" y1="10" x2="28" y2="14" stroke="#A89C88" stroke-width="1.5"/>
+              <text x="28" y="8" text-anchor="middle" fill="#A89C88" font-size="8" font-weight="600" font-family="Barlow, sans-serif">N</text>
+            </g>
+            <g data-wind="arrow">
+              <line x1="28" y1="40" x2="28" y2="21" stroke="#EDE3CF" stroke-width="2.5" stroke-linecap="round"/>
+              <path d="M28 14 L33.5 22 H22.5 Z" fill="#EDE3CF"/>
+            </g>
+          </svg>
+          <div class="windtext"><b>Wind from S,</b><br>35 mph, gusts 55</div>
+        </div>
+        <div id="mapMsg" class="mapmsg" hidden></div>
+        <!-- Confidence card and 1:53 alert pop-up (re-rendered). -->
+        <div id="mapOverlays"></div>
+      </main>
+
+      <div class="legend">
+        <span><i style="width:14px;height:10px;border:2px solid #F26B2E;background:#0E0C0A;border-radius:6px"></i>Fire, burned inside</span>
+        <span><i style="width:14px;height:10px;border:1px dashed #F26B2E;background:rgba(242,107,46,0.18)"></i>Fire path, 30 and 60 min</span>
+        <span><i style="width:9px;height:9px;background:#F2A65A;border:1.5px solid #F26B2E"></i>Home in the path</span>
+        <span><i style="width:9px;height:9px;background:#EDE3CF"></i>Home, safe for now</span>
+        <span><i style="width:14px;height:8px;background:#6EA8D6"></i>Water</span>
+        <span><i style="width:14px;height:2px;background:#C9B98F"></i>Power line</span>
+        <span><i style="width:14px;height:3px;background:#E8B04A"></i>Firebreak</span>
+        <span><i style="width:14px;height:10px;border:1px dashed #EDE3CF"></i>District boundary</span>
+        <span><svg width="18" height="8" viewBox="0 0 18 8" aria-hidden="true"><defs><linearGradient id="windGrad" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="13" y2="0"><stop offset="0" stop-color="#EDE3CF" stop-opacity="0"/><stop offset="1" stop-color="#EDE3CF" stop-opacity="0.9"/></linearGradient></defs><line x1="0" y1="4" x2="13" y2="4" stroke="url(#windGrad)" stroke-width="2"/><path d="M12 1 L17 4 L12 7 Z" fill="#EDE3CF"/></svg>Wind direction</span>
+      </div>
+
+      <footer id="footer"></footer>
+    </div>
+  </div>
+</div>
+
+<script src="map3d.js"></script>
 <script>
 /* ---------- Scenario data (simulated Cottonwood Creek fire) ---------- */
 const STEPS = [
@@ -167,15 +270,11 @@ const PEOPLE = [
   { who: 'Volunteer 5', note: 'at work',     s: [] }
 ];
 
-const HOUSES = [
-  { x: 488, y: 150, path: true }, { x: 508, y: 160, path: true }, { x: 470, y: 128, path: true },
-  { x: 700, y: 440, path: false }, { x: 240, y: 380, path: false }, { x: 880, y: 230, path: false }, { x: 160, y: 200, path: false }
-];
-
 const CHIPS = [
   { key: 'spread', label: 'Fire path' }, { key: 'houses', label: 'Homes' }, { key: 'water', label: 'Water' },
   { key: 'stations', label: 'Fire stations' }, { key: 'power', label: 'Power lines' },
-  { key: 'burns', label: 'Permitted burns' }, { key: 'risk', label: 'Fire risk today' }
+  { key: 'burns', label: 'Permitted burns' }, { key: 'risk', label: 'Fire risk today' },
+  { key: 'wind', label: 'Wind' }
 ];
 
 const TABS = [
@@ -191,7 +290,7 @@ const state = {
   tab: 'alerts',
   alertClosed: false,
   actionMsg: '',
-  layers: { spread: true, houses: true, water: true, stations: true, power: true, burns: false, risk: false, conf: false }
+  layers: { spread: true, houses: true, water: true, stations: true, power: true, burns: false, risk: false, wind: true, conf: false }
 };
 let timer = null;
 
@@ -267,118 +366,6 @@ function compute() {
   return { k, now, full, conf, reasons, statusLabel, statusColor, peopleRows, alertRows, tiles, dataRows, compare, brushStatus };
 }
 
-/* ---------- Map (SVG) ---------- */
-function mapSvg(v) {
-  const L = state.layers, k = v.k, now = v.now;
-  const show = b => (b ? 1 : 0);
-
-  const ox = 470, oy = 379;
-  const cx = ox + now.ry * 0.15, cy = oy - now.ry * 0.7, headY = cy - now.ry, w = now.rx;
-  const y30 = Math.max(24, headY - 110), y60 = Math.max(24, headY - 220);
-  const cone30 = `${cx - w},${cy} ${cx - w * 1.8 - 30},${y30} ${cx + w * 1.8 + 30},${y30} ${cx + w},${cy}`;
-  const cone60 = `${cx - w},${cy} ${cx - w * 2.6 - 60},${y60} ${cx + w * 2.6 + 60},${y60} ${cx + w},${cy}`;
-
-  let grid = '';
-  for (let x = -300; x <= 1300; x += 62) grid += `<line x1="${x}" y1="0" x2="${x}" y2="640"/>`;
-  for (let y = 0; y <= 620; y += 62) grid += `<line x1="-320" y1="${y}" x2="1320" y2="${y}"/>`;
-
-  let poles = '';
-  for (let px = 100; px <= 940; px += 70) {
-    const py = 420 - (px - 60) * 0.1;
-    poles += `<line x1="${px}" y1="${py - 5}" x2="${px}" y2="${py + 5}"/>`;
-  }
-
-  const houses = HOUSES.map(h =>
-    `<rect x="${h.x - 4.5}" y="${h.y - 4.5}" width="9" height="9" fill="${h.path ? '#F2A65A' : '#EDE3CF'}" stroke="${h.path ? '#F26B2E' : '#EDE3CF'}" stroke-width="1.5"/>`
-  ).join('');
-
-  return `
-  <svg viewBox="-300 30 1600 570" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Map of the Cottonwood Creek district with the fire, power line, homes, water and station">
-    <g stroke="#3A332B" stroke-width="1" opacity="0.7">${grid}</g>
-    <g fill="none" stroke="#8C8170" stroke-width="1.2" opacity="0.55">
-      <path d="M-320,120 C-200,60 -80,150 0,90 C150,40 300,140 460,90 S760,30 1000,110 S1200,40 1320,90"/>
-      <path d="M-320,230 C-220,190 -100,210 0,180 C120,150 260,230 400,200 S640,120 820,190 S960,260 1000,230 S1180,180 1320,240"/>
-      <path d="M-320,540 C-200,580 -80,520 0,560 C140,520 260,600 420,560 S700,500 1000,580 S1200,520 1320,560"/>
-      <path d="M-280,620 C-260,520 -180,500 -150,430 S-60,380 -120,300 S-220,240 -200,30"/>
-      <path d="M-120,360 C-90,330 -40,340 -45,370 S-110,400 -120,360 Z"/>
-      <path d="M1120,620 C1100,520 1180,470 1160,400 S1080,300 1150,220 S1250,120 1220,30"/>
-      <path d="M1060,470 C1090,450 1140,460 1135,490 S1070,510 1060,470 Z"/>
-      <path d="M80,620 C120,520 60,460 160,430 S300,470 340,400 S300,300 380,260"/>
-      <path d="M620,620 C640,540 760,560 780,480 S900,420 1000,450 S1200,470 1320,430"/>
-      <path d="M560,0 C600,120 700,100 720,170 S680,260 760,300 S900,300 1000,330"/>
-      <path d="M640,250 C680,230 730,250 720,280 S650,300 640,250 Z"/>
-      <path d="M200,250 C230,230 280,240 275,265 S215,285 200,250 Z"/>
-      <path d="M-320,300 C-200,340 -80,280 0,330 C90,300 160,360 230,340 S330,280 420,300"/>
-    </g>
-    <path d="M50,60 L940,50 L955,560 L60,575 Z" fill="none" stroke="#EDE3CF" stroke-width="1.4" stroke-dasharray="8 7" opacity="0.5"/>
-
-    <g opacity="${show(L.risk)}">
-      <polygon points="60,392 960,302 960,358 60,448" fill="#E8B04A" fill-opacity="0.13" stroke="#E8B04A" stroke-opacity="0.4" stroke-dasharray="2 5"/>
-      <text x="620" y="374" fill="#E8B04A">High risk today: power line over dry grass</text>
-    </g>
-
-    <g opacity="${show(L.burns)}">
-      <circle cx="720" cy="515" r="30" fill="#6E665C" fill-opacity="0.35" stroke="#A89C88" stroke-dasharray="3 4"/>
-      <text x="720" y="562" text-anchor="middle" fill="#A89C88">Permitted burn, Sat (out)</text>
-      <circle cx="300" cy="505" r="22" fill="#6E665C" fill-opacity="0.35" stroke="#A89C88" stroke-dasharray="3 4"/>
-      <text x="300" y="545" text-anchor="middle" fill="#A89C88">Permitted burn, Sun (out)</text>
-    </g>
-
-    <g opacity="${show(L.spread && k >= 1)}">
-      <polygon points="${cone60}" fill="#F26B2E" fill-opacity="0.07" stroke="#F26B2E" stroke-opacity="0.45" stroke-dasharray="5 6"/>
-      <polygon points="${cone30}" fill="#F26B2E" fill-opacity="0.14" stroke="#F26B2E" stroke-opacity="0.7" stroke-dasharray="5 6"/>
-      <text x="${cx}" y="${y30 + 16}" text-anchor="middle" fill="#F2A65A">in 30 min</text>
-      <text x="${cx}" y="${y60 + 16}" text-anchor="middle" fill="#F2A65A">in 60 min</text>
-    </g>
-
-    <g opacity="${show(L.power)}" stroke="#C9B98F" stroke-width="1.6">
-      <line x1="60" y1="420" x2="960" y2="330"/>
-      ${poles}
-      <text x="80" y="438" fill="#C9B98F" stroke="none">Oil-lease power line</text>
-    </g>
-
-    <path d="M800,112 L800,300 L470,300 L470,370" fill="none" stroke="#EDE3CF" stroke-width="3" stroke-dasharray="2 6" stroke-linecap="round" opacity="${show(L.stations && k >= 6)}"/>
-
-    <g opacity="${show(L.houses)}">
-      ${houses}
-      <text x="520" y="124" fill="#F2A65A">3 homes in the fire path</text>
-      <text x="520" y="164" fill="#EDE3CF">Rancher, has a disc</text>
-    </g>
-
-    <g opacity="${show(k >= 5)}">
-      <line x1="410" y1="190" x2="560" y2="190" stroke="#E8B04A" stroke-width="3" stroke-dasharray="10 4"/>
-      <text x="566" y="194" fill="#E8B04A">Firebreak</text>
-    </g>
-
-    <g opacity="${show(L.water)}">
-      <ellipse cx="430" cy="250" rx="14" ry="9" fill="#6EA8D6" fill-opacity="0.55" stroke="#6EA8D6"/>
-      <text x="450" y="254" fill="#9CC4E4">Stock pond</text>
-      <rect x="548" y="392" width="16" height="9" fill="#6EA8D6" stroke="#9CC4E4"/>
-      <text x="570" y="401" fill="#9CC4E4">Lease water truck</text>
-      <circle cx="250" cy="300" r="7" fill="none" stroke="#6EA8D6" stroke-width="2"/>
-      <text x="262" y="304" fill="#9CC4E4">Tank</text>
-    </g>
-
-    <g opacity="${show(L.stations)}">
-      <rect x="790" y="100" width="20" height="20" fill="#EDE3CF"/>
-      <text x="818" y="115" fill="#EDE3CF" font-weight="600" style="font-size:13px">Fire station</text>
-      <text x="818" y="131" fill="#A89C88">11 mi of gravel to the fire</text>
-      <rect x="80" y="470" width="14" height="14" fill="none" stroke="#EDE3CF" stroke-width="1.5"/>
-      <text x="102" y="482" fill="#A89C88">Mutual aid, 30 to 40 min</text>
-    </g>
-
-    <g opacity="${show(k >= 5)}">
-      <line x1="790" y1="395" x2="${cx}" y2="${cy}" stroke="#EDE3CF" stroke-width="1" stroke-dasharray="4 4"/>
-      <circle cx="790" cy="395" r="6" fill="#EDE3CF"/>
-      <text x="800" y="414" fill="#EDE3CF">Neighbor photo, 1:59</text>
-    </g>
-
-    <circle cx="${cx}" cy="${headY}" r="${14 + now.rx * 0.8}" fill="#F26B2E" fill-opacity="0.18"/>
-    <ellipse cx="${cx}" cy="${cy}" rx="${now.rx}" ry="${now.ry}" fill="#0E0C0A" stroke="#F26B2E" stroke-width="3"/>
-    <circle cx="470" cy="379" r="4" fill="#F2A65A"/>
-  </svg>`;
-}
-
 /* ---------- Pieces ---------- */
 function ring(conf, size, fontSize) {
   const dash = (conf / 100 * 314.16).toFixed(1);
@@ -397,7 +384,7 @@ function reasonList(v) {
     `<li style="color:${r.color}"><span>${r.label}</span><b>${r.pts}</b></li>`).join('')}</ul>`;
 }
 
-function asideHtml(v) {
+function asideInner(v) {
   let body = '';
   if (state.tab === 'alerts') {
     body = `<ul>${v.alertRows.map(a => `
@@ -418,7 +405,6 @@ function asideHtml(v) {
   }
 
   return `
-  <aside>
     <section class="status" aria-label="Fire status">
       <h2 style="color:${v.statusColor}">${v.statusLabel}</h2>
       <div class="ringrow">${ring(v.conf, 112, 32)}${reasonList(v)}</div>
@@ -438,8 +424,7 @@ function asideHtml(v) {
     <nav class="tabs" aria-label="Details">
       ${TABS.map(t => `<button type="button" class="${state.tab === t.key ? 'on' : ''}" aria-pressed="${state.tab === t.key}" data-act="tab:${t.key}">${t.label}</button>`).join('')}
     </nav>
-    <div class="tabbody">${body}</div>
-  </aside>`;
+    <div class="tabbody">${body}</div>`;
 }
 
 function confCard(v) {
@@ -478,100 +463,75 @@ function alertHtml() {
 }
 
 /* ---------- Render ---------- */
+// render() re-fills only the regions that change. The 3D map is never
+// re-created: it is updated through Map3D.update() at the end.
 const app = document.getElementById('app');
+const regions = {
+  modes: document.getElementById('modes'),
+  tiles: document.getElementById('tiles'),
+  body: document.getElementById('body'),
+  aside: document.getElementById('aside'),
+  toolbar: document.getElementById('toolbar'),
+  overlays: document.getElementById('mapOverlays'),
+  footer: document.getElementById('footer')
+};
 
 function render(focusAct) {
   const v = compute();
   const chips = v.full ? CHIPS : CHIPS.concat([{ key: 'conf', label: 'Confidence' }]);
 
-  app.innerHTML = `
-  <div class="app">
-    <header>
-      <div class="brand">
-        <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="#F26B2E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c1 4 5 5 5 10a5 5 0 0 1-10 0c0-3 2-4 2-7 2 1 3 3 3 5"/></svg>
-        <b>Firewatch</b>
-        <span class="muted" style="font-size:14px">Cottonwood Creek Fire District</span>
-      </div>
-      <div class="modes" role="group" aria-label="Dashboard view">
-        <button type="button" class="${!v.full ? 'on' : ''}" aria-pressed="${!v.full}" data-act="mode:simple">Simple</button>
-        <button type="button" class="${v.full ? 'on' : ''}" aria-pressed="${v.full}" data-act="mode:full">Full</button>
-      </div>
-      <div style="display:flex;align-items:center;gap:10px">
-        <span class="flag">Red flag warning</span>
-        <span class="muted" style="font-size:13px">Hot, dry and windy: fires spread fast today</span>
-      </div>
-      <div class="weather">
-        <div><span class="muted">Wind </span><b>S 35, gusts 55</b></div>
-        <div><span class="muted">Humidity </span><b>11%</b></div>
-        <div><span class="muted">Temp </span><b>78°F</b></div>
-        <div><span class="muted">Rain </span><b>none in 5 weeks</b></div>
-      </div>
-    </header>
+  regions.modes.innerHTML = `
+    <button type="button" class="${!v.full ? 'on' : ''}" aria-pressed="${!v.full}" data-act="mode:simple">Simple</button>
+    <button type="button" class="${v.full ? 'on' : ''}" aria-pressed="${v.full}" data-act="mode:full">Full</button>`;
 
-    <section class="tiles" aria-label="Key numbers">
-      ${v.tiles.map(t => `
-        <div class="tile">
-          <div class="tl">${t.label}</div>
-          <div class="tv num" style="color:${t.color}">${t.value}<span> ${t.unit}</span></div>
-          <div class="tn">${t.note}</div>
-        </div>`).join('')}
-    </section>
+  regions.tiles.innerHTML = v.tiles.map(t => `
+    <div class="tile">
+      <div class="tl">${t.label}</div>
+      <div class="tv num" style="color:${t.color}">${t.value}<span> ${t.unit}</span></div>
+      <div class="tn">${t.note}</div>
+    </div>`).join('');
 
-    <div class="body ${v.full ? 'full' : ''}">
-      ${v.full ? asideHtml(v) : ''}
-      <div class="mapwrap">
-        <div class="toolbar">
-          <span class="muted" style="font-size:13px;margin-right:4px">Show on map</span>
-          ${chips.map(c => {
-            const on = !!state.layers[c.key];
-            return `<button type="button" class="chip ${on ? 'on' : ''}" aria-pressed="${on}" data-act="layer:${c.key}">${c.label}</button>`;
-          }).join('')}
-          <span class="sim">Simulated scenario, not live data</span>
-        </div>
+  regions.body.classList.toggle('full', v.full);
+  regions.aside.hidden = !v.full;
+  regions.aside.innerHTML = v.full ? asideInner(v) : '';
 
-        <main class="map">
-          ${mapSvg(v)}
-          ${!v.full && state.layers.conf ? confCard(v) : ''}
-          ${v.k === 3 && !state.alertClosed ? alertHtml() : ''}
-        </main>
+  regions.toolbar.innerHTML = `
+    <span class="muted" style="font-size:13px;margin-right:4px">Show on map</span>
+    ${chips.map(c => {
+      const on = !!state.layers[c.key];
+      return `<button type="button" class="chip ${on ? 'on' : ''}" aria-pressed="${on}" data-act="layer:${c.key}">${c.label}</button>`;
+    }).join('')}
+    <span class="sim">Simulated scenario, not live data</span>`;
 
-        <div class="legend">
-          <span><i style="width:14px;height:10px;border:2px solid #F26B2E;background:#0E0C0A;border-radius:6px"></i>Fire, burned inside</span>
-          <span><i style="width:14px;height:10px;border:1px dashed #F26B2E;background:rgba(242,107,46,0.18)"></i>Fire path, 30 and 60 min</span>
-          <span><i style="width:9px;height:9px;background:#F2A65A;border:1.5px solid #F26B2E"></i>Home in the path</span>
-          <span><i style="width:9px;height:9px;background:#EDE3CF"></i>Home, safe for now</span>
-          <span><i style="width:14px;height:8px;background:#6EA8D6"></i>Water</span>
-          <span><i style="width:14px;height:2px;background:#C9B98F"></i>Power line</span>
-          <span><i style="width:14px;height:3px;background:#E8B04A"></i>Firebreak</span>
-          <span><i style="width:14px;height:10px;border:1px dashed #EDE3CF"></i>District boundary</span>
-        </div>
+  regions.overlays.innerHTML =
+    (!v.full && state.layers.conf ? confCard(v) : '') +
+    (v.k === 3 && !state.alertClosed ? alertHtml() : '');
 
-        <footer>
-          <div class="controls">
-            <button type="button" data-act="back">Back</button>
-            <button type="button" class="play" data-act="play">${state.playing ? 'Pause' : 'Play'}</button>
-            <button type="button" data-act="next">Next</button>
-          </div>
-          <div style="min-width:0">
-            <div class="steps">
-              ${STEPS.map((s, i) => `<button type="button" class="${i === v.k ? 'on' : i < v.k ? 'done' : ''}" aria-label="Go to ${s.time} pm" data-act="step:${i}">${s.time}</button>`).join('')}
-            </div>
-            <div class="caption">${v.now.caption}</div>
-            <div class="real">What really happened at ${v.now.time}: ${v.now.real}</div>
-          </div>
-          <div class="compare">
-            <span></span>
-            <span style="font-size:12px;font-weight:600;color:var(--fire)">Firewatch</span>
-            <span class="muted" style="font-size:12px">Real day</span>
-            ${v.compare.map(c => `
-              <span class="muted">${c.label}</span>
-              <span style="font-weight:600;color:${c.color}">${c.ours}</span>
-              <span class="muted">${c.real}</span>`).join('')}
-          </div>
-        </footer>
-      </div>
+  regions.footer.innerHTML = `
+    <div class="controls">
+      <button type="button" data-act="back">Back</button>
+      <button type="button" class="play" data-act="play">${state.playing ? 'Pause' : 'Play'}</button>
+      <button type="button" data-act="next">Next</button>
     </div>
-  </div>`;
+    <div style="min-width:0">
+      <div class="steps">
+        ${STEPS.map((s, i) => `<button type="button" class="${i === v.k ? 'on' : i < v.k ? 'done' : ''}" aria-label="Go to ${s.time} pm" data-act="step:${i}">${s.time}</button>`).join('')}
+      </div>
+      <div class="caption">${v.now.caption}</div>
+      <div class="real">What really happened at ${v.now.time}: ${v.now.real}</div>
+    </div>
+    <div class="compare">
+      <span></span>
+      <span style="font-size:12px;font-weight:600;color:var(--fire)">Firewatch</span>
+      <span class="muted" style="font-size:12px">Real day</span>
+      ${v.compare.map(c => `
+        <span class="muted">${c.label}</span>
+        <span style="font-weight:600;color:${c.color}">${c.ours}</span>
+        <span class="muted">${c.real}</span>`).join('')}
+    </div>`;
+
+  // 3D map: only moves/resizes/hides existing entities.
+  Map3D.update({ k: v.k, acres: v.now.acres, nSteps: STEPS.length, layers: state.layers });
 
   if (focusAct) {
     const el = app.querySelector(`[data-act="${focusAct}"]`);
@@ -608,6 +568,8 @@ app.addEventListener('click', e => {
   const act = btn.dataset.act;
   const [name, arg] = act.split(':');
 
+  if (name === 'resetView') { Map3D.resetView(); return; }   // camera only, no re-render
+
   if (name === 'mode') state.mode = arg;
   else if (name === 'layer') state.layers[arg] = !state.layers[arg];
   else if (name === 'tab') state.tab = arg;
@@ -623,6 +585,14 @@ app.addEventListener('click', e => {
 });
 
 render();
+
+// Create the 3D map once. Shows a message in the map area if the token is missing or wrong.
+Map3D.init({
+  container: document.getElementById('cesiumContainer'),
+  credits: document.getElementById('cesiumCredits'),
+  message: document.getElementById('mapMsg'),
+  compass: document.getElementById('windCompass')
+});
 </script>
 </body>
 </html>
