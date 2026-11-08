@@ -1,0 +1,25 @@
+{
+  "schemaVersion": "1.0.0",
+  "regionId": "us-ca",
+  "kind": "illustrative_spread_forecast_config",
+  "model": "illustrative_elliptical_v1",
+  "validated": false,
+  "documentation": [
+    "ILLUSTRATIVE ONLY. Every coefficient below is a transparent placeholder chosen for this demonstration; none is a measured or validated fire spread rate.",
+    "Replace spread-forecast.js assess() with a validated model (for example Rothermel) without changing the map or dashboard code.",
+    "Head distance = baseSpreadMPerHr x horizon x windFactor x slopeFactor x fuelFactor x humidityFactor x sizeFactor.",
+    "sizeRamp keeps a new ignition from spreading as far as an established fire, and lets large fires spread somewhat faster (log growth up to maxFactor).",
+    "Gusts, measured fuel model and hourly Dixie weather are not in the data package; wind, humidity and fuel are scenario assumptions and are labeled as such.",
+    "Roads are reported as a possible slowing factor only; a road never stops the modeled spread."
+  ],
+  "horizonMinutes": 60,
+  "baseSpreadMPerHr": 150,
+  "wind": { "perMph": 0.12 },
+  "lengthToBreadth": { "perMph": 0.15, "max": 4 },
+  "slope": { "perPct": 0.03, "min": 0.5, "max": 2.5, "sampleDistanceM": 400 },
+  "fuel": { "factor": 0.7, "assumed": true, "label": "Timber litter under canopy, slower ground fire (workbook)" },
+  "humidity": { "refPct": 30, "perPct": 0.02, "min": 0.6, "max": 1.6 },
+  "sizeRamp": { "fullAtAcres": 2, "minFactor": 0.15, "maxFactor": 2.5, "maxAtAcres": 500 },
+  "barrierLookaheadM": 3000,
+  "scenarioInputs": { "windToDeg": 45, "windMph": 10, "windGustMph": null, "humidityPct": 14 }
+}

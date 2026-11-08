@@ -227,7 +227,7 @@
   .legend span { display: flex; align-items: center; gap: 6px; }
   .legend i { display: inline-block; }
 
-  footer { background: var(--panel); border-top: 1px solid var(--line); padding: 10px 16px; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 8px 22px; align-items: center; }
+  footer { background: var(--panel); border-top: 1px solid var(--line); padding: 10px 16px; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px 22px; align-items: center; }
   .ctlcol { display: flex; flex-direction: column; gap: 6px; }
   .controls { display: flex; gap: 6px; }
   /* Optional data on/off switch (not used by the current incident). */
@@ -251,6 +251,20 @@
   .compare span { max-width: 150px; }
   .body.full .compare { font-size: 12px; }
 
+  /* Alert modal: fixed to the viewport, above every dashboard layer; only .alertbody scrolls. */
+  .alertmodal { position: fixed; inset: 0; z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(10, 8, 6, 0.68); }
+  .alertmodal[hidden] { display: none; }
+  .alertcard { width: min(520px, 100%); max-height: 90vh; max-height: 90dvh; display: flex; flex-direction: column; background: var(--panel-2); border: 1px solid #4A4238; border-top: 6px solid var(--fire); padding: 14px 20px 16px; }
+  .alerthead { flex: none; display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+  .alerttitle { font-weight: 600; font-size: 18px; color: var(--fire); }
+  .alerttag { display: inline-block; margin-top: 4px; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; color: var(--text-2); }
+  .alerttime { font-size: 13px; white-space: nowrap; }
+  .alertbody { flex: 1 1 auto; min-height: 0; overflow-y: auto; margin-top: 8px; background: var(--text); color: #1B1814; padding: 10px 14px; font-size: 14px; line-height: 1.45; overflow-wrap: anywhere; }
+  .alertbody div + div { margin-top: 3px; }
+  .alertactions { flex: none; margin-top: 12px; }
+  .alertactions button { display: block; width: 100%; min-height: 42px; font-size: 15px; font-weight: 600; }
+  .alertprimary { background: var(--fire); color: #1B1814; border: none; }
+  .alertsecondary { margin-top: 8px; background: transparent; color: var(--text-2); border: 1px solid #4A4238; }
   .overlay { position: absolute; inset: 0; z-index: 5; background: rgba(14, 12, 10, 0.6); display: flex; align-items: center; justify-content: center; padding: 20px; }
   .alert { width: 100%; max-width: 420px; background: var(--panel-2); border: 1px solid #4A4238; border-top: 6px solid var(--fire); padding: 16px 22px; }
   .alert .sms { margin-top: 10px; background: var(--text); color: #1B1814; padding: 12px 16px; font-size: 15px; line-height: 1.5; }
@@ -340,6 +354,7 @@
 </style>
 </head>
 <body>
+<div id="alertModal" class="alertmodal" hidden></div>
 <!--
   Page layout. The parts with an id="..." are re-filled by render() on every
   state change. Everything else, including the 3D map container, is created
@@ -450,6 +465,7 @@
 <script src="story.js"></script>
 <script src="regional-map.js" data-region="data/regions/california/region.json"></script>
 <script src="confidence-engine.js"></script>
+<script src="spread-forecast.js"></script>
 <script src="dixie-scenario.js"></script>
 <script src="dixie-fire.js"></script>
 <script src="mapdata.js"></script>
@@ -503,6 +519,8 @@ const state = {
   playing: false,
   tab: 'alerts',
   alertClosed: false,
+  alertAt: null,       // replay step where the prototype score first crossed the alert threshold (forward playback)
+  alertOpen: false,    // simulated alert popup showing
   actionMsg: '',
   layers: { spread: true, houses: true, water: true, stations: true, power: true, burns: false, risk: false, wind: true, sat: true, cameras: true, help: true, conf: false }
 };
@@ -560,9 +578,9 @@ function droneState(v) {
 }
 function forecastDrivers(v) {
   if (window.RegionalMap && RegionalMap.active) {
-    const roads = RegionalMap.data.geography.roads.features;
-    const rows = [['Terrain', 'Feather River Canyon; geometry draped on Cesium terrain, no slope-driven spread calculation'], ['Fuel', 'Workbook: slow ground fire under trees; measured fuel model and moisture unavailable'], ['Weather / risk', 'Historical wind, humidity, temperature and risk rating unavailable'], ['Roads', roads.length + ' mapped California road segments, including Highway 70; no verified containment effect'], ['Buildings', 'OSM reference points in the selected-step envelope, not confirmed residences or a complete 2021 inventory']];
-    return '<details class="drivers" open><summary>Replay assumptions</summary><dl>' + rows.map(([k, value]) => '<dt>' + k + '</dt><dd>' + escHtml(value) + '</dd>').join('') + '</dl><p>Simplified illustrative footprint and 1.4× radial envelope, not a verified forecast. No forecast horizon. Unknown areas retain the last supported footprint; transitions are visual only. No operational availability or response gains are implied.</p></details>';
+    const eff = { 'Main factor': 'var(--fire-soft)', Faster: 'var(--fire-soft)', Slower: 'var(--calm)', 'Possible slowing': 'var(--calm)' };
+    const rows = v.forecastRows || [];
+    return '<details class="drivers" open><summary>What drives the next-60-minute forecast</summary><dl>' + rows.map(([k, effect, text]) => '<dt>' + k + '</dt><dd><b style="color:' + (eff[effect] || 'var(--dim)') + '">' + escHtml(effect) + '</b> - ' + escHtml(text) + '</dd>').join('') + '</dl><p>Illustrative, configurable model (forecast-config.json), not a validated fire-spread model. Wind, humidity and fuel are scenario assumptions; gusts and measured fuel are unavailable. Roads are possible slowing factors only. Buildings are mapped OSM points, not confirmed homes.</p></details>';
   }
   return '';
 }
@@ -609,7 +627,8 @@ function ruleCheck(v) {
 function asideInner(v) {
   let body = '';
   if (v.sc.key === 'dixie' && state.tab === 'alerts') {
-    body = '<div class="tabintro">Dixie Fire / Butte County: hypothetical proposal ' + escHtml(v.now.level || 'No level specified') + '. No actual alerts, CAL FIRE dispatch or response times are recorded.</div>';
+    body = '<div class="tabintro">Simulated replay workflow (hypothetical Firewatch, workbook proposal: ' + escHtml(v.now.level || 'no level specified') + '). No real message, SMS, email, acknowledgement or dispatch exists.</div>' +
+      (v.alertRows.length ? '<ul>' + v.alertRows.map(a => `<li class="row"><span class="dot" style="background:${a.dot}"></span><span class="who">${a.who}</span><span style="color:${a.color}">${a.status}</span></li>`).join('') + '</ul>' : '<div class="datanote">No alert yet: prototype score ' + v.conf + ' is below the provisional ' + v.confidence.threshold + '.</div>');
   } else if (v.sc.key === 'dixie' && state.tab === 'burns') {
     body = '<div class="tabintro">No Dixie replay burn registrations supplied.</div>';
   } else if (state.tab === 'alerts') {
@@ -698,6 +717,54 @@ function alertHtml(p) {
     </div>
   </div>`;
 }
+
+// Simulated alert as a top-level modal (#alertModal sits directly under <body>, outside every clipping/stacking container).
+function dixieAlertHtml(p) {
+  const line = (k, val) => '<div><b>' + k + ':</b> ' + escHtml(val) + '</div>';
+  return `<div class="alertcard" role="alertdialog" aria-modal="true" aria-labelledby="alertTitle">
+    <div class="alerthead">
+      <div><div id="alertTitle" class="alerttitle">POTENTIAL WILDFIRE DETECTED</div><div class="alerttag">SIMULATED ALERT</div></div>
+      <div class="muted alerttime">${escHtml(p.time)}</div>
+    </div>
+    <div class="alertbody">${line('Location', 'Feather River Canyon, California')}${line('Confidence', p.score + ' pts (prototype score, provisional threshold ' + p.threshold + '; not a probability)')}${line('Evidence', p.evidence)}${line('Projected spread', p.spread)}${line('Buildings potentially at risk', p.buildings)}${p.help ? line('Nearest stations', p.help + '; availability unknown') : ''}</div>
+    <div class="alertactions">
+      <button type="button" class="alertprimary" data-act="viewIncident">View incident</button>
+      <button type="button" class="alertsecondary" data-act="closeAlert">Dismiss</button>
+    </div>
+  </div>`;
+}
+const alertModal = document.getElementById('alertModal');
+let alertReturnFocus = null;
+function syncAlertModal(p) {
+  if (!alertModal) return;
+  if (!p) { if (!alertModal.hidden) { alertModal.hidden = true; alertModal.innerHTML = ''; if (alertReturnFocus && alertReturnFocus.focus) alertReturnFocus.focus(); alertReturnFocus = null; } return; }
+  const html = dixieAlertHtml(p);
+  if (alertModal.hidden !== false || alertModal.innerHTML !== html) {
+    const opening = alertModal.hidden !== false;
+    if (opening) alertReturnFocus = document.activeElement;
+    alertModal.innerHTML = html; alertModal.hidden = false;
+    const primary = alertModal.querySelector && alertModal.querySelector('.alertprimary');
+    if (opening && primary && primary.focus) primary.focus();
+  }
+}
+function dismissAlert(view) {
+  state.alertOpen = false;
+  if (view && window.RegionalMap && RegionalMap.zoomToFire) RegionalMap.zoomToFire();
+  render();
+}
+if (alertModal && alertModal.addEventListener) {
+  alertModal.addEventListener('click', e => {
+    const btn = e.target.closest && e.target.closest('[data-act]');
+    if (btn) dismissAlert(btn.dataset.act === 'viewIncident');
+  });
+  alertModal.addEventListener('keydown', e => {   // keep Tab inside the dialog
+    if (e.key !== 'Tab') return;
+    const btns = alertModal.querySelectorAll('button'), first = btns[0], last = btns[btns.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  });
+}
+if (document.addEventListener) document.addEventListener('keydown', e => { if (e.key === 'Escape' && state.alertOpen) dismissAlert(false); });
 
 function outcomeHtml(o) {
   return `<section class="outcome" aria-label="Outcome"><div class="outcome-title">${o.title}</div><div class="outcome-sub">${o.sub}</div></section>`;
@@ -788,6 +855,7 @@ function render(focusAct) {
     (!regional && sc.outcome && v.k >= sc.outcome.at ? outcomeHtml(sc.outcome) : '') +
     (!regional && v.flags.length ? `<div class="mapflag" role="status">${v.flags.map(f => `<div>${f}</div>`).join('')}</div>` : '') +
     (!regional && sc.popup && v.k === sc.popup.at && !state.alertClosed ? alertHtml(sc.popup) : ''), v);
+  syncAlertModal(state.view === 'dashboard' ? v.alertPopup : null);
 
   const powerSwitch = '';
 
@@ -808,15 +876,7 @@ function render(focusAct) {
       ${v.now.real ? `<div class="real">What really happened at ${v.now.time}: ${v.now.real}</div>` : ''}
       ${sc.extraLine ? `<div class="offnote">${sc.extraLine}</div>` : ''}
     </div>
-    <div class="compare" aria-label="${sc.compareCols.join(' versus ')}" title="${sc.compareCols.join(' vs ')}">
-      <span></span>
-      <span style="font-size:12px;font-weight:600;color:var(--fire)">FW</span>
-      <span class="muted" style="font-size:12px">Real</span>
-      ${v.compare.map(c => `
-        <span class="muted" title="${escHtml(c.note || c.label)}">${compactComparison(c.label)}</span>
-        <span style="font-weight:600;color:${c.color}">${compactComparison(c.ours)}</span>
-        <span class="muted">${compactComparison(c.other)}</span>`).join('')}
-    </div>`, v);
+`, v);
 
   // 3D map: only moves/resizes/hides existing objects.
   Map3D.update(Object.assign({ layers: state.layers, wind: { towardDeg: v.wind.towardDeg, mph: v.wind.mph }, goes: v.goes, firms: v.firms }, v.map));
@@ -837,7 +897,14 @@ function stopTimer() {
 }
 
 function goTo(i) {
+  const prev = state.step;
   state.step = Math.max(0, Math.min(scenario().steps.length - 1, i));
+  if (state.scenario === 'dixie' && window.RegionalMap && RegionalMap.data && RegionalMap.data.confidence) {
+    // Alert fires once per upward threshold crossing; going back below the threshold (or restarting) re-arms it.
+    const before = DixieScenario.evaluateStep(RegionalMap.data, prev), after = DixieScenario.evaluateStep(RegionalMap.data, state.step);
+    if (state.step > prev && !before.alert && after.alert) { state.alertAt = state.step; state.alertOpen = true; }
+    else if (!after.alert) { state.alertAt = null; state.alertOpen = false; }
+  }
   state.alertClosed = false;
   state.actionMsg = '';
 }
@@ -894,7 +961,8 @@ app.addEventListener('click', e => {
   else if (name === 'back') { stopTimer(); goTo(state.step - 1); }
   else if (name === 'next') { stopTimer(); goTo(state.step + 1); }
   else if (name === 'play') togglePlay();
-  else if (name === 'closeAlert') state.alertClosed = true;
+  else if (name === 'closeAlert') { state.alertClosed = true; state.alertOpen = false; }
+  else if (name === 'viewIncident') { state.alertOpen = false; if (window.RegionalMap && RegionalMap.zoomToFire) RegionalMap.zoomToFire(); }
   else if (name === 'ask') state.actionMsg = 'Hypothetical replay: no messages sent; contacts and response times unknown.';
   else if (name === 'false') state.actionMsg = 'Replay annotation only. No live alerts or historical incident records are changed.';
 
@@ -911,6 +979,7 @@ regions.scenarioSelect.addEventListener('change', e => {
 // and texts about real places come from it. Then the dashboard is drawn.
 DroneUI.init({ content: droneFeed, animate: startThermal, resizeMap: () => Map3D.resize() });
 Map3D.onDroneClick = () => DroneUI.open();
+if (window.addEventListener) window.addEventListener('dixie-forecast', () => render());   // terrain slope sampled: refresh forecast drivers and counts
 window.addEventListener('map3d-heights', () => { if (MapData.loaded) render(); });
 MapData.load().then(() => render());
 

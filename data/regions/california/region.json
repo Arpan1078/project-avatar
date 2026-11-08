@@ -47,6 +47,9 @@
     "Resource presence does not imply availability. Unknown coordinates remain omitted."
   ],
   "mapConfigPath": "map.json",
+  "forecast": {
+    "configPath": "forecast-config.json"
+  },
   "confidence": {
     "configPath": "confidence-config.json",
     "evidencePath": "evidence.json"

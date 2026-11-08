@@ -26,7 +26,7 @@
     cached = { key: 'dixie', steps, ampm: '', compareCols: ['Hypothetical Firewatch', 'Historical benchmark'],
       people: { intro: 'Simulated volunteer roster (5 of 18 free this evening), paged when the provisional alert fires. Prototype only: no sourced CAL FIRE / Butte County staffing; see Nearby help for documented stations.' },
       burnsTab: () => ({ items: [] }),
-      extraLine: 'Historical replay, not live data. November 2026 capabilities are hypothetical. Replay steps follow workbook order, not measured detection times.' };
+      extraLine: '' };
     return cached;
   }
   function compute(data, state) {
@@ -61,26 +61,54 @@
     const paged = !!(ev && ev.alert);
     const peopleRows = roster.map(([who, note, status, yes]) => ({ who, note, status: paged ? status : 'Not paged yet', color: paged && yes ? 'var(--fire-soft)' : 'var(--dim)', dot: paged && yes ? 'var(--fire)' : paged ? 'var(--dim)' : '#4A4238' }));
     const responding = peopleRows.filter(p => paged && p.dot === 'var(--fire)').length;
+    // ---- One-hour spread forecast (illustrative model) from the CURRENT milestone area; same zone drives map, KPI and highlights ----
+    const fc = data.forecast, area = DixieFire.areas[ri];
+    const fa = fc ? SpreadForecast.assess(fc.config, fc.inputs, area) : null;
+    const zone = fc ? DixieFire.zoneXY(fc, area) : null;
+    const lon0 = o.longitude, lat0 = o.latitude, kx = 111320 * Math.cos(lat0 * Math.PI / 180);
+    const barrier = fa && data.geography.roads ? SpreadForecast.barrier(data.geography.roads, (lo, la) => [(lo - lon0) * kx, (la - lat0) * 111320], fa.headBearingDeg, Math.sqrt(area / Math.PI), Math.sqrt(area / Math.PI) + Math.max(fa.headDistanceM, fc.config.barrierLookaheadM)) : null;
+    const forecastRows = !fa ? [] : fa.factors.map(f => [f.label, f.effect, f.text]).concat([
+      ['Barriers', barrier ? 'Possible slowing' : 'None mapped', barrier ? barrier.name + ', ~' + Math.round(barrier.distM) + ' m ahead: a possible slowing factor, not a guaranteed stop' : 'No mapped road crosses the projected path (OSM coverage may be incomplete)'],
+      ['Horizon', fa.horizonMinutes + ' min', 'Head of fire ~' + Math.round(fa.headDistanceM) + ' m toward ' + fa.directionName + '; illustrative model, not a validated forecast']]);
+    const towns = (data.geography.towns && data.geography.towns.features) || [];
+    let community = null;
+    for (const f of towns) { const x = (f.geometry.coordinates[0] - lon0) * kx, y = (f.geometry.coordinates[1] - lat0) * 111320, km = Math.hypot(x, y) / 1000; if (!community || km < community.km) community = { name: f.properties.name, km, x, y }; }
+    const communityText = !community ? 'No mapped community data' : community.name + ', ' + community.km.toFixed(1) + ' km ' + SpreadForecast.compass(Math.atan2(community.x, community.y) * 180 / Math.PI) + ' of ignition; ' + (zone && SpreadForecast.inside(zone, community.x, community.y) ? 'inside the projected zone' : 'outside the projected 60-min zone');
+    const hasBuildings = !!(data.geography.buildings && data.geography.buildings.features.length);
+    // ---- Simulated alert workflow (state.alertAt = step where the score first crossed the threshold going forward) ----
+    const at = state.alertAt, fired = ev && at !== null && at !== undefined && state.step >= at;
+    const alertRows = !fired ? [] : [
+      ['Alert generated', 'Simulated: score ' + ev.score + ' reached the provisional ' + ev.threshold, true],
+      ['Alert queued', 'Simulated: no real message was sent', true],
+      ['Alert acknowledged', state.step > at ? 'Simulated assumption, not a real acknowledgement' : 'Pending (simulated)', state.step > at],
+      ['Dispatch confirmed', state.step > at ? 'Simulated assumption, not a real dispatch' : 'Pending (simulated)', state.step > at]
+    ].map(([who, status, done]) => ({ who, status, color: done ? 'var(--fire-soft)' : 'var(--dim)', dot: done ? 'var(--fire)' : '#4A4238' }));
+    const help = RegionalMap.nearestStations ? RegionalMap.nearestStations(3).map(s => s.name.replace(/, .*$/, '') + ' ~' + s.min + ' min (est.)').join('; ') : '';
+    const alertPopup = !fired || !state.alertOpen ? null : { time: now.time, score: ev.score, threshold: ev.threshold, evidence: ev.summary,
+      spread: fa ? 'Next 60 min toward ' + fa.directionName + ', head ~' + Math.round(fa.headDistanceM) + ' m (illustrative model)' : 'Unavailable',
+      buildings: hasBuildings ? pathBuildings.length + ' mapped (OSM coverage may be incomplete)' : 'Unavailable: no building data', help };
     const tile = (label, value, unit = '', color = 'var(--text)', note = '') => ({ label, value, unit, color, note });
     return {
       sc, k, now, ampm: '', full: state.mode === 'full', conf: ev ? ev.score : null, confidence: ev,
       reasons, confUnit: '', confLabel: 'prototype score', confNote,
       statusLabel: ev ? (ev.alert ? 'Dixie replay: provisional alert' : 'Dixie replay: no alert yet') : 'Dixie Fire historical replay', statusColor: 'var(--text)', ringColor: bandColor,
-      peopleRows, alertRows: [], responding, fireType: null, typeColor: null,
-      wind: { dir: 'SW', text: '~10 mph (scenario assumption)', towardDeg: 45, mph: 10 },
-      map: { dixieFire: { step: ri, playing: !!state.playing, headBearing: 45 } }, drone: null, pathHomes: pathBuildings, help: { rows: [], from: null, status: {}, lineTo: null }, tokens: {}, flags: [], rules: null,
+      peopleRows, alertRows, alertPopup, forecastRows, responding, fireType: null, typeColor: null,
+      wind: { dir: fc ? SpreadForecast.compass(fc.inputs.windToDeg + 180) : 'SW', text: (fc ? fc.inputs.windMph : 10) + ' mph (scenario assumption)', towardDeg: fc ? fc.inputs.windToDeg : 45, mph: fc ? fc.inputs.windMph : 10 },
+      map: { dixieFire: { step: ri, playing: !!state.playing, headBearing: fc ? fc.inputs.windToDeg : 45, windMph: fc ? fc.inputs.windMph : 10, forecast: fc || undefined } }, drone: null, pathHomes: pathBuildings, help: { rows: [], from: null, status: {}, lineTo: null }, tokens: {}, flags: [], rules: null,
       tiles: [tile('Time', now.time, '', 'var(--text)', now.label),
         tile('Confidence', ev ? ev.score : '—', ev ? 'pts' : '', bandColor, confNote),
         Object.assign(tile('Area burned', areaValues, areaUnits, 'var(--fire)', areaNote), { key: 'area' }),
-        tile('Buildings in path', !(data.geography.buildings && data.geography.buildings.features.length) ? 'Data unavailable' : pathBuildings.length, !(data.geography.buildings && data.geography.buildings.features.length) ? '' : 'buildings', pathBuildings.length ? 'var(--fire-soft)' : 'var(--text)', buildingNote),
+        tile('Buildings in path', !hasBuildings ? 'Data unavailable' : pathBuildings.length, !hasBuildings ? '' : 'mapped', pathBuildings.length ? 'var(--fire-soft)' : 'var(--text)', buildingNote),
         tile('Volunteer Response', responding, 'of 5', 'var(--text)', paged ? 'Simulated: paged at the provisional alert; 18 on the roster' : 'Simulated: not paged until the provisional alert'),
         tile('Response time', '14', 'min', 'var(--text)', 'Modeled estimate for the hypothetical Firewatch alert to first responders; not a historical 2021 response time.')],
-      facts: [['Replay time', escape(now.label)], ['Prototype score', ev ? ev.score + ' pts: ' + (ev.alert ? 'alert threshold reached' : 'below alert threshold') + ' (provisional ' + ev.threshold + ')' : 'Unavailable'], ['Historical context', escape(r.historicalContext.text)], ['Workbook status', escape(now.status) + '; not independently verified'], ['Hypothetical level', escape(now.level || 'Not specified')]],
+      facts: [['Replay time', escape(now.label)], ['Nearest community', escape(communityText)], ['Prototype score', ev ? ev.score + ' pts: ' + (ev.alert ? 'alert threshold reached' : 'below alert threshold') + ' (provisional ' + ev.threshold + ')' : 'Unavailable'], ['Historical context', escape(r.historicalContext.text)], ['Workbook status', escape(now.status) + '; not independently verified'], ['Hypothetical level', escape(now.level || 'Not specified')]],
       dataRows: [...evidenceRows, ['Alert decision', escape(ev ? ev.alertReason + ' Provisional threshold; the score is a prototype and not a calibrated probability.' : 'Unavailable')], ['Workbook', `Timeline today, row ${r.provenance.row}`], ['Original source / assumption', sources], ['Historical status', escape(now.status)], ['Hypothetical observation', escape(now.observation)], ['Proposed Firewatch behavior', escape(now.level || 'Not specified')], ['Inherited workbook note', r.provenance.inheritedNotes.map(n => escape(n.text)).join('; ')], ['Map fire label', 'Short map labels ("Simulated fire · area", "Likely path"). The fire is a simulated, terrain-draped footprint sized from the workbook area, not a verified perimeter. Between timeline milestones its size is interpolated (simulated, not observed). Likely path is an illustrative 1.4× envelope with no forecast horizon or probability.'], ['Weather', 'Scenario assumptions (no sourced hourly Dixie weather in the data package): 98°F, 14% humidity, no recent rain, extreme fire risk. Not historical measurements.'], ['Wind', 'Scenario assumption: toward NE (45°), ~10 mph, up-canyon afternoon flow. No sourced Dixie weather is in the data package; not historical weather.'], ['Camera limitation', 'November 2026 pointing snapshot; terrain visibility unverified']],
       firmsNote: buildingNote + ' No actual camera, satellite or drone detections are asserted. Historical weather, fuel measurements, confidence weights and response times are unavailable.',
       goes: [], firms: [], compare: [{ label: '911 call', note: 'Timeline today row 9: Dixie Fire (Wikiwand), workbook 2021 fact; not independently verified. Call time, not arrival.', ours: '—', other: 'July 13, 5:12 PM', color: 'var(--dim)' }, { label: 'Dispatch / arrival', note: 'No sourced response timings', ours: '—', other: '—', color: 'var(--dim)' }],
-      conditions: { badge: 'Fire risk: Extreme', badgeClass: 'flag', note: 'Hot, dry canyon', weather: [['Wind', 'SW 10 mph'], ['Humidity', '14%'], ['Temp', '98°F'], ['Rain', 'none in 6 weeks']] }
+      conditions: { badge: 'Fire risk: Extreme', badgeClass: 'flag', note: 'Hot, dry canyon', weather: [['Wind', 'SW 10 mph'], ['Humidity', (fc ? fc.inputs.humidityPct : 14) + '%'], ['Temp', '98°F'], ['Rain', 'none in 6 weeks']] }
     };
   }
-  window.DixieScenario = { scenario, compute };
+  // Prototype score for any replay step (used by the dashboard to detect the alert-threshold crossing).
+  function evaluateStep(data, k) { const steps = scenario(data).steps, ri = steps[Math.max(0, Math.min(steps.length - 1, k | 0))].recordIndex; return ConfidenceEngine.evaluate(data.confidence.config, data.confidence.evidence, ri); }
+  window.DixieScenario = { scenario, compute, evaluateStep };
 })();

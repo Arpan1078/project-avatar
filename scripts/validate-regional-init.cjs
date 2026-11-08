@@ -18,7 +18,7 @@ async function check(retry) {
   const ticks = [];
   const sources = [], allIds = new Set();
   const noop = () => {};
-  const element = () => ({ style: {}, addEventListener: noop, getContext: () => ({ beginPath: noop, roundRect: noop, fill: noop, stroke: noop, fillText: noop, fillRect: noop, moveTo: noop, lineTo: noop, closePath: noop, measureText: t => ({ width: String(t).length * 7 }) }) });
+  const element = () => ({ style: {}, addEventListener: noop, getContext: () => ({ beginPath: noop, roundRect: noop, fill: noop, stroke: noop, fillText: noop, fillRect: noop, createRadialGradient: () => ({ addColorStop: noop }), moveTo: noop, lineTo: noop, closePath: noop, measureText: t => ({ width: String(t).length * 7 }) }) });
   const context = {
     URL, console, performance: { now: () => now }, ResizeObserver: class { observe() {} },
     FIRE_TYPES: { wildfire: { color: '#FF4A1C', ember: '#FF8A3D', emberHot: '#FFC07A', glow: { width: 16, alpha: 0.85, power: 0.2 } } },
@@ -26,7 +26,7 @@ async function check(retry) {
     document: { baseURI: 'https://firewatch.local/index.html', currentScript: { dataset: { region: 'data/regions/california/region.json' } }, createElement: element },
     fetch: async url => ({ ok: true, json: async () => JSON.parse(fs.readFileSync(path.join(root, new URL(url).pathname.slice(1)), 'utf8')) }),
     Cesium: {
-      Color: Object.assign(class {}, { fromCssColorString: () => ({ withAlpha() { return this; } }) }), Material: class {}, PolylineCollection: class { add() { return {}; } },
+      Color: Object.assign(class {}, { fromCssColorString: () => ({ withAlpha() { return this; } }) }), Material: class {}, PolylineCollection: class { add() { return {}; } }, BillboardCollection: class { add() { return {}; } },
       Cartesian3: { fromDegrees: (longitude, latitude, height) => ({ longitude, latitude, height }) },
       Cartographic: { fromDegrees: () => ({}) },
       Cartesian2: class {}, DistanceDisplayCondition: class {}, BoundingSphere: class {}, HeadingPitchRange: class {},
@@ -45,6 +45,7 @@ async function check(retry) {
     }
   };
   context.window = context; vm.createContext(context);
+  vm.runInContext(fs.readFileSync(path.join(root, 'spread-forecast.js'), 'utf8'), context);
   vm.runInContext(fs.readFileSync(path.join(root, 'dixie-fire.js'), 'utf8'), context);
   vm.runInContext(fs.readFileSync(path.join(root, 'regional-map.js'), 'utf8'), context);
   const viewer = {
@@ -66,7 +67,7 @@ async function check(retry) {
   assert.equal(ignition.parent, undefined);
   assert.equal(ignition.position.latitude, 39.871306);
   assert.equal(ignition.position.longitude, -121.389439);
-  assert.equal(viewer.entities.values.length, 63);
+  assert.equal(viewer.entities.values.length, 64);
   assert.equal(ticks.length, 1);
   const fire = context.DixieFire.create(viewer, context.RegionalMap.data.config.origin);
   assert.equal(ticks.length, 1);
@@ -134,7 +135,7 @@ async function check(retry) {
   fire.update({ step: 0, playing: true }, { spread: true });
   assert(Math.abs(polyArea() - table[0]) < 0.01, 'restart during Play returns to the first ignition state');
   assert.equal(ticks.length, 1);
-  assert.equal(viewer.entities.values.length, 63);
+  assert.equal(viewer.entities.values.length, 64);
   assert.equal(sources.length, 5);
   assert.equal(listeners, 1); assert.equal(panels, 1); assert.equal(flights, 1);
   for (const collection of [viewer.entities, ...sources.map(ds => ds.entities)]) {

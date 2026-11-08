@@ -42,10 +42,29 @@
     const r = Math.sqrt(a) + (Math.sqrt(b) - Math.sqrt(a)) * t;
     return r * r;
   }
-  const envelope = area => outline(area).map(p => p.map(v => v * 1.4));
+  const envelope = area => outline(area).map(p => p.map(v => v * 1.4));   // fallback only when no forecast config is loaded
+  // One-hour spread zone for a given burned area (see spread-forecast.js; illustrative model). Used by the map AND the Buildings KPI.
+  function zoneXY(fc, area) {
+    const a = SpreadForecast.assess(fc.config, fc.inputs, area);
+    return SpreadForecast.expand(a, outline(area));
+  }
+  // Smoke puff model (pure, so it can be tested). Subtle for a small ignition, a broader plume as the fire grows,
+  // drifting along the wind (bearing = direction the wind blows toward) at a rate that scales with wind speed.
+  const SMOKE_PUFFS = 36, SMOKE_LIFE = 9;
+  const hash = (i, c) => { const x = Math.sin(i * 127.1 + c * 311.7) * 43758.5453; return x - Math.floor(x); };
+  function smokePuff(i, t, area, bearingDeg, mph) {
+    const age = t + i * SMOKE_LIFE / SMOKE_PUFFS, cycle = Math.floor(age / SMOKE_LIFE), q = (age % SMOKE_LIFE) / SMOKE_LIFE;
+    const radius = Math.sqrt(area / Math.PI), acres = area / ACRE, b = bearingDeg * Math.PI / 180;
+    const intensity = Math.min(1, 0.06 + 0.94 * Math.sqrt(acres / 500));   // very subtle at ignition, full by ~500 acres
+    const plume = Math.max(30, Math.min(4000, 30 + 6 * Math.sqrt(area))) * (mph / 10);
+    const along = radius * 0.3 + q * plume, across = (hash(i, cycle) - 0.5) * (radius * 1.2 + 6) * (1 + 2 * q);
+    return { east: along * Math.sin(b) + across * Math.cos(b), north: along * Math.cos(b) - across * Math.sin(b), q,
+      sizeM: Math.min(900, (radius * 0.6 + 5) * (0.6 + 1.8 * q)), heightM: Math.min(400, 10 + (20 + radius * 0.5) * q),
+      alpha: 0.3 * intensity * Math.pow(Math.sin(Math.PI * q), 1.2) };
+  }
   function buildingsInPath(data, step) {
     if (!areas[step]) return [];
-    const ring = envelope(areas[step]), origin = data.config.origin;
+    const ring = data.forecast ? zoneXY(data.forecast, areas[step]) : envelope(areas[step]), origin = data.config.origin;
     return data.geography.buildings.features.filter(feature => {
       if (feature.geometry.type !== 'Point') return false;
       const [lon, lat] = feature.geometry.coordinates;
@@ -79,9 +98,14 @@
     const fill = put('fill', { parent: group, polygon: { hierarchy: [], zIndex: 6, material: new C.ImageMaterialProperty({ image: Map3D.fireVisuals.smokyTexture(), transparent: true }) } });
     const glow = put('glow', { parent: group, polyline: { positions: [], clampToGround: true, width: ft.glow.width, zIndex: 10, material: new C.PolylineGlowMaterialProperty({ color: color(ft.color, ft.glow.alpha), glowPower: ft.glow.power, taperPower: 1 }) } });
     const edge = put('edge', { parent: group, polyline: { positions: [], clampToGround: true, width: 2.5, zIndex: 11, material: color(ft.emberHot) } });
-    const path = put('path', { show: false, name: 'Likely path: simulated envelope; no forecast horizon or probability', polygon: { hierarchy: [], zIndex: 3, material: color('#F2A65A', 0.13) }, polyline: { positions: [], clampToGround: true, width: 2, material: new C.PolylineDashMaterialProperty({ color: color('#F2A65A', 0.65) }) } });
-    path.position = position(0, 0);
-    path.label = { text: 'Likely path', font: '12px Barlow, sans-serif', fillColor: color('#F2A65A'), outlineColor: color('#15120F'), outlineWidth: 3, style: C.LabelStyle.FILL_AND_OUTLINE, pixelOffset: new C.Cartesian2(0, -88), heightReference: C.HeightReference.CLAMP_TO_GROUND, disableDepthTestDistance: Infinity };
+    // "Likely path": translucent orange zone for the next 60 minutes (illustrative model), dashed orange boundary, tip label.
+    const path = put('path', { show: false, name: 'Next 60 min: illustrative spread zone; not a validated forecast', polygon: { hierarchy: [], zIndex: 3, material: color('#F26B2E', 0.2) }, polyline: { positions: [], clampToGround: true, width: 2.5, material: new C.PolylineDashMaterialProperty({ color: color('#F26B2E', 0.95), dashLength: 12 }) } });
+    const tipLabel = put('forecast-tip', { show: false, position: position(0, 0), label: { text: 'Next 60 min', font: '600 12px Barlow, sans-serif', fillColor: color('#F26B2E'), showBackground: true, backgroundColor: color('#15120F', 0.88), backgroundPadding: new C.Cartesian2(6, 3), horizontalOrigin: C.HorizontalOrigin.LEFT, pixelOffset: new C.Cartesian2(10, 0), heightReference: C.HeightReference.CLAMP_TO_GROUND, disableDepthTestDistance: Infinity } });
+    // Smoke: one BillboardCollection of reused puffs (never recreated), positioned relative to the ignition and sampled terrain height.
+    const smokeColl = viewer.scene.primitives.add(new C.BillboardCollection());
+    const smokeTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d'); const gr = g.createRadialGradient(32, 32, 0, 32, 32, 30); gr.addColorStop(0, 'rgba(255,255,255,0.5)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); return c; })();
+    const puffs = Array.from({ length: SMOKE_PUFFS }, (_, i) => smokeColl.add({ image: smokeTex, sizeInMeters: true, width: 10, height: 10, color: new C.Color(0.52, 0.5, 0.47, 0), show: false }));
+    let baseH = 0, heightAt = 0, windMph = 10, fctx = null, lastSlope;
     const label = put('label', { position: position(0, 0), label: { text: '', font: '13px Barlow, sans-serif', fillColor: color('#F2A65A'), outlineColor: color('#15120F'), outlineWidth: 3, style: C.LabelStyle.FILL_AND_OUTLINE, pixelOffset: new C.Cartesian2(0, -48), heightReference: C.HeightReference.CLAMP_TO_GROUND, disableDepthTestDistance: Infinity } });
     // Orange callout at the fire's head (the downwind edge); follows the simulated footprint as it grows.
     const head = put('head', { position: position(0, 0), show: false, point: { pixelSize: 7, color: color(ft.color), outlineColor: color('#FFF4E0'), outlineWidth: 1.5, heightReference: C.HeightReference.CLAMP_TO_GROUND, disableDepthTestDistance: Infinity },
@@ -99,10 +123,11 @@
       group.show = area > 0;
       fill.polygon.hierarchy = new C.PolygonHierarchy(vertices);
       glow.polyline.positions = edge.polyline.positions = ring;
-      const pathVertices = envelope(area).map(p => position(...p));
+      const zone = fctx ? zoneXY(fctx, area) : envelope(area), pathVertices = zone.map(p => position(...p));
+      if (fctx) { const a = SpreadForecast.assess(fctx.config, fctx.inputs, area), tp = SpreadForecast.tip(a, zone); tipLabel.position = position(tp[0], tp[1]); tipLabel.label.text = 'Next 60 min · ' + a.directionName; }
       path.polygon.hierarchy = new C.PolygonHierarchy(pathVertices);
       path.polyline.positions = pathVertices.concat(pathVertices[0]);
-      path.show = spread && area > 0;
+      path.show = spread && area > 0; tipLabel.show = spread && area > 0;
       const radius = Math.sqrt(area / Math.PI), b = headBearing * Math.PI / 180;
       pulse.show = area > 0 && area < 20 * ACRE;
       head.show = area > 0; head.position = position(radius * 1.1 * Math.sin(b), radius * 1.1 * Math.cos(b));
@@ -114,6 +139,7 @@
     function tick() {
       const now = performance.now(), animating = current !== target && !frozen;
       if (pulse.show) pulse.point.pixelSize = 15 + 6 * Math.sin(now / 380);
+      smokeTick(now);
       if (now - last < (animating ? GEOM_MS : 140)) return; // One geometry commit per build window while growing.
       last = now;
       if (animating) {
@@ -124,6 +150,16 @@
       }
       embers.forEach(e => { e.entity.point.color = color(ft.ember, 0.35 + 0.5 * (0.5 + 0.5 * Math.sin(now / 330 + e.phase))); });
     }
+    function smokeTick(now) {
+      if (now - heightAt > 3000) { heightAt = now; const h = viewer.scene.globe.getHeight(C.Cartographic.fromDegrees(origin.longitude, origin.latitude)); if (Number.isFinite(h)) baseH = h; }
+      const t = now / 1000, on = current > 0;
+      for (let i = 0; i < puffs.length; i++) {
+        const s = on ? smokePuff(i, t, current, headBearing, windMph) : null, bb = puffs[i];
+        if (!s || s.alpha < 0.004) { if (bb.show) bb.show = false; continue; }
+        bb.position = C.Cartesian3.fromDegrees(origin.longitude + s.east / (111320 * Math.cos(origin.latitude * Math.PI / 180)), origin.latitude + s.north / 111320, baseH + s.heightM);
+        bb.width = bb.height = s.sizeM; bb.color = new C.Color(0.52, 0.5, 0.47, s.alpha); bb.show = true;
+      }
+    }
     function setLabel() {
       const settled = current === target;
       const text = current <= 0 ? 'Ignition' : 'Simulated fire · ' + (settled && step === 4 ? '~40 × 40 ft' : format(current));
@@ -132,7 +168,9 @@
     function update(spec, layers) {
       if (!spec || !Number.isInteger(spec.step) || !areas.hasOwnProperty(spec.step)) return;
       spread = layers.spread !== false;
-      path.show = spread && current > 0;
+      path.show = spread && current > 0; tipLabel.show = spread && current > 0;
+      if (Number.isFinite(spec.windMph)) windMph = spec.windMph;
+      if (spec.forecast) { const slope = spec.forecast.inputs.slopePct; fctx = spec.forecast; if (slope !== lastSlope) { lastSlope = slope; draw(current); } }
       if (Number.isFinite(spec.headBearing) && spec.headBearing !== headBearing) { headBearing = spec.headBearing; draw(current); }
       const playing = !!spec.playing, now = performance.now();
       if (step === spec.step) {
@@ -161,5 +199,5 @@
     }
     const result = { update, zoom, get area() { return current; } }; instances.set(viewer, result); return result;
   }
-  window.DixieFire = { liveArea: 0, milestones: MILESTONES, PLAY_MS, MANUAL_MS, create, outline, envelope, buildingsInPath, areas, format, interpolate };
+  window.DixieFire = { liveArea: 0, milestones: MILESTONES, PLAY_MS, MANUAL_MS, smokePuff, zoneXY, create, outline, envelope, buildingsInPath, areas, format, interpolate };
 })();

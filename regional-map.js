@@ -9,7 +9,7 @@
   const color = s => Cesium.Color.fromCssColorString(s);
   const MAJOR_TOWNS = new Set(['Stirling City', 'Magalia', 'Concow', 'Cresta', 'Poe', 'Belden', 'Rock Creek', 'Pulga', 'Paradise']);
   const hasPosition = r => Number.isFinite(r.location?.latitude) && Number.isFinite(r.location?.longitude);
-  const runtime = { active, load, init, update, resetView, helpHtml, get data() { return data; } };
+  const runtime = { active, load, init, update, resetView, helpHtml, zoomToFire: () => fire && fire.zoom(), nearestStations, get data() { return data; } };
   async function json(url) {
     const response = await fetch(url);
     if (!response.ok) throw Error(`${url}: HTTP ${response.status}`);
@@ -62,7 +62,9 @@
       for (const s of evidence.steps) if (!timeline.records[s.step] || timeline.records[s.step].id !== s.eventId) throw Error('Evidence step does not match the timeline event');
       confidence = { config: cfg, evidence };
     }
-    data = { manifest, config, incident, sources, mapSources, overrides, resources, geography, timeline, confidence };
+    let forecast = null;   // illustrative one-hour spread model config + scenario inputs (slope is filled in from terrain)
+    if (manifest.forecast) { const fc = await json(resolve(manifest.forecast.configPath)); forecast = { config: fc, inputs: Object.assign({}, fc.scenarioInputs, { slopePct: null }) }; }
+    data = { manifest, config, incident, sources, mapSources, overrides, resources, geography, timeline, confidence, forecast };
     return data;
   }
   function sourceLinks(record) {
@@ -70,6 +72,20 @@
   }
   // Illustrative travel-time estimate: straight line x 1.4 road factor at 30 mph. Not routed, not a dispatch time.
   const travelMin = km => Math.max(1, Math.round(km * 1.4 / 48.28 * 60));
+  // Terrain slope along the spread direction, sampled once from Cesium terrain (retried until tiles load).
+  let slopeTries = 0;
+  function sampleSlope() {
+    const f = data && data.forecast;
+    if (!f || Number.isFinite(f.inputs.slopePct) || slopeTries++ > 60) return;
+    const o = data.config.origin, d = f.config.slope.sampleDistanceM, b = f.inputs.windToDeg * Math.PI / 180, globe = viewer.scene.globe;
+    const h1 = globe.getHeight(Cesium.Cartographic.fromDegrees(o.longitude, o.latitude));
+    const h2 = globe.getHeight(Cesium.Cartographic.fromDegrees(o.longitude + d * Math.sin(b) / (111320 * Math.cos(o.latitude * Math.PI / 180)), o.latitude + d * Math.cos(b) / 111320));
+    if (Number.isFinite(h1) && Number.isFinite(h2)) { f.inputs.slopePct = (h2 - h1) / d * 100; if (window.dispatchEvent && typeof Event === 'function') window.dispatchEvent(new Event('dixie-forecast')); }
+    else setTimeout(sampleSlope, 1500);
+  }
+  function nearestStations(n) {
+    return data.resources.stations.filter(hasPosition).map(r => ({ name: r.name, km: distanceKm(r.location), min: travelMin(distanceKm(r.location)) })).sort((a, b) => a.km - b.km).slice(0, n);
+  }
   function distanceKm(p) {
     const o = data.config.origin, rad = x => x * Math.PI / 180;
     const a = Math.sin(rad(p.latitude - o.latitude) / 2) ** 2 + Math.cos(rad(o.latitude)) * Math.cos(rad(p.latitude)) * Math.sin(rad(p.longitude - o.longitude) / 2) ** 2;
@@ -202,6 +218,7 @@
     viewer.scene.postRender.addEventListener(updateNorth);
     initialized = true;
     resetView(0);
+    sampleSlope();
   }
   function buildInfo() {
     info = document.createElement('div'); info.className = 'satinfo regional-info'; info.hidden = true;
@@ -282,14 +299,17 @@
     if (wind.collection) wind.collection.show = on;
   }
   // Buildings inside the simulated likely-path envelope turn orange (real mapped points; none are added or moved).
+  const baseDetails = new Map();
   function highlightBuildings(step) {
-    const ds = dataSources.buildings;
-    if (!ds || step === pathStep || !Number.isInteger(step)) return;
-    pathStep = step;
-    const paint = (ids, ink, size) => ids.forEach(id => { const e = ds.entities.getById(id); if (e && e.point) { e.point.color = color(ink); e.point.pixelSize = size; } });
-    paint(pathIds, '#EDE3CF', 3);
+    const ds = dataSources.buildings, slope = data.forecast && data.forecast.inputs.slopePct, key = step + ':' + slope;
+    if (!ds || key === pathStep || !Number.isInteger(step)) return;
+    pathStep = key;
+    const paint = (ids, ink, size, on) => ids.forEach(id => { const e = ds.entities.getById(id); if (!e || !e.point) return; e.point.color = color(ink); e.point.pixelSize = size;
+      if (!baseDetails.has(id)) baseDetails.set(id, details.get(id));
+      details.set(id, baseDetails.get(id) + (on ? '<br><b>Inside the simulated next-60-minute spread zone.</b><br>Illustrative model, not a validated forecast. Occupancy and building type are unknown.' : '')); });
+    paint(pathIds, '#EDE3CF', 3, false);
     pathIds = DixieFire.buildingsInPath(data, step).map(f => f.id);
-    paint(pathIds, '#F26B2E', 5);
+    paint(pathIds, '#F26B2E', 5, true);   // same list the Buildings in path KPI counts
   }
   function updateNorth() {
     if (!compass || compass.hidden) return;
