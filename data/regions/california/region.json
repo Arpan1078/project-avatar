@@ -19,7 +19,9 @@
       "path": "dixie-incident.json",
       "replayIds": [
         "us-ca-dixie-2026-hypothetical"
-      ]
+      ],
+      "label": "Dixie Fire — Historical Replay",
+      "scenarioKey": "dixie"
     }
   ],
   "collections": {
@@ -44,5 +46,9 @@
     "Phase 2 geographic view only. Legacy dashboard timelines are not Dixie progression.",
     "Resource presence does not imply availability. Unknown coordinates remain omitted."
   ],
-  "mapConfigPath": "map.json"
+  "mapConfigPath": "map.json",
+  "confidence": {
+    "configPath": "confidence-config.json",
+    "evidencePath": "evidence.json"
+  }
 }

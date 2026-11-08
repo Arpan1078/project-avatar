@@ -1909,5 +1909,5 @@
     applyState(u);
   }
 
-  window.Map3D = { init, update, resize: () => { if (viewer && ready) { viewer.resize(); viewer.scene.requestRender(); } }, resetView: () => resetView(1.5), pathHomes, pathBuildings, forecast, onDroneClick: null };
+  window.Map3D = { fireVisuals: { smokyTexture, seeded }, init, update, resize: () => { if (viewer && ready) { viewer.resize(); viewer.scene.requestRender(); } }, resetView: () => resetView(1.5), pathHomes, pathBuildings, forecast, onDroneClick: null };
 })();

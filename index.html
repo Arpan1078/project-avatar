@@ -230,7 +230,7 @@
   footer { background: var(--panel); border-top: 1px solid var(--line); padding: 10px 16px; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 8px 22px; align-items: center; }
   .ctlcol { display: flex; flex-direction: column; gap: 6px; }
   .controls { display: flex; gap: 6px; }
-  /* "Co-op power data" on/off switch (Real fire only). */
+  /* Optional data on/off switch (not used by the current incident). */
   .pswitch { display: flex; align-items: center; gap: 7px; padding: 0; background: none; border: none; color: var(--text-2); font-size: 12px; }
   .pswitch b { font-weight: 600; color: var(--text); }
   .pswitch-track { position: relative; width: 26px; height: 14px; border-radius: 7px; background: #4A4238; transition: background 0.15s; }
@@ -355,8 +355,8 @@
       </div>
     </div>
     <div class="modes" id="modes" role="group" aria-label="Dashboard view"></div>
-    <!-- "What if" scenario picker. Options are filled from SCENARIO_MENU. -->
-    <label class="scenario">Scenario <select id="scenarioSelect"></select></label>
+    <!-- Incident picker. Options come from the region manifest (incidentMenu()); only implemented replays are listed. -->
+    <label class="scenario">Incident <select id="scenarioSelect" aria-label="Incident"></select></label>
     <!-- Day badge + weather for the current scenario and step (re-rendered). -->
     <div class="conditions" id="conditions"></div>
   </header>
@@ -393,7 +393,7 @@
               <path d="M28 14 L33.5 22 H22.5 Z" fill="#EDE3CF"/>
             </g>
           </svg>
-          <div class="windtext"><b>Wind from S,</b><br>35 mph, gusts 55</div>
+          <div class="windtext"><b>North</b><br>Weather unavailable</div>
         </div>
         <div id="mapMsg" class="mapmsg" hidden></div>
         <!-- Confidence card and 1:53 alert pop-up (re-rendered). -->
@@ -449,7 +449,9 @@
 <!-- Where the story happens (on real geography) and the real map data in data/. -->
 <script src="story.js"></script>
 <script src="regional-map.js" data-region="data/regions/california/region.json"></script>
+<script src="confidence-engine.js"></script>
 <script src="dixie-scenario.js"></script>
+<script src="dixie-fire.js"></script>
 <script src="mapdata.js"></script>
 <script src="satellite.js"></script>
 <script src="map3d.js"></script>
@@ -457,415 +459,24 @@
 <script>
 /* ======================================================================
    SCENARIO DATA
-   Each scenario is one object in SCENARIOS below. Step numbers start at 0,
-   so "from: 3" means "from the 4th step on". Times, numbers and wording can
-   be edited here without touching the code further down.
+   Incident replays are data-driven: region.json lists incidents, and each implemented
+   replay has a module (see SCENARIO_MODULES). Step numbers start at 0.
    Captions: every timing that is our assumption (not from the real day or
    the scenario script) is marked "(assumed)".
    ====================================================================== */
 
-// The scenario menu in the top bar (key in SCENARIOS, label shown).
-const SCENARIO_MENU = window.RegionalMap && RegionalMap.active ? [['dixie', 'Dixie Fire historical replay']] : [
-  ['real',   'Real fire'],
-  ['outage', 'Power outage, no fire'],
-  ['burn',   'Planned burn']
-];
-
-// ---- Shared by the two Cottonwood Creek fire replays ----
-const COTTONWOOD_CONDITIONS = [
-  { from: 0, badge: 'Red flag warning', badgeClass: 'flag', note: 'Fires spread fast today',
-    weather: [['Wind', 'S 35, gusts 55'], ['Humidity', '11%'], ['Temp', '78°F'], ['Rain', 'none in 5 weeks']] }
-];
-// South wind; counts and geometry follow the northward forecast.
-const COTTONWOOD_WIND = [{ from: 0, dir: 'S', towardDeg: 0, mph: 35, text: '35 mph, gusts 55' }];
-const WEEKEND_BURNS = [
-  { title: 'Section 14 pasture', sub: 'Saturday, called in to dispatch, out by 6 pm' },
-  { title: 'Section 31 pasture', sub: 'Sunday, called in to dispatch, out by 5 pm' }
-];
-// Card over the homes in the likely path (title gets the live count, see compute()).
-const COTTONWOOD_HOMES_CARD = { title: n => `${n} ${n === 1 ? 'home' : 'homes'} in the fire path`, sub: 'Rancher has a disc' };
-const HEAD_CARD = { tone: 'wildfire', title: 'Head of the fire', sub: 'lineDistance' };
-
-// ---- "Planned burn" registration (used by the planned-burn rules) ----
-const REGISTERED_BURN = {
-  place: 'Section 22',
-  startText: '10:00 am', endText: '2:00 pm',
-  endMin: 14 * 60,              // 2:00 pm, minutes after midnight
-  escapeMin: 12 * 60 + 47       // when the burn escaped: 12:47 pm (assumed)
-};
-
-const SCENARIOS = {
-
-  /* ------------------------------------------------------------------
-     1. REAL FIRE: the Cottonwood Creek fire with all data sources (unchanged)
-     ------------------------------------------------------------------ */
-  real: {
-    ampm: 'pm',
-    conditions: COTTONWOOD_CONDITIONS,
-    wind: COTTONWOOD_WIND,
-    compareCols: ['Firewatch', 'Real day'],
-    steps: [
-      { time: '1:50', acres: 0,   caption: 'A gust drops the power line into dry grass. The co-op’s meters show the line lost power.', real: 'nobody knew.' },
-      { time: '1:51', acres: 5,   caption: 'Red flag day and no burn permit nearby, so Firewatch flags a possible fire.', real: 'nobody knew.' },
-      { time: '1:52', acres: 15,  caption: 'A weather satellite sees heat over the line. Confidence passes 70%.', real: 'nobody knew. Nobody was within four miles.' },
-      { time: '1:53', acres: 22,  caption: 'Alerts go out by text to the chief, dispatch, the rancher downwind, the water truck and {homes}.', real: 'nobody knew. The first 911 call was 28 minutes away.' },
-      { time: '1:56', acres: 45,  caption: 'Dispatch pages the volunteers. Three of the five who are free reply.', real: 'nobody knew.' },
-      { time: '1:59', acres: 80,  caption: 'A neighbor sends a photo. The rancher starts cutting a firebreak ahead of the fire.', real: 'nobody knew.' },
-      { time: '2:04', acres: 160, caption: 'Brush 1 leaves the station. Nearby departments and the state get a heads-up.', real: 'nobody knew. A driver saw smoke at 2:17, with no signal.' },
-      { time: '2:22', acres: 600, caption: 'Brush 1 arrives. The firebreak is already ahead of the fire.', real: 'the 911 call had just come in. The truck left at 2:34.' }
-    ],
-    reasons: [
-      { label: 'Power lost on the line', pts: 30, from: 0 },
-      { label: 'Red flag day',           pts: 15, from: 1 },
-      { label: 'No burn permit nearby',  pts: 10, from: 1 },
-      { label: 'Satellite sees heat',    pts: 25, from: 2, sat: true },
-      { label: 'Neighbor photo',         pts: 15, from: 5 }
-    ],
-    alerts: [
-      { who: 'Fire chief',          s: [[3, 'Text sent 1:53'], [4, 'Heading in']] },
-      { who: 'County 911 dispatch', s: [[3, 'Alert sent 1:53'], [4, 'Paged 1:56']] },
-      { who: 'Rancher downwind',    s: [[3, 'Text sent 1:53'], [5, 'Cutting firebreak']] },
-      { who: 'Lease water truck',   s: [[3, 'Text sent 1:53'], [5, 'Moving']] },
-      { who: '{Homes} in the path', s: [[3, 'Warned 1:53']] },
-      { who: 'Nearby departments',  s: [[6, 'Heads-up 2:04']] },
-      { who: 'State fire desk',     s: [[6, 'Heads-up 2:04']] }
-    ],
-    // People: [step, status, counts as responding?]
-    people: {
-      intro: '5 of 18 volunteers can leave work this afternoon', pagedFrom: 4, notPaged: 'Not paged yet',
-      rows: [
-        { who: 'Volunteer 1', note: 'farm',        s: [[4, 'Responding', true], [6, 'On Brush 1', true]] },
-        { who: 'Volunteer 2', note: 'in town',     s: [[4, 'Responding', true], [6, 'On Brush 1', true]] },
-        { who: 'Volunteer 3', note: 'co-op yard',  s: [[4, 'Responding', true], [6, 'Bringing tanker', true]] },
-        { who: 'Volunteer 4', note: 'out of town', s: [[4, 'Can’t make it', false]] },
-        { who: 'Volunteer 5', note: 'at work',     s: [] }
-      ]
-    },
-    burnsTab: k => ({ items: WEEKEND_BURNS.concat([{ title: 'Today', sub: 'None. No burning on a red flag day.' }]) }),
-    data: k => [
-      ['Power outages (co-op)', 'Live'],
-      ['Satellite heat (GOES)', k >= 2 ? '1 min ago' : 'No heat yet'],
-      ['Satellite (VIIRS)', 'Last pass 3 h ago'],
-      ['Weather (NWS)', '5 min ago'],
-      ['Community reports', k >= 5 ? '1 photo, 1:59' : 'None yet'],
-      ['Air quality (AirNow)', 'Sensor too far'],
-      ['Burn permits', 'Today’s list']
-    ],
-    facts: k => [['Likely cause', 'Power line down'], ['Heading', 'N, 2–3 mph'], ['Nearest water', '{Water}'],
-      ['Brush 1', k >= 7 ? 'On scene' : k >= 6 ? 'Driving' : k >= 4 ? 'Crew gathering' : 'At station']],
-    tiles: (k, v) => [
-      timeTile(v),
-      confTile(v),
-      { label: 'Area burned', value: v.now.acres, unit: 'acres', color: 'var(--fire)', note: k >= 3 ? 'Simulated estimate' : 'From the scenario' },
-      homesTile(v),
-      { label: 'Volunteers responding', value: v.responding, unit: 'of 5', color: 'var(--text)', note: '18 on the roster' },
-      { label: 'Ahead of 911', value: k >= 7 ? '30' : k >= 3 ? '28' : '0', unit: 'min', color: k >= 3 ? 'var(--fire)' : 'var(--text)',
-        note: k >= 7 ? 'Truck arrived 30 min sooner' : k >= 3 ? 'Fire known before anyone called' : 'Counts once alerts go out' }
-    ],
-    // Footer comparison: Firewatch value shows from step `from`; `other` is the right-hand column.
-    compare: [
-      { label: 'Fire known',    ours: '1:53', from: 3, other: '2:21' },
-      { label: 'Truck leaves',  ours: '2:04', from: 6, other: '2:34' },
-      { label: 'Truck arrives', ours: '2:22', from: 7, other: '2:52' }
-    ],
-    popup: {
-      at: 3, time: '1:53 pm',
-      sms: ['<b>Likely wildfire, 80% confidence</b>', '{fromStation}.', 'Cause: power line down.',
-        'Moving N. Wind S 35, gusts 55.', '{Homes} in the path. Nearest water: {water}.', 'Nearest help: {help}.'],
-      sentTo: 'Sent to the chief, county dispatch, the rancher downwind, the lease operator and {homes}. Plain text, so it works on one bar of signal.'
-    },
-    fireType: k => 'wildfire',
-    map: (k, v) => ({
-      view: 'district',
-      fires: { A: { place: 'line', acres: v.now.acres, type: 'wildfire', path: k >= 1, card: HEAD_CARD }, B: null },
-      firebreak: k >= 5, reporter: k >= 5, route: k >= 6, lineFault: true, burnArea: false,
-      homesCard: COTTONWOOD_HOMES_CARD
-    })
-  },
-
-  /* ------------------------------------------------------------------
-     1b. REAL FIRE with the co-op power data switched OFF.
-     Same fire, same growth (acres follow the same curve as the replay
-     above; 2:36 is extrapolated). Only detection changes.
-     ------------------------------------------------------------------ */
-  realNoPower: {
-    ampm: 'pm',
-    conditions: COTTONWOOD_CONDITIONS,
-    wind: COTTONWOOD_WIND,
-    compareCols: ['Firewatch', 'Real day'],
-    extraLine: 'Slower without power data, but still ahead of the 911 call. Every source is a bonus, not a requirement.',
-    steps: [
-      { time: '1:50', acres: 0,    caption: 'The line falls into dry grass. Power data is off: the outage isn’t seen.', real: 'nobody knew.' },
-      { time: '1:52', acres: 15,   caption: 'Red flag day is known, but there is nothing to tie it to yet. Firewatch sees nothing.', real: 'nobody knew. Nobody was within four miles.' },
-      { time: '2:04', acres: 160,  caption: 'At 2:04 (assumed) the fire is big enough for the weather satellite. Possible fire: Firewatch auto-texts enrolled people near the heat.', real: 'nobody knew.' },
-      { time: '2:07', acres: 200,  caption: 'At 2:07 (assumed) the rancher {rancher} replies YES with a photo. 75%: alerts go out.', real: 'nobody knew.' },
-      { time: '2:10', acres: 250,  caption: 'Dispatch pages the district at 2:10 (assumed).', real: 'nobody knew.' },
-      { time: '2:18', acres: 390,  caption: 'Brush 1 leaves the station at 2:18 (assumed, same 8 min to gather a crew).', real: 'nobody knew. A driver saw smoke at 2:17, with no signal.' },
-      { time: '2:36', acres: 1500, caption: 'Brush 1 arrives at 2:36 (assumed, same 18 min drive), 16 minutes sooner than the real day.', real: 'the truck left at 2:34 and was still on the road.' }
-    ],
-    reasons: [
-      { label: 'Power lost on the line', off: true },
-      { label: 'Satellite sees heat',       pts: 25, from: 2, sat: true },
-      { label: 'Red flag day',              pts: 15, from: 2 },
-      { label: 'No burn permit nearby',     pts: 10, from: 2 },
-      { label: 'Nearby person sees smoke',  pts: 25, from: 3 }
-    ],
-    status: [['Nothing detected', 'text'], ['Nothing detected', 'text']],   // later steps use the usual thresholds
-    alerts: [
-      { who: 'Rancher {rancherShort}',  s: [[2, 'Asked 2:04: see smoke?'], [3, 'Replied YES + photo']] },
-      { who: 'Fire chief',            s: [[3, 'Text sent 2:07'], [4, 'Heading in']] },
-      { who: 'County 911 dispatch',   s: [[3, 'Alert sent 2:07'], [4, 'Paged 2:10']] },
-      { who: 'Lease water truck',     s: [[3, 'Text sent 2:07']] },
-      { who: '{Homes} in the path',   s: [[3, 'Warned 2:07']] },
-      { who: 'Nearby departments',    s: [[5, 'Heads-up 2:18']] },
-      { who: 'State fire desk',       s: [[5, 'Heads-up 2:18']] }
-    ],
-    people: {
-      intro: '5 of 18 volunteers can leave work this afternoon', pagedFrom: 4, notPaged: 'Not paged yet',
-      rows: [
-        { who: 'Volunteer 1', note: 'farm',        s: [[4, 'Responding', true], [5, 'On Brush 1', true]] },
-        { who: 'Volunteer 2', note: 'in town',     s: [[4, 'Responding', true], [5, 'On Brush 1', true]] },
-        { who: 'Volunteer 3', note: 'co-op yard',  s: [[4, 'Responding', true], [5, 'Bringing tanker', true]] },
-        { who: 'Volunteer 4', note: 'out of town', s: [[4, 'Can’t make it', false]] },
-        { who: 'Volunteer 5', note: 'at work',     s: [] }
-      ]
-    },
-    burnsTab: k => ({ items: WEEKEND_BURNS.concat([{ title: 'Today', sub: 'None. No burning on a red flag day.' }]) }),
-    data: k => [
-      ['Power outages (co-op)', 'Off (not available)'],
-      ['Satellite heat (GOES)', k >= 2 ? 'Heat seen 2:04' : 'No heat yet'],
-      ['Satellite (VIIRS)', 'Last pass 3 h ago'],
-      ['Weather (NWS)', '5 min ago'],
-      ['Community reports', k >= 3 ? 'YES + photo, 2:07' : k >= 2 ? '1 asked, waiting' : 'None yet'],
-      ['Air quality (AirNow)', 'Sensor too far'],
-      ['Burn permits', 'Today’s list']
-    ],
-    facts: k => [['Likely cause', k >= 3 ? 'Near the power line' : 'Not known yet'], ['Heading', k >= 2 ? 'N, 2–3 mph' : '—'],
-      ['Nearest water', '{Water}'], ['Brush 1', k >= 6 ? 'On scene' : k >= 5 ? 'Driving' : k >= 4 ? 'Crew gathering' : 'At station']],
-    tiles: (k, v) => [
-      timeTile(v),
-      confTile(v),
-      { label: 'Area burned', value: v.now.acres.toLocaleString('en-US'), unit: 'acres', color: 'var(--fire)', note: k >= 3 ? 'Simulated estimate' : 'From the scenario' },
-      homesTile(v),
-      { label: 'Volunteers responding', value: v.responding, unit: 'of 5', color: 'var(--text)', note: '18 on the roster' },
-      { label: 'Ahead of 911', value: k >= 6 ? '16' : k >= 3 ? '14' : '0', unit: 'min', color: k >= 3 ? 'var(--fire)' : 'var(--text)',
-        note: k >= 6 ? 'Truck arrived 16 min sooner' : k >= 3 ? 'Fire known before anyone called' : 'Counts once alerts go out' }
-    ],
-    compare: [
-      { label: 'Fire known',    ours: '2:07', from: 3, other: '2:21' },
-      { label: 'Truck leaves',  ours: '2:18', from: 5, other: '2:34' },
-      { label: 'Truck arrives', ours: '2:36', from: 6, other: '2:52' }
-    ],
-    popup: {
-      at: 3, time: '2:07 pm',
-      sms: ['<b>Likely wildfire, 75% confidence</b>', '{fromStation}.', 'Seen by satellite, confirmed by a rancher nearby.',
-        'Moving N. Wind S 35, gusts 55.', '{Homes} in the path. Nearest water: {water}.', 'Nearest help: {help}.'],
-      sentTo: 'Sent to the chief, county dispatch, the rancher, the lease operator and {homes}. Plain text, so it works on one bar of signal.'
-    },
-    fireType: k => 'wildfire',
-    map: (k, v) => ({
-      view: 'district',
-      fires: { A: { place: 'line', acres: v.now.acres, type: 'wildfire', path: k >= 2, card: HEAD_CARD }, B: null },
-      firebreak: false, reporter: false, route: k >= 5, lineFault: true, burnArea: false,
-      homesCard: COTTONWOOD_HOMES_CARD
-    })
-  },
-
-  /* ------------------------------------------------------------------
-     2. POWER OUTAGE, NO FIRE: a windy day trips the line; nobody is paged.
-     ------------------------------------------------------------------ */
-  outage: {
-    ampm: 'am',
-    conditions: [
-      { from: 0, badge: 'Windy', badgeClass: 'badge-neutral', note: 'Windy Thursday in April',
-        weather: [['Wind', 'S 30, gusts 45'], ['Humidity', '30%']] }
-    ],
-    wind: [{ from: 0, dir: 'S', towardDeg: 20, mph: 30, text: '30 mph, gusts 45' }],
-    compareCols: ['Firewatch', 'Without Firewatch'],
-    steps: [
-      { time: '10:40', caption: 'A gust trips the same power line. The co-op’s meters show the line lost power.' },
-      { time: '10:41', caption: 'Windy, but not a red flag day. Firewatch keeps watching the line.' },
-      { time: '10:45', caption: 'The weather satellite sees no heat over the line at 10:45 (assumed).' },
-      { time: '10:46', caption: 'Under 70%, so no alert. Firewatch texts 2 enrolled people near the line: “Power line down near you. Can you see smoke? Reply YES or NO.”' },
-      { time: '10:49', caption: 'At 10:49 (assumed) the rancher replies NO: no smoke.' },
-      { time: '10:52', caption: 'At 10:52 (assumed) the co-op reports power back on: the line reclosed, it was not down. Case closed.' }
-    ],
-    reasons: [
-      { label: 'Power lost on the line',      pts: 30,  from: 0 },
-      { label: 'Windy, not red flag',         pts: 5,   from: 1 },
-      { label: 'No satellite heat',           pts: 0,   from: 2 },
-      { label: 'Nearby person sees no smoke', pts: -20, from: 4 },
-      { label: 'Power restored',              pts: -10, from: 5 }
-    ],
-    status: [['Watching the line', 'text'], ['Watching the line', 'text'], ['Watching the line', 'text'],
-      ['Asking people nearby', 'text'], ['Watching the line', 'text'], ['No fire, case closed', 'calm']],
-    alerts: [
-      { who: 'Rancher near the line', s: [[3, 'Confirm request sent'], [4, 'Replied NO, no smoke']] },
-      { who: 'Lease operator',        s: [[3, 'Confirm request sent']] },
-      { who: 'Fire chief',            s: [[5, 'Not needed']], none: 'Not alerted' },
-      { who: 'County 911 dispatch',   s: [[5, 'Not needed']], none: 'Not alerted' },
-      { who: 'Volunteers',            s: [[5, 'Not paged']], none: 'Not paged' }
-    ],
-    alertNote: { from: 3, title: 'Confirm request (text, 10:46)', text: 'Power line down near you. Can you see smoke? Reply YES or NO.' },
-    people: {
-      intro: 'No one is paged unless an alert goes out', pagedFrom: Infinity, notPaged: 'Not paged',
-      rows: ['farm', 'in town', 'co-op yard', 'out of town', 'at work'].map((note, i) => ({ who: 'Volunteer ' + (i + 1), note, s: [] }))
-    },
-    burnsTab: k => ({ items: WEEKEND_BURNS.concat([{ title: 'Today', sub: 'None registered.' }]) }),
-    data: k => [
-      ['Power outages (co-op)', k >= 5 ? 'Power back on 10:52' : 'Line out since 10:40'],
-      ['Satellite heat (GOES)', k >= 2 ? 'No heat' : 'Checking'],
-      ['Satellite (VIIRS)', 'Last pass 2 h ago'],
-      ['Weather (NWS)', '5 min ago'],
-      ['Community reports', k >= 4 ? '1 reply: no smoke' : k >= 3 ? '2 asked, waiting' : 'None yet'],
-      ['Air quality (AirNow)', 'Sensor too far'],
-      ['Burn permits', 'None today']
-    ],
-    facts: k => [['Likely cause', k >= 5 ? 'Line reclosed' : 'Line tripped in wind'], ['Heading', 'No fire'],
-      ['Nearest water', '{Water}'], ['Brush 1', 'At station']],
-    tiles: (k, v) => [
-      timeTile(v),
-      confTile(v),
-      { label: 'Area burned', value: 0, unit: 'acres', color: 'var(--text)', note: 'No fire' },
-      { label: 'Homes in path', value: 0, unit: '', color: 'var(--text)', note: 'No fire' },
-      { label: 'Volunteers paged', value: 0, unit: 'of 5', color: 'var(--text)', note: 'No alert, no page' },
-      { label: 'False alarms avoided', value: k >= 5 ? 1 : 0, unit: '', color: k >= 5 ? 'var(--calm)' : 'var(--text)',
-        note: k >= 5 ? 'District not paged' : 'Counts when the case closes' }
-    ],
-    compare: [
-      { label: 'Outage',                      ours: '10:40', from: 0, other: '10:40' },
-      { label: 'District paged',              ours: 'No',    from: 5, other: 'Maybe, if someone calls in' },
-      { label: 'Volunteers pulled from work', ours: '0',     from: 5, other: 'Up to 5' }
-    ],
-    outcome: { at: 5, title: 'No alert sent. 0 volunteers pulled from work.', sub: 'Case closed at 10:52: the line reclosed, no fire.' },
-    map: k => ({
-      view: 'district',
-      fires: { A: null, B: null },
-      firebreak: false, reporter: false, route: false, lineFault: true, burnArea: false,
-      homesCard: null
-    })
-  },
-
-  /* ------------------------------------------------------------------
-     3. PLANNED BURN: a registered burn is watched, not paged; then it escapes.
-     ------------------------------------------------------------------ */
-  burn: {
-    ampm: 'am/pm',
-    layersOnEnter: { burns: true },          // show the registered burn area
-    conditions: [
-      { from: 0, badge: 'Burn day', badgeClass: 'badge-neutral', note: 'Breezy Wednesday in April',
-        weather: [['Wind', 'SW 15'], ['Humidity', '28%']] },
-      { from: 3, badge: 'Burn day', badgeClass: 'badge-neutral', note: 'Breezy Wednesday in April',
-        weather: [['Wind', 'SW 25, gusts 40'], ['Humidity', '28%']] }
-    ],
-    wind: [
-      // Southwest wind drives the simulated path northeast.
-      { from: 0, dir: 'SW', towardDeg: 45, mph: 15, text: '15 mph' },
-      { from: 3, dir: 'SW', towardDeg: 45, mph: 25, text: '25 mph, gusts 40' }
-    ],
-    compareCols: ['Firewatch', 'Without Firewatch'],
-    // burnAcres = the planned burn inside Section 22; escapeAcres = new fire outside it.
-    // heatOutside = satellite heat outside the registered area (drives the rules).
-    steps: [
-      { time: '9:00',  ampm: 'am', burnAcres: 0,  escapeAcres: 0, caption: 'The landowner registers a burn by text: Section 22, 10:00 am to 2:00 pm, crew of 3 on site.' },
-      { time: '10:05', ampm: 'am', burnAcres: 2,  escapeAcres: 0, caption: 'At 10:05 (assumed) the satellite sees heat at Section 22. It matches the registered burn, so no alert.' },
-      { time: '10:20', ampm: 'am', burnAcres: 8,  escapeAcres: 0, caption: 'At 10:20 (assumed) a neighbor texts a smoke photo. Firewatch matches it to the burn and replies automatically. No alert.' },
-      { time: '12:30', ampm: 'pm', burnAcres: 40, escapeAcres: 0, caption: 'Wind picks up to SW 25, gusts 40. Firewatch keeps checking the burn’s edges against the registered area.' },
-      { time: '12:48', ampm: 'pm', burnAcres: 48, escapeAcres: 3, heatOutside: true, caption: 'At 12:48 (assumed) the satellite sees new heat about half a mile northeast, outside the registered area.' },
-      { time: '12:49', ampm: 'pm', burnAcres: 48, escapeAcres: 4, heatOutside: true, caption: 'Alert goes out to the chief, dispatch, the landowner running the burn and the downwind neighbors.' },
-      { time: '12:51', ampm: 'pm', burnAcres: 48, escapeAcres: 8, heatOutside: true, caption: 'At 12:51 (assumed) the landowner replies: “Yes, it jumped the road.” Dispatch pages the district. A VIIRS pass at 12:50 (assumed) also sees the escape.' },
-      { time: '12:58', ampm: 'pm', burnAcres: 48, escapeAcres: 8, heatOutside: true, caption: 'Simulated drone flight: launch from the nearest town at 12:52 PM, arrival near the escape at 12:58 PM. Six minutes replayed in 2.4 seconds; timing and capabilities assumed.' }
-    ],
-    reasons: [
-      { label: 'Satellite sees heat',          pts: 25,  from: 1, sat: true },
-      { label: 'Matches a registered burn',    from: 1, rule: k => burnMatchReason(k) },
-      { label: 'Neighbor smoke report',        pts: 15,  from: 2,
-        changes: [[4, { label: 'Neighbor report (was the burn)', pts: 0 }]] },   // that smoke was the planned burn
-      { label: 'Wind increasing',              pts: 10,  from: 3 },
-      { label: 'Heat outside registered area', pts: 45,  from: 4 },
-      { label: 'Landowner confirms escape',    pts: 15,  from: 6 }
-    ],
-    // 'fire' = the current fire type's color: amber while planned, red-magenta once escaped.
-    status: [['Burn registered', 'fire'], ['Planned burn, being watched', 'fire'], ['Planned burn, being watched', 'fire'],
-      ['Planned burn, watching edges', 'fire'], ['Possible escaped burn', 'fire'], ['Possible escaped burn', 'fire'], ['Escaped burn, confirmed', 'fire'], ['Escaped burn, confirmed', 'fire']],
-    confLabel: 'Wildfire confidence',
-    alerts: [
-      { who: 'County drone (simulated)', s: [[7, 'Launched 12:52 PM; arrived 12:58 PM (assumed)']] },
-      { who: 'Landowner (running the burn)', s: [[0, 'Burn registered 9:00'], [5, 'Text sent 12:49'], [6, 'Replied: jumped the road']] },
-      { who: 'Neighbor (smoke photo)',       s: [[2, 'Auto-reply sent 10:20']] },
-      { who: 'Fire chief',                   s: [[5, 'Text sent 12:49']] },
-      { who: 'County 911 dispatch',          s: [[5, 'Alert sent 12:49'], [6, 'Paged district 12:51']] },
-      { who: 'Downwind neighbors ({escapeHomesN})', s: [[5, 'Warned 12:49']] }
-    ],
-    alertNote: { from: 2, title: 'Auto-reply to the neighbor (10:20)', text: 'This is a registered burn in Section 22, scheduled until 2:00 pm. Reply FIRE if you see it spreading.' },
-    people: {
-      intro: '5 of 18 volunteers can leave work today', pagedFrom: 6, notPaged: 'Not paged',
-      rows: ['farm', 'in town', 'co-op yard', 'out of town', 'at work'].map((note, i) => ({ who: 'Volunteer ' + (i + 1), note, s: [[6, 'Paged 12:51', false]] }))
-    },
-    burnsTab: k => ({
-      items: [
-        { title: 'Section 22 pasture', sub: 'Today 10:00 am to 2:00 pm. Registered by text at 9:00, crew of 3 on site.',
-          badge: k >= 4 ? 'Possible escape' : 'Active today', badgeTone: k >= 4 ? 'fire' : 'calm' }
-      ].concat(WEEKEND_BURNS)
-    }),
-    data: k => [
-      ['Power outages (co-op)', 'Live, none'],
-      ['Satellite heat (GOES)', k >= 4 ? 'Heat outside burn, 12:48' : k >= 1 ? 'Heat at Section 22' : 'No heat yet'],
-      ['Satellite (VIIRS)', 'Last pass 2 h ago'],
-      ['Weather (NWS)', '5 min ago'],
-      ['Community reports', k >= 6 ? 'Landowner: jumped the road' : k >= 2 ? '1 smoke photo, 10:20' : 'None yet'],
-      ['Air quality (AirNow)', 'Sensor too far'],
-      ['Burn permits', 'Section 22 active']
-    ],
-    facts: k => [['Likely cause', k >= 4 ? 'Escaped planned burn' : 'Registered burn'], ['Heading', 'NE, with the wind'],
-      ['Burn crew', '3 on site'], ['Brush 1', k >= 6 ? 'Crew gathering' : 'At station']],
-    tiles: (k, v) => [
-      timeTile(v),
-      confTile(v),
-      { label: 'Area burned', value: v.now.burnAcres + v.now.escapeAcres, unit: 'acres', color: 'var(--fire)',
-        note: k >= 4 ? 'Burn + escape, simulated' : 'Planned burn, simulated' },
-      homesTile(v),
-      { label: 'Volunteers responding', value: v.responding, unit: 'of 5', color: 'var(--text)', note: k >= 6 ? 'Paged 12:51' : 'Not paged' },
-      k >= 4
-        ? { label: 'Escape caught', value: escapeCaughtMinutes(), unit: 'min', color: 'var(--fire)', note: 'After the escape (12:47, assumed)' }
-        : { label: 'Planned burns not paged', value: 1, unit: '', color: 'var(--calm)', note: 'Smoke there is expected' }
-    ],
-    compare: [
-      { label: 'Smoke reports',                      ours: 'Answered automatically', from: 2, other: 'Each one paged or called back' },
-      { label: 'District paged for the planned burn', ours: 'No',                    from: 1, other: 'Possibly' },
-      { label: 'Escape noticed',                     ours: '12:48',                  from: 4, other: 'When someone calls' }
-    ],
-    popup: {
-      at: 5, time: '12:49 pm',
-      sms: ['<b>Planned burn may have escaped, 80% confidence</b>', 'New fire {escapeFrom} of Section 22 burn, outside the registered area.',
-        'Wind SW 25, gusts 40.', 'Homes in the path: {escapeHomes}.', 'Nearest help: {help}.'],
-      sentTo: 'Sent to the chief, county dispatch, the landowner running the burn and {escapeHomesN} downwind. Plain text, so it works on one bar of signal.'
-    },
-    rules: k => (k >= 1 ? burnRules(k) : null),
-    // Planned while every burn rule holds; escaped as soon as one breaks.
-    fireType: k => (burnRules(k).every(r => r.ok) ? 'planned' : 'escaped'),
-    map: (k, v) => {
-      const [inside, beforeEnd] = burnRules(k).map(r => r.ok);
-      return {
-        view: 'burn',
-        fires: {
-          // New fire outside the registered area.
-          A: v.now.escapeAcres ? { place: 'escape', acres: v.now.escapeAcres, type: 'escaped', path: true,
-            card: { tone: 'escaped', title: 'Escaped burn', sub: k >= 6 ? 'Confirmed by the landowner' : 'Outside the registered area' } } : null,
-          // The burn inside Section 22: planned until its end time passes.
-          B: v.now.burnAcres ? { place: 'burn', acres: v.now.burnAcres, type: beforeEnd ? 'planned' : 'escaped',
-            card: beforeEnd ? { tone: 'planned', title: 'Planned burn', sub: `Section 22, until ${REGISTERED_BURN.endText}` }
-              : { tone: 'escaped', title: 'Burn past its end time', sub: `Registered until ${REGISTERED_BURN.endText}` } } : null
-        },
-        firebreak: false, reporter: false, route: false, lineFault: false, burnArea: true,
-        burnAreaTone: inside && beforeEnd ? 'planned' : 'escaped',
-        homesCard: { title: n => `${n} ${n === 1 ? 'home' : 'homes'} downwind`, sub: '{escapeHomesRange} of the escape' }
-      };
-    }
-  }
-};
-
-for (const key in SCENARIOS) SCENARIOS[key].key = key;
+// Scenario replay modules, keyed by the scenario key declared in the region manifest (region.json "incidents").
+// An incident is selectable only if a replay module exists for it. Legacy Kansas demo scenarios are archived in archive/kansas/.
+const SCENARIO_MODULES = { dixie: DixieScenario };
+function incidentMenu() {
+  const m = window.RegionalMap && RegionalMap.data && RegionalMap.data.manifest;
+  const list = m ? m.incidents.filter(i => i.scenarioKey && SCENARIO_MODULES[i.scenarioKey]).map(i => [i.scenarioKey, i.label]) : [];
+  return list.length ? list : [['dixie', 'Dixie Fire \u2014 Historical Replay']];
+}
+function syncIncidentMenu() {
+  const menu = incidentMenu(), sel = regions.scenarioSelect;
+  if ((sel.options ? sel.options.length : -1) !== menu.length) sel.innerHTML = menu.map(([key, label]) => `<option value="${key}">${label}</option>`).join('');
+}
 
 // Short fire-mask words for the "Satellite sees heat (GOES, ...)" reason.
 const MASK_SHORT = { 10: 'processed fire', 11: 'saturated fire', 12: 'cloud-contaminated fire', 13: 'high probability', 14: 'medium probability', 15: 'low probability' };
@@ -875,7 +486,7 @@ const CHIPS = [
   { key: 'spread', label: 'Likely path' }, { key: 'houses', label: 'Homes' }, { key: 'water', label: 'Water' },
   { key: 'stations', label: 'Fire stations' }, { key: 'power', label: 'Power lines' },
   { key: 'burns', label: 'Permitted burns' }, { key: 'risk', label: 'Fire risk today' },
-  { key: 'wind', label: 'Wind' }, { key: 'sat', label: 'Satellite' }, { key: 'help', label: 'Help nearby' }
+  { key: 'wind', label: 'Wind' }, { key: 'sat', label: 'Satellite' }, { key: 'cameras', label: 'Cameras', regionalOnly: true }, { key: 'help', label: 'Help nearby' }
 ];
 
 const TABS = [
@@ -886,7 +497,6 @@ const TABS = [
 /* ---------- State ---------- */
 const state = {
   scenario: window.RegionalMap && RegionalMap.active ? 'dixie' : 'real',
-  powerData: true,     // "Co-op power data" switch (Real fire only)
   view: 'dashboard',   // 'dashboard' (map) or 'calculator' (Calculator tab)
   mode: 'simple',
   step: 0,
@@ -894,14 +504,13 @@ const state = {
   tab: 'alerts',
   alertClosed: false,
   actionMsg: '',
-  layers: { spread: true, houses: true, water: true, stations: true, power: true, burns: false, risk: false, wind: true, sat: true, help: true, conf: false }
+  layers: { spread: true, houses: true, water: true, stations: true, power: true, burns: false, risk: false, wind: true, sat: true, cameras: true, help: true, conf: false }
 };
 let timer = null;
 
 // The scenario data in use (Real fire switches variant with the power-data switch).
 function scenario() {
-  if (state.scenario === 'dixie') return DixieScenario.scenario(RegionalMap.data);
-  return state.scenario === 'real' && !state.powerData ? SCENARIOS.realNoPower : SCENARIOS[state.scenario];
+  return SCENARIO_MODULES[state.scenario].scenario(RegionalMap.data);
 }
 
 /* ---------- Helpers ---------- */
@@ -929,292 +538,39 @@ const stepAmPm = (sc, s) => s.ampm || sc.ampm;
      2. it is before the registered end time.
    If heat shows up outside the area, or the burn is still burning after the
    end time, it stops counting as planned and is treated as a possible wildfire. */
-function burnRules(k) {
-  const sc = SCENARIOS.burn, s = sc.steps[k];
-  const inside = !s.heatOutside;
-  const beforeEnd = toMinutes(s.time, stepAmPm(sc, s)) <= REGISTERED_BURN.endMin;
-  return [
-    { label: 'Inside registered area', ok: inside },
-    { label: `Before ${REGISTERED_BURN.endText} end time`, ok: beforeEnd }
-  ];
-}
-function burnMatchReason(k) {
-  const [inside, beforeEnd] = burnRules(k).map(r => r.ok);
-  if (inside && beforeEnd) return { label: 'Matches a registered burn', pts: -30 };
-  if (!inside) return { label: 'No longer matches the burn', pts: 0 };
-  return { label: 'Still burning after the end time', pts: 0 };
-}
-// Minutes from the (assumed) escape to the first heat seen outside the area.
-function escapeCaughtMinutes() {
-  const sc = SCENARIOS.burn;
-  const first = sc.steps.find(s => s.heatOutside);
-  return toMinutes(first.time, stepAmPm(sc, first)) - REGISTERED_BURN.escapeMin;
-}
-
-// Shared tiles.
-const timeTile = v => ({ label: 'Time', value: v.now.time, unit: v.ampm, color: 'var(--text)', note: 'Simulated clock' });
 // Homes inside the likely-path zone on the map (Map3D.pathHomes), so the number always matches.
-const homesTile = v => ({ label: 'Homes in path', value: v.pathHomes.length, unit: '', color: v.pathHomes.length ? 'var(--fire-soft)' : 'var(--text)', note: 'Next 60 min' });
 const confidenceColor = score => score < 40 ? '#F26B2E' : score < 70 ? '#E8B04A' : '#5FBF77';
-const confTile = v => ({ label: 'Confidence', value: v.conf, unit: '%', color: confidenceColor(v.conf), note: 'Alerts go out at 70%' });
 
 const TONE = { fire: 'var(--fire)', calm: 'var(--calm)', text: 'var(--text)' };
 
 /* ---------- Help nearby (real fire departments, simulated status) ----------
    Real fire: one of the two nearest departments is busy on its own fire.
    From headsUpFrom on, the 3 nearest available ones get a heads-up. */
-const HELP_PLAN = {
-  real:        { headsUpFrom: 6, busyNearest: true },   // "Nearby departments: heads-up 2:04"
-  realNoPower: { headsUpFrom: 5, busyNearest: true },   // heads-up 2:18
-  outage:      null,
-  burn:        { headsUpFrom: 6 }                       // district paged 12:51
-};
-function helpState(sc, k, v) {
-  const plan = HELP_PLAN[sc.key];
-  const A = v.map.fires.A, B = v.map.fires.B;
-  const at = STORY.PLACES[(A || B || { place: 'line' }).place];
-  const rows = MapData.helpFrom(at);
-  const status = {};
-  if (plan && plan.busyNearest && rows[0]) status[rows[0].dept.id] = 'busy';
-  const available = rows.filter(r => status[r.dept.id] !== 'busy');
-  if (plan && k >= plan.headsUpFrom) available.slice(0, 3).forEach(r => { status[r.dept.id] = 'headsup'; });
-  // Dashed lines only while there is a fire that may need help (wildfire or escape).
-  const needed = !!A;
-  return { at, from: needed ? at : null, rows, status, lineTo: needed ? available.slice(0, 3).map(r => r.dept.id) : [], nearest: available[0] || null };
-}
-
-/* ---------- Story text about real places ----------
-   Captions and alerts use {tokens}; fill() puts in values from the real data. */
 const fill = (text, v) => String(text).replace(/\{(\w+)\}/g, (m, key) => (v.tokens && key in v.tokens ? v.tokens[key] : m));
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
-function storyTokens(v) {
-  const t = {};
-  const P = STORY.PLACES, fire = P.line, dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
-  const vec = (a, b) => [b[0] - a[0], b[1] - a[1]];
-  const ok = MapData.loaded;
-  // Nearest water to the fire (or to the burn / escape).
-  const w = ok ? MapData.nearestWater(v.help.at) : null;
-  t.Water = w ? w.text : '—';
-  t.water = w ? `${(w.name || w.type).toLowerCase()} ${w.miles.toFixed(1)} mi ${w.dir}` : 'unknown';
-  // Homes in the likely path now.
-  t.homes = plural(v.pathHomes.length, 'home', 'homes');
-  t.Homes = t.homes;
-  // Nearest available help.
-  const h = v.help.nearest;
-  t.help = h ? `${h.dept.label}, ~${h.minutes} min` : 'none in range';
-  // Where the fire is, from the district station.
-  if (ok) {
-    const road = MapData.nearestNamedRoad(fire), line = MapData.nearestPower(fire);
-    t.fromStation = `${Math.round(dist(STORY.STATION, fire))} mi ${MapData.dir16(vec(STORY.STATION, fire))} of station, at the ` +
-      `${line ? line.label.replace(/ \(.*\)$/, '') : 'power line'}${road ? ' by ' + road.name : ''}`;
-    // The rancher: the nearest home in the fire's path.
-    const rh = Map3D.pathHomes({ place: 'line', acres: 200, path: true }, SCENARIOS.real.wind[0].towardDeg)
-      .map(i => MapData.buildings[i].p).sort((a, b) => dist(fire, a) - dist(fire, b))[0];
-    t.rancher = rh ? `${dist(fire, rh).toFixed(1)} miles ${MapData.dir16(vec(fire, rh))}` : 'downwind';
-    t.rancherShort = rh ? `${dist(fire, rh).toFixed(1)} mi ${MapData.dir16(vec(fire, rh))}` : 'downwind';
-    // Planned burn: the escape and the homes in its path.
-    const C = STORY.SECTION_22.center, E = P.escape;
-    t.escapeFrom = `${dist(C, E).toFixed(1)} mi ${MapData.dir16(vec(C, E))}`;
-    const burnWind = SCENARIOS.burn.wind[SCENARIOS.burn.wind.length - 1].towardDeg;
-    const eh = Map3D.pathHomes({ place: 'escape', acres: 4, path: true }, burnWind).map(i => MapData.buildings[i].p);
-    const ds = eh.map(p => dist(E, p)).sort((a, b) => a - b);
-    const dir = eh.length ? MapData.dir16(vec(E, eh.reduce((s, p) => [s[0] + p[0] / eh.length, s[1] + p[1] / eh.length], [0, 0]))) : '';
-    t.escapeHomesN = plural(eh.length, 'home', 'homes');
-    t.escapeHomes = eh.length ? `${eh.length}, about ${ds[0].toFixed(1)} mi ${dir}` : 'none';
-    t.escapeHomesRange = eh.length ? `${ds[0].toFixed(1)} to ${ds[ds.length - 1].toFixed(1)} mi ${dir}` : 'Downwind';
-  }
-  return t;
-}
 const escHtml = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 function compute() {
-  if (state.scenario === 'dixie') return DixieScenario.compute(RegionalMap.data, state);
-  const sc = scenario();
-  const k = Math.min(state.step, sc.steps.length - 1);
-  const now = sc.steps[k];
-  const full = state.mode === 'full';
-  const ampm = stepAmPm(sc, now);
-
-  // Satellite detections for this moment (simulated now; same format as the real feeds).
-  const iso = Satellite.toIso(sc.key, now.time, ampm);
-  const goes = Satellite.getGoesDetections(sc.key, iso);
-  const firms = Satellite.getFirmsHotspots(sc.key, iso);
-  const goesScan = Satellite.getGoesScanTime(sc.key, iso);
-  const firmsPass = Satellite.getFirmsPassInfo(sc.key, iso);
-  const strongest = Satellite.strongest(goes);
-
-  // Confidence: sum of the reasons that apply now (negative points allowed), kept in 0..100.
-  let sum = 0;
-  const reasons = sc.reasons.map(r => {
-    if (r.off) return { label: r.label, pts: 'off', color: 'var(--dim)' };
-    if (k < r.from) return { label: r.label, pts: '—', color: 'var(--dim)' };
-    let label = r.label, pts = r.pts;
-    for (const [ck, ch] of r.changes || []) if (k >= ck) { if (ch.label) label = ch.label; if ('pts' in ch) pts = ch.pts; }
-    if (r.rule) ({ label, pts } = r.rule(k));
-    if (r.sat && strongest) label = `Satellite sees heat (${firms.length ? 'GOES + VIIRS' : 'GOES'}, ${MASK_SHORT[strongest.fire_mask]})`;
-    sum += pts;
-    return {
-      label,
-      pts: pts > 0 ? '+' + pts : pts < 0 ? '-' + Math.abs(pts) : '+0',
-      color: pts > 0 ? 'var(--text)' : pts < 0 ? 'var(--calm)' : 'var(--dim)'
-    };
-  });
-  const conf = Math.max(0, Math.min(100, sum));
-
-  // Fire type now (FIRE_TYPES): sets the color of the status heading, ring, badge.
-  const fireType = sc.fireType ? sc.fireType(k) : null;
-  const typeColor = fireType ? FIRE_TYPES[fireType].color : null;
-  let statusLabel, statusColor;
-  if (sc.status && sc.status[k]) {
-    statusLabel = sc.status[k][0];
-    statusColor = sc.status[k][1] === 'fire' && typeColor ? typeColor : TONE[sc.status[k][1]];
-  } else {
-    statusLabel = conf < 50 ? 'Watching the line' : conf < 70 ? 'Possible fire' : conf < 90 ? 'Likely wildfire' : 'Confirmed wildfire';
-    statusColor = conf < 70 ? 'var(--text)' : typeColor || 'var(--fire)';
-  }
-
-  let responding = 0;
-  const peopleRows = sc.people.rows.map(p => {
-    let s = null, yes = false;
-    for (const [from, text, ok] of p.s) if (k >= from) { s = text; yes = !!ok; }
-    if (yes) responding++;
-    return {
-      who: p.who, note: p.note,
-      status: s || (k >= sc.people.pagedFrom ? 'No reply' : sc.people.notPaged),
-      color: yes ? 'var(--fire-soft)' : 'var(--dim)',
-      dot: yes ? 'var(--fire)' : s ? 'var(--dim)' : '#4A4238'
-    };
-  });
-
-  const alertRows = sc.alerts.map(a => {
-    const s = pickStatus(a.s, k);
-    const quiet = !s || /^Not /.test(s);
-    return { who: a.who, status: s || a.none || 'Not sent yet', color: quiet ? 'var(--dim)' : 'var(--fire-soft)', dot: quiet ? '#4A4238' : 'var(--fire)' };
-  });
-
-  const v = { sc, k, now, ampm, full, conf, reasons, statusLabel, statusColor, peopleRows, alertRows, responding, fireType, typeColor };
-  v.ringColor = confidenceColor(conf);
-  v.wind = pickFrom(sc.wind, k);
-  // Map state for this step. Homes "in the path" come from the map's likely-path
-  // zone, so the tile, the card and the orange homes always agree.
-  v.map = sc.map(k, v);
-  v.drone = droneState(v);
-  v.map.drone = v.drone;
-  v.pathHomes = Map3D.pathHomes(v.map.fires.A, v.wind.towardDeg);
-  // Help nearby (real fire departments) and the {tokens} used in story text.
-  v.help = helpState(sc, k, v);
-  v.map.help = { from: v.help.from, status: v.help.status, lineTo: v.help.lineTo };
-  v.tokens = storyTokens(v);
-  const hc = v.map.homesCard;
-  v.map.homesCard = hc && v.pathHomes.length ? { title: hc.title(v.pathHomes.length), sub: fill(hc.sub, v) } : null;
-  // Planned-burn flags: once a rule breaks, the banner stays to the end of the scenario.
-  v.flags = [];
-  if (sc.rules) {
-    let outside = false, late = false;
-    for (let i = 0; i <= k; i++) {
-      const r = sc.rules(i);
-      if (r) { outside = outside || !r[0].ok; late = late || !r[1].ok; }
-    }
-    if (outside) v.flags.push('Planned burn outside its registered area');
-    if (late) v.flags.push(`Still burning after the ${REGISTERED_BURN.endText} end time`);
-  }
-  v.tiles = sc.tiles(k, v);
-  v.facts = sc.facts(k);
-  // Data tab: the satellite rows come live from satellite.js.
-  const goesText = goesScan
-    ? `last scan ${Satellite.formatTime(goesScan)}, ` + (strongest
-      ? `${strongest.fire_mask_label}, ` + (goes.length === 1 ? `${Math.round(goes[0].frp_mw)} MW`
-        : `${goes.length} pixels, ${Math.round(goes.reduce((t, d) => t + d.frp_mw, 0))} MW total`)
-      : 'no fire seen')
-    : 'no scan yet';
-  const firmsText = firms.length
-    ? `hotspot ${Satellite.firmsTime(firms[0])}, ${firms[0].confidence}, ${firms[0].frp.toFixed(1)} MW`
-    : firmsPass.lastPass ? `no pass since ${Satellite.formatTime(firmsPass.lastPass)}` : 'no pass yet';
-  const otherRows = sc.data(k).filter(([name]) => !/^Satellite/.test(name));
-  v.dataRows = [otherRows[0], ['GOES-East', goesText], ['FIRMS VIIRS', firmsText]].concat(otherRows.slice(1),
-    [['Homes in path', 'Real buildings: houses + unlabeled']]);
-  v.firmsNote = firmsPass.note;
-  v.goes = goes;
-  v.firms = firms;
-  v.compare = sc.compare.map(c => ({ label: c.label, ours: k >= c.from ? c.ours : '…', other: c.other, color: k >= c.from ? 'var(--fire)' : 'var(--dim)' }));
-  v.rules = sc.rules ? sc.rules(k) : null;
-  v.conditions = pickFrom(sc.conditions, k);
-  return v;
+  return SCENARIO_MODULES[state.scenario].compute(RegionalMap.data, state);
 }
 
 /* ---------- Phase 3: simulated drone and forecast explanation ---------- */
 function droneState(v) {
-  if (window.RegionalMap && RegionalMap.active) return null; // No California deployment authorized in Phase 2.
-  if (!['real', 'realNoPower', 'burn'].includes(v.sc.key)) return null;
-  const burn = v.sc.key === 'burn', town = MapData.nearestTown(STORY.PLACES[burn ? 'escape' : 'line']);
-  if (!town) return null;
-  const arrived = burn && toMinutes(v.now.time, v.ampm) >= 778;
-  return { id: v.sc.key, from: town.p, town: town.name, toPlace: burn ? 'escape' : 'line',
-    progress: arrived ? 1 : 0, active: burn, path: arrived, onScene: arrived,
-    label: !burn ? 'County drone: grounded, gusts 55 mph' : arrived ? 'County drone: arrived 12:58 PM (simulated)' : 'County drone: awaiting launch 12:52 PM (assumed)',
-    info: !burn ? 'Grounded: gusts 55 mph. No flight.' : 'Simulated launch 12:52 PM; arrival 12:58 PM. Timing and capabilities assumed.' };
+  return null; // No drone deployment is defined for the implemented incident (Dixie).
 }
 function forecastDrivers(v) {
-  if (window.RegionalMap && RegionalMap.active) return '<details class="drivers" open><summary>Replay assumptions</summary><p>Historical Dixie Fire context with hypothetical November 2026 Firewatch observations. Confidence weights, response times and detection timestamps are unknown. No fire progression or forecast geometry is implemented.</p></details>';
-  const fire = v.map.fires.A || v.map.fires.B;
-  const f = Map3D.forecast(fire || { place: v.sc.key === 'burn' ? 'burn' : 'line', acres: 0 }, v.wind.towardDeg);
-  const slope = f && f.slopePct;
-  const slopeText = Number.isFinite(slope) ? slope.toFixed(1) + '% over 1 mi downwind (terrain grid) - ' +
-    (slope > 0.5 ? 'Uphill, potentially faster' : slope < -0.5 ? 'Downhill, potentially slower' : 'Little net slope effect') : 'Terrain unavailable / loading';
-  const humidity = v.conditions.weather.find(row => row[0] === 'Humidity');
-  const rows = [
-    ['Wind', v.wind.dir + ' ' + v.wind.text + ' - Main factor'],
-    ['Fuel', v.sc.key === 'burn' ? 'Grazed pasture - Lower fuel load (assumed)' : 'CRP and tall grass - Faster (assumed)'],
-    ['Slope', slopeText],
-    ['Humidity', (humidity ? humidity[1] : 'Unavailable') + (v.sc.key.startsWith('real') ? ', very dry - Faster' : ' - Less drying than 11%')],
-    ['Barriers', !fire || !fire.path ? 'No projected escape path yet' : f && f.barrier ? f.barrier.name + ', ' + f.barrier.along.toFixed(2) + ' mi ahead - Potential slowing factor' : 'No suitable road crossing; path unchanged']
-  ];
-  return '<details class="drivers" open><summary>What drives this forecast</summary><dl>' + rows.map(([k,x]) => '<dt>' + k + '</dt><dd>' + escHtml(x) + '</dd>').join('') + '</dl><p>Simplified, uncertain forecast; roads may slow a fire but cannot guarantee a stop.</p><p>Today&#39;s demo uses wind and simple rules. Next step: the Rothermel fire spread model with LANDFIRE fuel maps and USDA crop maps.</p></details>';
+  if (window.RegionalMap && RegionalMap.active) {
+    const roads = RegionalMap.data.geography.roads.features;
+    const rows = [['Terrain', 'Feather River Canyon; geometry draped on Cesium terrain, no slope-driven spread calculation'], ['Fuel', 'Workbook: slow ground fire under trees; measured fuel model and moisture unavailable'], ['Weather / risk', 'Historical wind, humidity, temperature and risk rating unavailable'], ['Roads', roads.length + ' mapped California road segments, including Highway 70; no verified containment effect'], ['Buildings', 'OSM reference points in the selected-step envelope, not confirmed residences or a complete 2021 inventory']];
+    return '<details class="drivers" open><summary>Replay assumptions</summary><dl>' + rows.map(([k, value]) => '<dt>' + k + '</dt><dd>' + escHtml(value) + '</dd>').join('') + '</dl><p>Simplified illustrative footprint and 1.4× radial envelope, not a verified forecast. No forecast horizon. Unknown areas retain the last supported footprint; transitions are visual only. No operational availability or response gains are implied.</p></details>';
+  }
+  return '';
 }
 function droneFeed(v) {
-  const d = v.drone;
-  const status = !d ? (window.RegionalMap && RegionalMap.active ? 'Camera unavailable: no Dixie drone deployment is defined in Phase 2.' : 'No drone assigned to this scenario.') : !d.active ? d.label : !d.onScene ?
-    (v.k >= 6 ? 'Waiting for drone, ETA 6 min' : 'Waiting for simulated launch at 12:52 PM') : 'On scene at 12:58 PM (assumed)';
-  return '<div class="dronefeed"><p class="camera-status" role="status">' + escHtml(status) + '</p>' +
-    (d && d.onScene ? '<div class="camera-image"><canvas id="thermalFeed" width="640" height="360" aria-label="Animated thermal simulation of the escaped fire"></canvas></div><p>Fire edge outside the registered area, 0.5 mi NE of Section 22</p>' : '<div class="camera-image unavailable">Camera unavailable</div>') +
-    '<p class="muted">' + (d && d.active ? 'Flight 12:52-12:58 PM; timing, telemetry, footprint and capability assumed. Generated thermal imagery, not live. ' : 'No flight or camera footage available. ') + 'Real town location: ' + escHtml(d ? d.town : 'unavailable') + '.</p></div>';
+  if (v.sc.key === 'dixie') return '<div class="dronefeed"><p class="camera-status" role="status">Dixie Fire: drone confirmation unavailable</p><div class="camera-image unavailable">Camera unavailable</div><p class="muted">SIMULATED FEED · Historical replay, not live. No drone flight, confirmation time or footage is documented in this scenario. No actual 2021 drone response is asserted.</p></div>';
+  return '<div class="dronefeed"><p class="camera-status" role="status">Camera unavailable: no drone deployment is defined for this incident.</p><div class="camera-image unavailable">Camera unavailable</div></div>';
 }
-let thermalFrame = null;
-function startThermal(v) {
-  if (thermalFrame !== null) cancelAnimationFrame(thermalFrame);
-  thermalFrame = null;
-  const canvas = document.getElementById('thermalFeed');
-  if (!canvas || state.view !== 'dashboard' || !v.drone || !v.drone.onScene) return;
-  const g = canvas.getContext('2d');
-  if (!g) return;
-  const [lon, lat] = STORY.toLonLat(STORY.PLACES.escape);
-  const began = performance.now();
-  function draw(now) {
-    if (!canvas.isConnected) { thermalFrame = null; return; }
-    const t = (now - began) / 1000, loop = t % 12;
-    g.fillStyle = '#090523'; g.fillRect(0, 0, 640, 360);
-    // Moving contours and flickering hot spots, repeated every 12 seconds.
-    for (let band = 6; band >= 0; band--) {
-      g.fillStyle = ['#fff8be','#ffe35a','#ff982b','#ed392a','#9b1955','#4b1864','#231447'][band];
-      g.beginPath(); g.moveTo(0,360);
-      for (let x=0;x<=640;x+=8) {
-        const y=230 + Math.sin(x/61+loop*Math.PI/6)*20 + Math.sin(x/19-loop*Math.PI/3)*7 - band*14;
-        g.lineTo(x,y);
-      }
-      g.lineTo(640,360); g.closePath(); g.fill();
-    }
-    g.strokeStyle='#d4ffff'; g.lineWidth=1; g.beginPath();
-    g.moveTo(300,180);g.lineTo(340,180);g.moveTo(320,160);g.lineTo(320,200);g.stroke();
-    g.fillStyle='rgba(0,0,0,.7)';g.fillRect(0,0,640,55);g.fillRect(0,305,640,55);
-    g.font='17px monospace';g.fillStyle='#fff';g.fillText('SIMULATED FEED',14,23);
-    g.fillText('ALT 120 m AGL | SPD 0 mph | BAT 86%',14,46);
-    g.fillStyle=Math.floor(t*2)%2 ? '#ff5353':'#fff';g.fillText('REC',550,23);
-    g.fillStyle='#fff';g.fillText('GPS '+lat.toFixed(5)+', '+lon.toFixed(5),14,328);
-    g.fillText('12:58:'+String(Math.floor(loop)).padStart(2,'0')+' PM | ASSUMED TELEMETRY | LOOP',14,350);
-    thermalFrame=requestAnimationFrame(draw);
-  }
-  thermalFrame=requestAnimationFrame(draw);
-}
+function startThermal() {}   // No simulated thermal feed for the implemented incident.
 
 // Display abbreviations only; scenario values and timings are unchanged.
 function compactComparison(text) {
@@ -1226,7 +582,7 @@ function compactComparison(text) {
 }
 
 /* ---------- Pieces ---------- */
-function ring(conf, size, fontSize, color) {
+function ring(conf, size, fontSize, color, unit = '%', caption = 'confidence') {
   const dash = (conf / 100 * 314.16).toFixed(1);
   return `
     <div class="ring" style="width:${size}px;height:${size}px">
@@ -1234,7 +590,7 @@ function ring(conf, size, fontSize, color) {
         <circle cx="60" cy="60" r="50" fill="none" stroke="#3A332B" stroke-width="14"/>
         <circle cx="60" cy="60" r="50" fill="none" stroke="${color}" stroke-width="14" stroke-dasharray="${dash} 400" transform="rotate(-90 60 60)"/>
       </svg>
-      <div class="center"><span class="num" style="font-size:${fontSize}px;line-height:1;color:${color}">${conf === null ? '?' : conf + '%'}</span><small>confidence</small></div>
+      <div class="center"><span class="num" style="font-size:${fontSize}px;line-height:1;color:${color}">${conf === null ? '—' : conf + unit}</span><small>${conf === null ? 'unavailable' : caption}</small></div>
     </div>`;
 }
 
@@ -1253,7 +609,7 @@ function ruleCheck(v) {
 function asideInner(v) {
   let body = '';
   if (v.sc.key === 'dixie' && state.tab === 'alerts') {
-    body = '<div class="tabintro">Hypothetical proposal: ' + escHtml(v.now.level || 'No level specified') + '. No actual alerts or dispatch times are recorded.</div>';
+    body = '<div class="tabintro">Dixie Fire / Butte County: hypothetical proposal ' + escHtml(v.now.level || 'No level specified') + '. No actual alerts, CAL FIRE dispatch or response times are recorded.</div>';
   } else if (v.sc.key === 'dixie' && state.tab === 'burns') {
     body = '<div class="tabintro">No Dixie replay burn registrations supplied.</div>';
   } else if (state.tab === 'alerts') {
@@ -1266,12 +622,10 @@ function asideInner(v) {
       <li class="row"><span class="dot" style="background:${p.dot}"></span><span style="flex:1 1 auto"><b>${p.who}</b> <span class="muted">${p.note}</span></span><span style="color:${p.color}">${p.status}</span></li>`).join('')}</ul>`;
   } else if (state.tab === 'burns') {
     const bt = v.sc.burnsTab(v.k);
-    body = `<div class="tabintro">Burns farmers called in on purpose, so smoke there is not a false alarm</div>
+    body = `<div class="tabintro">Prescribed-burn records: none were supplied for this incident. Missing records are not evidence that no burn exists.</div>
       <ul>${bt.items.map(b => `
         <li class="burn"><div>${b.title}${b.badge ? ` <span class="burnbadge ${b.badgeTone}">${b.badge}</span>` : ''}</div><div>${b.sub}</div></li>`).join('')}
-      </ul>
-      <div class="burnrules">A registered burn stops counting as planned, and is treated as a possible wildfire, if it is
-        <b>outside the registered area</b> or <b>still burning after the end time</b>.</div>`;
+      </ul>`;
   } else if (state.tab === 'help' && window.RegionalMap && RegionalMap.active) {
     body = RegionalMap.helpHtml();
   } else if (state.tab === 'help') {
@@ -1286,7 +640,7 @@ function asideInner(v) {
     body = `<ul>${v.dataRows.map(([name, age]) => `
       <li class="row" style="justify-content:space-between"><b>${name}</b><span class="muted" style="text-align:right">${age}</span></li>`).join('')}</ul>
       ${v.firmsNote ? `<div class="datanote">${v.firmsNote}</div>` : ''}
-      <div class="datanote">Water, power lines, roads, buildings and towns: real public data. Fire, people, and equipment: simulated.</div>
+      <div class="datanote">${v.sc.key === 'dixie' ? 'California locations are reference inventory, not active resource availability. Building points are not confirmed homes. Precise utility geometry is omitted.' : 'Water, power lines, roads, buildings and towns: real public data. Fire, people, and equipment: simulated.'}</div>
       <div class="datanote">${v.sc.key === 'dixie' ? 'Workbook assumptions only; no live sensor feed or historical detection evidence.' : Satellite.DATA_SOURCE === 'api' ? 'Live data from NOAA GOES Fire Detection and NASA FIRMS.'
         : 'Simulated in the same format as NOAA GOES Fire Detection and NASA FIRMS. Ready for live data.'}</div>`;
   }
@@ -1294,10 +648,10 @@ function asideInner(v) {
   return `
     <section class="status" aria-label="Fire status">
       <h2 style="color:${v.statusColor}">${v.statusLabel}</h2>
-      <div class="ringrow">${ring(v.conf, 112, 32, v.ringColor)}${reasonList(v)}</div>
+      <div class="ringrow">${ring(v.conf, 112, 32, v.ringColor, v.confUnit, v.confLabel)}${reasonList(v)}</div>
       ${forecastDrivers(v)}
     ${ruleCheck(v)}
-      <div class="note">${v.sc.key === 'dixie' ? 'Hypothetical behavior only; confidence not calculated' : 'Alerts go out automatically at 70%'}</div>
+      <div class="note">${v.sc.key === 'dixie' ? v.confNote : 'Alerts go out automatically at 70%'}</div>
       <div class="facts">
         ${v.facts.map(([label, value]) => `<div><div>${label}</div><div>${value}</div></div>`).join('')}
       </div>
@@ -1317,7 +671,7 @@ function confCard(v) {
   return `
   <section class="confcard" aria-label="Fire status">
     <h2 style="color:${v.statusColor}">${v.statusLabel}</h2>
-    <div class="ringrow" style="gap:12px;margin-top:8px">${ring(v.conf, 92, 26, v.ringColor)}${reasonList(v)}</div>
+    <div class="ringrow" style="gap:12px;margin-top:8px">${ring(v.conf, 92, 26, v.ringColor, v.confUnit, v.confLabel)}${reasonList(v)}</div>
     ${forecastDrivers(v)}
     ${ruleCheck(v)}
     <div class="facts" style="margin-top:10px;padding-top:8px">
@@ -1371,14 +725,14 @@ const calcFrame = document.getElementById('calcFrame');
 // Legend: one entry per fire type, from FIRE_TYPES.
 document.getElementById('legendFireTypes').innerHTML = Object.values(FIRE_TYPES).map(t =>
   `<span><i style="width:14px;height:10px;border:2px solid ${t.color};background:#1A1512;border-radius:5px 7px 6px 4px;box-shadow:0 0 5px ${t.color}CC"></i>${t.label}</span>`).join('');
-regions.scenarioSelect.innerHTML = SCENARIO_MENU.map(([key, label]) => `<option value="${key}">${label}</option>`).join('');
+syncIncidentMenu();
 
 function render(focusAct) {
   const v = compute();
   const sc = v.sc;
   const regional = !!(window.RegionalMap && RegionalMap.active);
-  document.getElementById('regionName').textContent = regional && RegionalMap.data ? RegionalMap.data.config.title : 'Cottonwood Creek Fire District';
-  const chips = v.full ? CHIPS : CHIPS.concat([{ key: 'conf', label: 'Confidence' }]);
+  document.getElementById('regionName').textContent = regional ? (RegionalMap.data ? RegionalMap.data.config.title : 'Dixie Fire, California') : 'Regional wildfire monitoring';
+  const chips = (v.full ? CHIPS : CHIPS.concat([{ key: 'conf', label: 'Confidence' }])).filter(c => !c.regionalOnly || (window.RegionalMap && RegionalMap.active));
 
   const dash = state.view === 'dashboard';
   regions.modes.innerHTML = `
@@ -1387,6 +741,7 @@ function render(focusAct) {
     <button type="button" class="${!dash ? 'on' : ''}" aria-pressed="${!dash}" data-act="view:calculator">Calculator</button>`;
   // Calculator tab: hides the tiles and map area (the map keeps its state) and shows the calculator.
   app.classList.toggle('calc', !dash);
+  syncIncidentMenu();
   regions.scenarioSelect.value = state.scenario;
 
   // Header: day type badge and weather for this scenario and step.
@@ -1401,11 +756,20 @@ function render(focusAct) {
     </div>`;
   regions.windText.innerHTML = `<b>Wind from ${v.wind.dir},</b><br>${v.wind.text}`;
 
+  const syncDixieArea = () => {   // Dixie Area burned KPI follows the displayed (animated) fire polygon
+    const tv = regions.tiles.querySelector('[data-kpi="area"] .tv'), a = window.DixieFire && DixieFire.liveArea;
+    if (!tv || state.scenario !== 'dixie' || a === undefined || a === null) return;
+    if (!(a > 0)) { tv.innerHTML = '—<span></span>'; return; }
+    const f = DixieFire.format(a), i = f.indexOf(' ');
+    tv.innerHTML = f.slice(0, i) + '<span> ' + f.slice(i + 1) + '</span>';
+  };
+  window.syncDixieArea = syncDixieArea;
   regions.tiles.innerHTML = v.tiles.map(t => `
-    <div class="tile">
+    <div class="tile"${t.key ? ` data-kpi="${t.key}"` : ''} title="${escHtml(t.note || '')}">
       <div class="tl">${/^Volunteers/.test(t.label) ? 'Volunteer Response' : t.label === 'Ahead of 911' ? 'Ahead of 911 Responder' : t.label}</div>
       <div class="tv num" style="color:${t.color}">${t.value}<span>${t.unit === 'of 5' ? '/5' : (t.unit === '%' || !t.unit ? '' : ' ') + t.unit}</span></div>
     </div>`).join('');
+  syncDixieArea();
 
   regions.body.classList.toggle('full', v.full);
   regions.aside.hidden = !v.full;
@@ -1415,7 +779,7 @@ function render(focusAct) {
     <span class="muted" style="font-size:13px;margin-right:4px">Show on map</span>
     ${chips.map(c => {
       const on = !!state.layers[c.key];
-      return `<button type="button" class="chip ${on ? 'on' : ''}" aria-pressed="${on}" data-act="layer:${c.key}" title="${regional ? (c.key === 'sat' ? 'Recorded camera locations; no Dixie satellite detections in Phase 2' : ['spread', 'power', 'burns', 'risk'].includes(c.key) ? 'Not drawn in Phase 2 geographic mode' : c.key === 'wind' ? 'North compass; California weather is not configured' : c.label) : c.label}">${c.label}</button>`;
+      return `<button type="button" class="chip ${on ? 'on' : ''}" aria-pressed="${on}" data-act="layer:${c.key}" title="${regional ? (c.key === 'cameras' ? 'Recorded camera locations (Nov 2026 snapshot); not 2021 footage or proof of visibility' : c.key === 'sat' ? 'No satellite detections are drawn for Dixie' : c.key === 'spread' ? 'Illustrative Dixie envelope; not a verified forecast' : ['power', 'burns', 'risk'].includes(c.key) ? 'Not drawn: no verified geometry supplied' : c.key === 'wind' ? 'Animated wind streaks and compass; direction and speed are a scenario assumption, not sourced Dixie weather' : c.label) : c.label}">${c.label}</button>`;
     }).join('')}
     <span class="sim" title="${regional ? '2021 historical replay with hypothetical November 2026 capabilities; not actual detections.' : 'Simulated scenario'}">${regional ? 'Dixie historical replay; not live data' : 'Simulated scenario, not live data'}</span>`;
 
@@ -1425,10 +789,7 @@ function render(focusAct) {
     (!regional && v.flags.length ? `<div class="mapflag" role="status">${v.flags.map(f => `<div>${f}</div>`).join('')}</div>` : '') +
     (!regional && sc.popup && v.k === sc.popup.at && !state.alertClosed ? alertHtml(sc.popup) : ''), v);
 
-  const powerSwitch = state.scenario === 'real' ? `
-      <button type="button" class="pswitch ${state.powerData ? 'on' : ''}" aria-pressed="${state.powerData}" data-act="power">
-        <span class="pswitch-track"><span class="pswitch-knob"></span></span>Co-op power data: <b>${state.powerData ? 'On' : 'Off'}</b>
-      </button>` : '';
+  const powerSwitch = '';
 
   regions.footer.innerHTML = fill(`
     <div class="ctlcol">
@@ -1452,7 +813,7 @@ function render(focusAct) {
       <span style="font-size:12px;font-weight:600;color:var(--fire)">FW</span>
       <span class="muted" style="font-size:12px">Real</span>
       ${v.compare.map(c => `
-        <span class="muted" title="${escHtml(c.label)}">${compactComparison(c.label)}</span>
+        <span class="muted" title="${escHtml(c.note || c.label)}">${compactComparison(c.label)}</span>
         <span style="font-weight:600;color:${c.color}">${compactComparison(c.ours)}</span>
         <span class="muted">${compactComparison(c.other)}</span>`).join('')}
     </div>`, v);
@@ -1466,6 +827,8 @@ function render(focusAct) {
     if (el) el.focus();
   }
 }
+
+if (window.addEventListener) window.addEventListener('dixie-area', () => window.syncDixieArea && window.syncDixieArea());
 
 /* ---------- Actions ---------- */
 function stopTimer() {
@@ -1531,10 +894,9 @@ app.addEventListener('click', e => {
   else if (name === 'back') { stopTimer(); goTo(state.step - 1); }
   else if (name === 'next') { stopTimer(); goTo(state.step + 1); }
   else if (name === 'play') togglePlay();
-  else if (name === 'power') { stopTimer(); state.powerData = !state.powerData; goTo(0); }
   else if (name === 'closeAlert') state.alertClosed = true;
-  else if (name === 'ask') state.actionMsg = state.scenario === 'dixie' ? 'Hypothetical replay: no messages sent; contacts and response times unknown.' : 'Texted 4 people within 5 miles: “Can you see smoke? Reply YES or NO.”';
-  else if (name === 'false') state.actionMsg = 'Marked as a false alarm. Alerts stop.';
+  else if (name === 'ask') state.actionMsg = 'Hypothetical replay: no messages sent; contacts and response times unknown.';
+  else if (name === 'false') state.actionMsg = 'Replay annotation only. No live alerts or historical incident records are changed.';
 
   render(act);
 });
@@ -1542,6 +904,7 @@ app.addEventListener('click', e => {
 regions.scenarioSelect.addEventListener('change', e => {
   setScenario(e.target.value);
   render();
+  Map3D.resetView();   // center the map on the selected incident
 });
 
 // The real map data (data/*.geojson) is loaded first: the counts, distances

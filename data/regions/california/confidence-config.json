@@ -1,0 +1,41 @@
+{
+  "schemaVersion": "1.0.0",
+  "regionId": "us-ca",
+  "kind": "prototype_confidence_config",
+  "calibration": "NOT_CALIBRATED",
+  "documentation": [
+    "ALL numbers below are transparent PROTOTYPE values chosen by the Firewatch team for this demonstration.",
+    "The Dixie workbook (Timeline today) supplies proposed detection events and levels but NO confidence weights.",
+    "The score is additive points clamped to 0-100. It is not a statistical probability: 80 points does not mean an 80% likelihood of fire.",
+    "Detected signals add their weight. Negative signals add negativeWeights. Unavailable and not_checked signals add 0; missing data is never negative evidence.",
+    "Correlated signals share a family: the strongest counts in full, the others count corroborationFactor of their weight, and the family total is capped.",
+    "Signals with the same `group` (for example repeated GOES scans of one hotspot) count once.",
+    "Some values echo the earlier Kansas prototype where the evidence type is analogous (satellite 25-35, red-flag 15, no-burn-permit 10, nearby person 25); they are still unvalidated."
+  ],
+  "alertThreshold": 70,
+  "alertThresholdStatus": "provisional",
+  "bands": { "mediumFrom": 40, "highFrom": 70 },
+  "weights": {
+    "utility_outage": 15,
+    "camera_smoke": 25,
+    "goes_thermal": 30,
+    "viirs_hotspot": 35,
+    "weather_risk": 15,
+    "prescribed_burn_absent": 10,
+    "human_confirmation": 25,
+    "drone_confirmation": 30
+  },
+  "negativeWeights": {
+    "camera_smoke": -10,
+    "goes_thermal": -5,
+    "viirs_hotspot": -5,
+    "prescribed_burn_match": -30,
+    "human_confirmation": -25,
+    "drone_confirmation": -30
+  },
+  "statusMultipliers": { "historical": 1, "live": 1, "simulated": 1, "hypothetical": 1 },
+  "families": {
+    "satellite": { "types": ["goes_thermal", "viirs_hotspot"], "corroborationFactor": 0.5, "cap": 60 },
+    "camera": { "types": ["camera_smoke"], "corroborationFactor": 0.5, "cap": 30 }
+  }
+}

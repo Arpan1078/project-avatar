@@ -85,8 +85,8 @@
         return MD;
       }
       const raw = await Promise.all(FILES.map(async n => {
-        const r = await fetch(`data/${n}.geojson`);
-        if (!r.ok) throw new Error(`data/${n}.geojson: HTTP ${r.status}`);
+        const r = await fetch(`archive/kansas/data/${n}.geojson`);
+        if (!r.ok) throw new Error(`archive/kansas/data/${n}.geojson: HTTP ${r.status}`);
         return r.json();
       }));
       const d = Object.fromEntries(FILES.map((n, i) => [n, raw[i]]));
