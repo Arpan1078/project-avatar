@@ -140,7 +140,7 @@
   // widen/extraMi: half-width at the far edge = fire half-width * widen + extraMi.
   const ZONE = {
     label: 'Likely path, next hour',
-    aheadMi: 2.5, widen: 2.4, extraMi: 0.6,
+    aheadMi: 2.5, widen: 2.4, extraMi: 0.6, pastBarrierMi: 0.15,
     color: '#F26B2E', fill: 0.17, edge: 0.75, edgeWidth: 1.5, z: 3
   };
 
@@ -291,6 +291,44 @@
     };
   }
 
+  // Simplified road-crossing heuristic, not a validated spread model.
+  // OSM road classes do not establish surface, width, or ability to stop fire.
+  const BARRIER_TYPES = ['primary', 'secondary', 'tertiary', 'unclassified'];
+  let barrierSegs = null;
+  const barrierCache = new Map();
+  function barrierName(r) { return r.name || 'Unnamed mapped road'; }
+  // The first barrier road crossed by the line from the fire head, straight
+  // downwind, within the likely-path length. { along (miles from the head), name, type } or null.
+  function barrierAhead(g) {
+    if (!MD.loaded) return null;
+    const key = g.origin.join() + '|' + SIN_B.toFixed(5) + ',' + COS_B.toFixed(5) + '|' + g.head[0].toFixed(3) + ',' + g.head[1].toFixed(3);
+    if (barrierCache.has(key)) return barrierCache.get(key);
+    if (!barrierSegs) {
+      barrierSegs = [];
+      for (const r of MD.roads) {
+        if (!BARRIER_TYPES.includes(r.type)) continue;
+        for (const part of r.parts) for (let i = 1; i < part.length; i++) {
+          barrierSegs.push({ a: STORY.toLocal(part[i - 1][0], part[i - 1][1]), b: STORY.toLocal(part[i][0], part[i][1]), road: r });
+        }
+      }
+    }
+    const H = g.head, dx = SIN_B, dy = COS_B;
+    let best = null;
+    for (const s of barrierSegs) {
+      const ex = s.b[0] - s.a[0], ey = s.b[1] - s.a[1], den = dx * ey - dy * ex;
+      if (Math.abs(den) < 0.25 * Math.hypot(ex, ey)) continue; // reject near-parallel crossings
+      if (Math.abs(den) < 1e-9) continue;
+      const t = ((s.a[0] - H[0]) * ey - (s.a[1] - H[1]) * ex) / den;     // miles along the wind
+      const u = ((s.a[0] - H[0]) * dy - (s.a[1] - H[1]) * dx) / den;     // 0..1 along the road segment
+      if (t > 0.02 && t <= ZONE.aheadMi && u >= 0 && u <= 1 && (!best || t < best.along)) {
+        best = { along: t, name: barrierName(s.road), type: s.road.type, at: [H[0] + dx * t, H[1] + dy * t] };
+      }
+    }
+    if (barrierCache.size > 200) barrierCache.clear();
+    barrierCache.set(key, best);
+    return best;
+  }
+
   // Likely-path zone from the fire head out to a curved front edge. It starts
   // a little behind the tip and as wide as the fire, so it overlaps the head
   // (it is drawn under the fire) and homes right beside the head count as in the path.
@@ -298,8 +336,11 @@
     const [h0, hc] = g.headW, o = g.origin;
     const base = Math.max(g.s.b, 0.04);
     const start = h0 - g.s.a * 0.3;
-    const far = h0 + ZONE.aheadMi;
-    const hw = g.s.b * ZONE.widen + ZONE.extraMi;
+    // The zone ends just past the first barrier road ("Fire expected to slow here").
+    const barrier = barrierAhead(g);
+    const ahead = barrier ? Math.min(ZONE.aheadMi, barrier.along + ZONE.pastBarrierMi) : ZONE.aheadMi;
+    const far = h0 + ahead;
+    const hw = g.s.b * ZONE.widen + ZONE.extraMi * (ahead / ZONE.aheadMi);
     const front = [];
     for (let j = 0; j <= 12; j++) {
       const u = -1 + j / 6;                       // -1 .. 1 across the front
@@ -309,8 +350,28 @@
     return {
       fill: [left].concat(front, [right]),
       edge: [left].concat(front, [right]),   // open: no line across the fire head
-      tip: fireFrame(far + 0.08, hc, o)      // label spot just past the outer edge
+      tip: fireFrame(far + 0.08, hc, o),     // label spot just past the outer edge
+      barrier, clipped: !!barrier && ahead < ZONE.aheadMi
     };
+  }
+
+  // What drives the forecast, for the dashboard panel: the barrier ahead and
+  // the slope (terrain height at the fire start vs 1 mile downwind). Pure math,
+  // works without a token; slope is null until the terrain heights are sampled.
+  function forecast(specFire, towardDeg) {
+    if (!MD.loaded) return null;
+    const spec = specFire && PLACES[specFire.place] ? specFire : { place: 'line', acres: 0 };
+    const keep = WIND.towardDeg;
+    setBearing(towardDeg ?? keep);
+    const g = fireGeometry(fireSize(spec.acres), PLACES[spec.place]);
+    const barrier = spec.path ? barrierAhead(g) : null;
+    let slopePct = null;
+    if (heights) {
+      const o = g.origin, q = [o[0] + SIN_B, o[1] + COS_B];            // 1 mile downwind
+      if (hasTerrain(o) && hasTerrain(q)) slopePct = ((heightAt(q[0], q[1]) - heightAt(o[0], o[1])) / METERS_PER_MILE) * 100;
+    }
+    setBearing(keep);
+    return { barrier, slopePct };
   }
 
   // Distance (miles) from a point to the nearest real power line.
@@ -432,6 +493,19 @@
     });
   }
 
+  // Small quadcopter icon (top view): X frame, four rotors, a body, on a dark halo.
+  function droneIcon(color) {
+    return canvas(24, 24, g => {
+      g.fillStyle = 'rgba(21, 18, 15, 0.7)';
+      g.beginPath(); g.arc(12, 12, 11, 0, Math.PI * 2); g.fill();
+      g.strokeStyle = color; g.fillStyle = color; g.lineWidth = 1.8; g.lineCap = 'round';
+      g.beginPath(); g.moveTo(6, 6); g.lineTo(18, 18); g.moveTo(18, 6); g.lineTo(6, 18); g.stroke();
+      g.lineWidth = 1.4;
+      for (const [x, y] of [[5.5, 5.5], [18.5, 5.5], [5.5, 18.5], [18.5, 18.5]]) { g.beginPath(); g.arc(x, y, 3.3, 0, Math.PI * 2); g.stroke(); }
+      g.beginPath(); g.arc(12, 12, 2.8, 0, Math.PI * 2); g.fill();
+    });
+  }
+
   // Burned-area fill: dark char with soft gray smoke mottling and a few faint red specks.
   function smokyTexture() {
     const rnd = seeded(5);
@@ -537,8 +611,15 @@
 
   // Terrain heights on a 0.5-mile grid over the district, sampled once.
   // Wind streaks, embers and smoke read heights from this grid (cheap).
-  const HGRID = { e0: -10.5, n0: -11.5, step: 0.5, cols: 51, rows: 42 };
-  let heights = null;
+  const HGRID = { e0: -11.5, n0: -15.0, step: 0.5, cols: 52, rows: 42 };   // -11.5..14 mi east, -15..5.5 mi north
+  let heights = null, validHeights = null;
+  function hasTerrain(p) {
+    if (!validHeights) return false;
+    const x = (p[0] - HGRID.e0) / HGRID.step, y = (p[1] - HGRID.n0) / HGRID.step;
+    if (x < 0 || y < 0 || x >= HGRID.cols - 1 || y >= HGRID.rows - 1) return false;
+    const i = Math.floor(y) * HGRID.cols + Math.floor(x);
+    return [i, i + 1, i + HGRID.cols, i + HGRID.cols + 1].every(j => validHeights[j]);
+  }
   async function sampleHeights(terrainProvider) {
     const pts = [];
     for (let r = 0; r < HGRID.rows; r++) for (let c = 0; c < HGRID.cols; c++) {
@@ -551,8 +632,10 @@
       try { out = await Cesium.sampleTerrain(terrainProvider, 11, pts); } catch (e2) { /* keep flat */ }
     }
     if (out) {
+      validHeights = Uint8Array.from(out, q => Number.isFinite(q.height) ? 1 : 0);
       heights = Float32Array.from(out, q => (Number.isFinite(q.height) ? q.height : targetHeightM));
       for (const id in slots) slots[id].emberA = NaN;   // re-seat embers on the real terrain
+      window.dispatchEvent(new Event('map3d-heights'));  // the dashboard can now measure the slope
     }
   }
   function heightAt(e, n) {
@@ -648,6 +731,17 @@
       E.helpLines.push(add({ parent: layers.help, show: false, polyline: groundLine(PLACEHOLDER, col(HEX.cream, 0.75), 1.5, { length: 14 }, 2) }));
     }
 
+    // --- County drone (simulated): icon, dashed path from its town, camera footprint on arrival ---
+    // The dashboard describes it in the map state (u.drone); droneTick() moves it.
+    E.droneIcons = { grounded: droneIcon('#999999'), active: droneIcon(HEX.cream) };
+    E.drone = add({ parent: layers.help, show: false, position: pos([0, 0]), billboard: billboard(E.droneIcons.grounded) });
+    E.dronePath = add({ parent: layers.help, show: false, polyline: groundLine(PLACEHOLDER, col(HEX.cream, 0.8), 1.5, { length: 10 }, 3) });
+    E.droneView = add({ parent: layers.help, show: false, polygon: { hierarchy: posList(PLACEHOLDER), material: col(HEX.cream, 0.14), zIndex: 4 } });
+    E.droneViewEdge = add({ parent: layers.help, show: false, polyline: groundLine(PLACEHOLDER, col(HEX.cream, 0.9), 1.5, { length: 6 }, 5) });
+    E.droneNow = null;                                  // current position [east, north] (for the label and click)
+    E.droneAnim = { cur: 0, from: 0, to: 0, t0: 0, img: '', pathKey: '', viewKey: '' };
+    viewer.scene.preUpdate.addEventListener(droneTick);
+
     // --- Real buildings (orange when in the likely path, see pathBuildings) ---
     const s = REAL.building.size;
     E.homeIcons = { path: squareIcon(s, HEX.fireSoft, HEX.fire, 1.25), safe: squareIcon(s, HEX.cream, HEX.bg, 1) };
@@ -706,6 +800,9 @@
   }
 
   function applyState(u) {
+    if (E.droneAnim && (!u.drone || !u.drone.active || !cur || !cur.drone || cur.drone.id !== u.drone.id || u.drone.progress < cur.drone.progress)) {
+      Object.assign(E.droneAnim, { cur: 0, from: 0, to: 0, t0: performance.now() / 1000 });
+    }
     cur = u;
     for (const key in layers) layers[key].show = !!u.layers[key];
     setWindVisible(u.layers.wind !== false);
@@ -812,6 +909,11 @@
   function satAt(p) {
     if (!cur) return null;
     const scene = viewer.scene;
+    // County drone: within ~14 px of its icon.
+    if (cur.layers.help && cur.drone && E.droneNow) {
+      const w = Cesium.SceneTransforms.worldToWindowCoordinates(scene, groundPos(E.droneNow), scratchWin);
+      if (w && Math.hypot(w.x - p.x, w.y - p.y) < 14) return { html: `<b>County drone</b> <span class="muted">(simulated)</span><br>${cur.drone.info || ''}`, drone: true };
+    }
     // Fire departments (Help nearby): within ~12 px of the station icon.
     if (cur.layers.help) {
       for (const d of MD.departments) {
@@ -861,6 +963,11 @@
         satInfo.el.hidden = true;
       }
       if (click) satInfo.pinned = !!text;
+      // Clicking an active drone opens its video feed instead of pinning a card.
+      if (click && text && text.drone && cur.drone && window.Map3D.onDroneClick) {
+        satInfo.el.hidden = true; satInfo.pinned = false;
+        window.Map3D.onDroneClick();
+      }
     };
     handler.setInputAction(m => {
       if (satInfo.pinned) return;
@@ -1010,11 +1117,13 @@
     sl.headGlow.ellipse.semiMinorAxis = glowR;
 
     if (sl.zone) {
-      const zg = zoneGeometry(g);
+      // Forecast and counts use the same final step geometry while the fire grows.
+      const zg = zoneGeometry(fireGeometry(sl.to, sl.origin));
       sl.zone.fill.polygon.hierarchy = new Cesium.PolygonHierarchy(posList(zg.fill));
       sl.zone.edge.polyline.positions = posList(zg.edge);
-      sl.zone.tip = zg.tip;
+      sl.zone.tip = zg.clipped ? zg.barrier.at : zg.tip;
       sl.zone.pts = zg.fill;
+      sl.zone.clipped = zg.clipped;
     }
     if (sl.id === 'A') E.reporterLine.polyline.positions = posList([REPORTER, g.center]);
   }
@@ -1023,6 +1132,41 @@
   // Cheap hash -> 0..1, used for per-puff randomness that changes each cycle.
   const hash = (a, b) => { const x = Math.sin(a * 127.1 + b * 311.7) * 43758.5453; return x - Math.floor(x); };
   const ease = t => t * t * (3 - 2 * t);
+
+  // Drone: slides along its dashed path to the fire. A new progress value (a new
+  // step) is reached in DRONE_TWEEN seconds, forward or back.
+  const DRONE_TWEEN = 2.4;
+  function droneTick() {
+    const d = cur && cur.drone, a = E.droneAnim;
+    E.drone.show = !!d;
+    if (!d) { a.cur = a.from = a.to = 0; E.droneMoving = false; E.dronePath.show = E.droneView.show = E.droneViewEdge.show = false; E.droneNow = null; return; }
+    const now = performance.now() / 1000;
+    if (!d.active) a.cur = a.from = a.to = 0;
+    if (a.to !== d.progress) { a.from = a.cur; a.to = d.progress; a.t0 = now; }
+    const p = Math.min(1, (now - a.t0) / DRONE_TWEEN);
+    a.cur = a.from + (a.to - a.from) * ease(p);
+    const target = PLACES[d.toPlace] || PLACES.line, from = d.from;
+    E.droneNow = [from[0] + (target[0] - from[0]) * a.cur, from[1] + (target[1] - from[1]) * a.cur];
+    E.droneMoving = p < 1 && a.from !== a.to;
+    E.drone.position = pos(E.droneNow);
+    const img = d.active ? 'active' : 'grounded';
+    if (a.img !== img) { a.img = img; E.drone.billboard.image = E.droneIcons[img]; }
+    // Dashed path from the town to the fire (only while the drone is going there).
+    const key = [from, target.map(x => x.toFixed(2))].join();
+    E.dronePath.show = !!d.path;
+    if (d.path && key !== a.pathKey) { a.pathKey = key; E.dronePath.polyline.positions = posList([from, target]); }
+    // Camera footprint on the ground once it has arrived: a 16:9 rectangle facing the way it flew.
+    const arrived = !!d.path && a.cur > 0.999 && d.onScene;
+    E.droneView.show = E.droneViewEdge.show = arrived;
+    if (arrived && key !== a.viewKey) {
+      a.viewKey = key;
+      const dx = target[0] - from[0], dy = target[1] - from[1], L = Math.hypot(dx, dy) || 1, f = [dx / L, dy / L], r = [f[1], -f[0]];
+      const hl = 0.16, hw = 0.09, c = [];
+      for (const [u, v] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) c.push([target[0] + f[0] * hl * u + r[0] * hw * v, target[1] + f[1] * hl * u + r[1] * hw * v]);
+      E.droneView.polygon.hierarchy = new Cesium.PolygonHierarchy(posList(c));
+      E.droneViewEdge.polyline.positions = posList(c.concat([c[0]]));
+    }
+  }
 
   function fireTick() {
     const now = performance.now() / 1000;
@@ -1143,8 +1287,8 @@
 
     // Small labels, highest priority first.
     // One label at the outer edge of the likely-path zone.
-    tag({ text: ZONE.label, tone: 'fire', at: () => slots.A.zone.tip, show: c => L(c).spread && !!c.fires.A && !!c.fires.A.path,
-      pref: ['up', 'left', 'right', 'down'], far: 70000 });
+    tag({ tone: 'fire', html: () => (slots.A.zone.clipped ? 'Fire expected to slow here' : ZONE.label), at: () => slots.A.zone.tip,
+      show: c => L(c).spread && !!c.fires.A && !!c.fires.A.path, pref: ['up', 'left', 'right', 'down'], far: 70000 });
     tag({ text: SECTION_22.label, tone: 'muted', at: () => [SECTION_22.center[0] - SECTION_22.halfMi, SECTION_22.center[1] - SECTION_22.halfMi],
       show: c => L(c).burns && c.burnArea, pref: ['down', 'left', 'up'], far: 70000 });
     tag({ text: 'Firebreak', tone: 'brk', at: () => firebreakPoints()[0], alt: () => firebreakPoints()[8], show: c => c.firebreak, pref: ['left', 'down', 'right', 'up'], far: 70000 });
@@ -1154,6 +1298,9 @@
       tag({ dept: d, tone: 'cream', html: () => deptTagHtml(d), at: () => d.p, show: c => L(c).help, pref: ['right', 'left', 'down', 'up'],
         far: REAL.help.labelMaxDistanceM });
     }
+    // County drone label (text from the dashboard; "en route" while it is moving).
+    tag({ tone: 'cream', html: () => (E.droneMoving ? 'County drone: en route' : cur.drone.label), at: () => E.droneNow,
+      show: c => L(c).help && !!c.drone, pref: ['right', 'left', 'down', 'up'], far: REAL.help.labelMaxDistanceM });
     // Drive time on each dashed help line (at its middle).
     E.helpLines.forEach((line, i) => tag({ tone: 'muted', html: () => (helpLineDept(i) ? `about ${helpRow(helpLineDept(i)).minutes} min` : ''),
       at: () => { const d = helpLineDept(i); return d ? lerp(cur.help.from, d.p, 0.5) : null; },
@@ -1316,9 +1463,9 @@
     // 2. Things labels must not cover: on-map controls and every label's own point.
     const rootRect = labels.root.getBoundingClientRect();
     const blocks = [];
-    for (const sel of ['.resetview', '#windCompass', '.credits', '.confcard', '.outcome', '.mapflag']) {
-      const el = mapRoot.querySelector(sel);
-      if (!el || el.hidden || !el.offsetParent) continue;
+    for (const sel of ['.resetview', '#windCompass', '.credits', '.confcard', '.outcome', '.mapflag', '#droneWindow', '#droneControl']) {
+      const el = (mapRoot.closest('.mapstage') || mapRoot).querySelector(sel);
+      if (!el || el.hidden || !el.offsetParent || (sel === '#droneWindow' && el.classList.contains('primary'))) continue;
       const r = el.getBoundingClientRect();
       if (r.width && r.height) blocks.push({ x: r.left - rootRect.left, y: r.top - rootRect.top, w: r.width, h: r.height });
     }
@@ -1747,5 +1894,5 @@
     applyState(u);
   }
 
-  window.Map3D = { init, update, resetView: () => resetView(1.5), pathHomes, pathBuildings };
+  window.Map3D = { init, update, resize: () => { if (viewer && ready) { viewer.resize(); viewer.scene.requestRender(); } }, resetView: () => resetView(1.5), pathHomes, pathBuildings, forecast, onDroneClick: null };
 })();

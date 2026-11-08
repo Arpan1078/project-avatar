@@ -20,6 +20,7 @@
      MapData.distanceToPower(p)     miles from p to the nearest power line
      MapData.snapToRoad(p)          nearest point on a real road
      MapData.nearestNamedRoad(p)    { name, miles } of the nearest named road
+     MapData.nearestTown(p)         { name, p, miles } of the nearest town or village
    Points p are miles [east, north] of the fire start (story.js).
    ===================================================================== */
 (function () {
@@ -33,9 +34,9 @@
 
   const MD = {
     loaded: false, error: null, attribution: [],
-    buildings: [], water: [], creeks: [], power: [], roads: [], departments: [],
+    buildings: [], water: [], creeks: [], power: [], roads: [], departments: [], towns: [],
     route: null, DRIVE,
-    load, nearestWater, helpFrom, distanceToPower, nearestPower, snapToRoad, nearestNamedRoad, dir16, driveMinutes
+    load, nearestWater, helpFrom, distanceToPower, nearestPower, snapToRoad, nearestNamedRoad, nearestTown, dir16, driveMinutes
   };
 
   const local = c => S.toLocal(c[0], c[1]);
@@ -153,6 +154,12 @@
   function shortOperator(o) {
     const known = { 'Oklahoma Gas & Electric': 'OG&E', 'Southern Pioneer Electric Company': 'Southern Pioneer' };
     return known[o] || o.replace(/\b(Company|Corporation|Inc\.?|LLC)\b/g, '').trim();
+  }
+  // The nearest town or village (not a fire station) to p.
+  function nearestTown(p) {
+    let best = null, bd = Infinity;
+    for (const t of MD.towns) { const d = dist(p, t.p); if (d < bd) { bd = d; best = t; } }
+    return best ? { name: best.name, p: best.p, miles: bd } : null;
   }
   // The power line nearest to p.
   function nearestPower(p) {
@@ -305,6 +312,7 @@
       const twin = d.town && depts.some(o => o !== d && o.town === d.town);
       d.label = !d.town || twin ? (d.names.map(shortDept).join(' / ') || d.name) : d.town;
     }
+    MD.towns = places;
     depts.sort((a, b) => dist(a.p, [0, 0]) - dist(b.p, [0, 0]));
     depts.forEach((d, i) => { d.id = 'dept' + i; });
     MD.departments = depts;
