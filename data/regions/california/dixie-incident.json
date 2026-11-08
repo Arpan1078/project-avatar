@@ -1,0 +1,351 @@
+{
+  "schemaVersion": "1.0.0",
+  "regionId": "us-ca",
+  "id": "us-ca-dixie-2021",
+  "name": "Dixie Fire",
+  "historical": {
+    "date": "2021-07-13",
+    "origin": {
+      "latitude": 39.871306,
+      "longitude": -121.389439,
+      "category": "verified_historical_fact",
+      "sourceRefs": [
+        "source-4ec1fb5ee5c2"
+      ],
+      "workbookCells": [
+        "Inputs!B4",
+        "Inputs!B5"
+      ],
+      "verificationStatus": "verified_against_cal_fire"
+    },
+    "verifiedFacts": [
+      {
+        "id": "us-ca-dixie-2021:date",
+        "category": "verified_historical_fact",
+        "value": "2021-07-13",
+        "meaning": "Historical incident date, not a hypothetical detection timestamp",
+        "sourceRefs": [
+          "source-4ec1fb5ee5c2"
+        ]
+      },
+      {
+        "id": "us-ca-dixie-2021:location",
+        "category": "verified_historical_fact",
+        "value": "Above the Cresta Dam, Feather River Canyon",
+        "sourceRefs": [
+          "source-4ec1fb5ee5c2"
+        ]
+      }
+    ]
+  },
+  "replay": {
+    "id": "us-ca-dixie-2026-hypothetical",
+    "category": "simulated_firewatch_behavior",
+    "description": "Hypothetical: same origin and fire behavior as July 13, 2021, with resources and sensors as of Nov 7, 2026.",
+    "basisYear": 2021,
+    "resourceSnapshotAsOf": "2026-11-07",
+    "replayDate": null,
+    "actualIncident": false,
+    "actualHistoricalDetections": false,
+    "implemented": false,
+    "timelinePath": "timeline.json",
+    "assumptions": [
+      "2021 fire behavior reused in a hypothetical replay with selected November 2026 sensors/resources.",
+      "Workbook clock labels are not observed 2026 timestamps.",
+      "Camera-first and outage-source behaviors are proposals, not existing dashboard features."
+    ],
+    "confidenceWeights": null
+  },
+  "inputs": [
+    {
+      "name": "Origin latitude",
+      "value": 39.871306,
+      "category": "verified_historical_fact",
+      "sourceText": "CAL FIRE Dixie Fire incident page, https://www.fire.ca.gov/incidents/2021/7/13/dixie-fire",
+      "provenance": {
+        "workbookId": "dixie-reference-workbook",
+        "sheet": "Inputs",
+        "row": 4,
+        "range": "A4:C4",
+        "sourceRefs": [
+          "source-4ec1fb5ee5c2"
+        ],
+        "sourceText": [
+          "CAL FIRE Dixie Fire incident page, https://www.fire.ca.gov/incidents/2021/7/13/dixie-fire"
+        ],
+        "inheritedNotes": [],
+        "cellComments": []
+      }
+    },
+    {
+      "name": "Origin longitude",
+      "value": -121.389439,
+      "category": "verified_historical_fact",
+      "sourceText": "CAL FIRE Dixie Fire incident page, https://www.fire.ca.gov/incidents/2021/7/13/dixie-fire",
+      "provenance": {
+        "workbookId": "dixie-reference-workbook",
+        "sheet": "Inputs",
+        "row": 5,
+        "range": "A5:C5",
+        "sourceRefs": [
+          "source-4ec1fb5ee5c2"
+        ],
+        "sourceText": [
+          "CAL FIRE Dixie Fire incident page, https://www.fire.ca.gov/incidents/2021/7/13/dixie-fire"
+        ],
+        "inheritedNotes": [],
+        "cellComments": []
+      }
+    },
+    {
+      "name": "Camera range (km)",
+      "value": 40,
+      "category": "simulated_firewatch_behavior",
+      "sourceText": "Firewatch scorer setting (CAM_RANGE_KM)",
+      "provenance": {
+        "workbookId": "dixie-reference-workbook",
+        "sheet": "Inputs",
+        "row": 6,
+        "range": "A6:C6",
+        "sourceRefs": [],
+        "sourceText": [
+          "Firewatch scorer setting (CAM_RANGE_KM)"
+        ],
+        "inheritedNotes": [],
+        "cellComments": []
+      }
+    },
+    {
+      "name": "Earth radius (km)",
+      "value": 6371.0088,
+      "category": "unknown_unverified",
+      "sourceText": "Mean Earth radius",
+      "provenance": {
+        "workbookId": "dixie-reference-workbook",
+        "sheet": "Inputs",
+        "row": 7,
+        "range": "A7:C7",
+        "sourceRefs": [],
+        "sourceText": [
+          "Mean Earth radius"
+        ],
+        "inheritedNotes": [],
+        "cellComments": []
+      }
+    }
+  ],
+  "summaryClaims": [
+    {
+      "id": "us-ca-dixie-2021:summary-1",
+      "question": "Location",
+      "text": "39.871306, -121.389439 (CAL FIRE official origin). Feather River Canyon above Cresta Dam, Butte County. Edit in Inputs tab to move the scenario.",
+      "categories": [
+        "verified_historical_fact",
+        "real_geographic_location"
+      ],
+      "workbookConfidence": "Official",
+      "verificationStatus": "origin_and_location_verified_only",
+      "provenance": {
+        "workbookId": "dixie-reference-workbook",
+        "sheet": "Summary",
+        "row": 5,
+        "range": "A5:E5",
+        "sourceRefs": [
+          "source-4ec1fb5ee5c2"
+        ],
+        "sourceText": [
+          "CAL FIRE Dixie Fire incident page, https://www.fire.ca.gov/incidents/2021/7/13/dixie-fire"
+        ],
+        "inheritedNotes": [
+          {
+            "cell": "A2",
+            "text": "Hypothetical: same origin and fire behavior as July 13, 2021, with resources and sensors as of Nov 7, 2026."
+          }
+        ],
+        "cellComments": []
+      }
+    },
+    {
+      "id": "us-ca-dixie-2021:summary-2",
+      "question": "Initial intensity",
+      "text": "Assume the 2021 behavior: slow ground fire under a fallen tree from ~6:48 AM; ~600 to 800 sq ft by 4:30 PM; ~40 x 40 ft by 5:12 PM; ~2 acres by 5:42 PM; ~500 acres by 8 AM next day. No measured heat output on record.",
+      "categories": [
+        "unknown_unverified",
+        "simulated_firewatch_behavior"
+      ],
+      "workbookConfidence": "Official (2021 values reused)",
+      "verificationStatus": "not_independently_verified",
+      "provenance": {
+        "workbookId": "dixie-reference-workbook",
+        "sheet": "Summary",
+        "row": 6,
+        "range": "A6:E6",
+        "sourceRefs": [
+          "source-557c2e6471cf"
+        ],
+        "sourceText": [
+          "Dixie Fire (Wikiwand), https://www.wikiwand.com/en/articles/Dixie_Fire"
+        ],
+        "inheritedNotes": [
+          {
+            "cell": "A2",
+            "text": "Hypothetical: same origin and fire behavior as July 13, 2021, with resources and sensors as of Nov 7, 2026."
+          }
+        ],
+        "cellComments": []
+      }
+    },
+    {
+      "id": "us-ca-dixie-2021:summary-3",
+      "question": "Nearest fire stations",
+      "text": "CAL FIRE Station 36 Jarbo Gap, 17 km SW on Highway 70 (coordinates known). Also nearby by address: Concow 37, Concow Lake 38, Brush Creek 60, Berry Creek 61. See Stations tab.",
+      "categories": [
+        "real_geographic_location",
+        "unknown_unverified"
+      ],
+      "workbookConfidence": "Confirmed (4 stations lack coordinates)",
+      "verificationStatus": "not_independently_verified",
+      "provenance": {
+        "workbookId": "dixie-reference-workbook",
+        "sheet": "Summary",
+        "row": 7,
+        "range": "A7:E7",
+        "sourceRefs": [
+          "source-b228471a2a64",
+          "source-ca809fed9617"
+        ],
+        "sourceText": [
+          "TopoQuest, CAL FIRE Station 36 Jarbo Gap, https://www.topoquest.com/place-detail.php?id=2622345; NERIS, Butte County Fire Department stations, https://neris.fsri.org/departments/FD06007050/stations"
+        ],
+        "inheritedNotes": [
+          {
+            "cell": "A2",
+            "text": "Hypothetical: same origin and fire behavior as July 13, 2021, with resources and sensors as of Nov 7, 2026."
+          }
+        ],
+        "cellComments": []
+      }
+    },
+    {
+      "id": "us-ca-dixie-2021:summary-4",
+      "question": "Aerial support",
+      "text": "Chico Regional Airport (~41 km W) is a CAL FIRE air attack and airtanker base; Aero-Flite also keeps a hangar there. Ag aviation operators in the Sacramento Valley (Chico, Biggs, Gridley, Colusa, Yuba City) can help only if carded and contracted as single engine air tankers; a Fire Boss version can scoop from large lakes. See Aircraft tab.",
+      "categories": [
+        "unknown_unverified"
+      ],
+      "workbookConfidence": "Confirmed bases; operator fleets unverified",
+      "verificationStatus": "not_independently_verified",
+      "provenance": {
+        "workbookId": "dixie-reference-workbook",
+        "sheet": "Summary",
+        "row": 8,
+        "range": "A8:E8",
+        "sourceRefs": [
+          "source-a63fcb5459fd",
+          "source-e5e4e7143215"
+        ],
+        "sourceText": [
+          "Butte County, Chico Air Attack Base, https://www.buttecounty.ca.gov/563/Chico-Air-Attack-Base; Aerial Fire Magazine, Aero-Flite hangar in Chico (2024), https://aerialfiremag.com/2024/03/11/aero-flite-establishes-hangar-base-in-chico-california"
+        ],
+        "inheritedNotes": [
+          {
+            "cell": "A2",
+            "text": "Hypothetical: same origin and fire behavior as July 13, 2021, with resources and sensors as of Nov 7, 2026."
+          }
+        ],
+        "cellComments": []
+      }
+    },
+    {
+      "id": "us-ca-dixie-2021:summary-5",
+      "question": "Water sources",
+      "text": "Feather River directly below; Cresta Reservoir 1.5 km; Poe Reservoir 7.8 km; Rock Creek Reservoir 15.7 km; Belden Forebay 30 km; Lake Almanor 42 km. See Water tab.",
+      "categories": [
+        "real_geographic_location",
+        "unknown_unverified"
+      ],
+      "workbookConfidence": "Confirmed coordinates",
+      "verificationStatus": "not_independently_verified",
+      "provenance": {
+        "workbookId": "dixie-reference-workbook",
+        "sheet": "Summary",
+        "row": 9,
+        "range": "A9:E9",
+        "sourceRefs": [
+          "source-cabcc8eb94c3",
+          "source-42917e809551"
+        ],
+        "sourceText": [
+          "North Fork Feather River (Wikipedia mirror), https://ipfs.aleph.im/ipfs/QmXoypizjW3WknFiJnKLwHCnL72vedxjQkDDP1mXWo6uco/wiki/Feather_River_Canyon.html; Poe Dam, Wikipedia, https://en.wikipedia.org/wiki/Poe_Dam"
+        ],
+        "inheritedNotes": [
+          {
+            "cell": "A2",
+            "text": "Hypothetical: same origin and fire behavior as July 13, 2021, with resources and sensors as of Nov 7, 2026."
+          }
+        ],
+        "cellComments": []
+      }
+    },
+    {
+      "id": "us-ca-dixie-2021:summary-6",
+      "question": "Cameras that could see it",
+      "text": "Bald Mtn. (Butte) 1 is 12 km away and was pointed at the origin when the list was read. Bald Mtn. La Porte 1 (40 km) also covers it. Bald Eagle Mtn. 1 (15 km) is 10 deg off with a narrow view. See Cameras tab. Terrain line of sight not checked.",
+      "categories": [
+        "real_geographic_location",
+        "unknown_unverified"
+      ],
+      "workbookConfidence": "Confirmed positions; view can change (cameras pan)",
+      "verificationStatus": "not_independently_verified",
+      "provenance": {
+        "workbookId": "dixie-reference-workbook",
+        "sheet": "Summary",
+        "row": 10,
+        "range": "A10:E10",
+        "sourceRefs": [
+          "source-c2da81094ab5"
+        ],
+        "sourceText": [
+          "ALERTCalifornia public camera list (read Nov 7, 2026), https://cameras.alertcalifornia.org/public-camera-data/all_cameras-v3.json"
+        ],
+        "inheritedNotes": [
+          {
+            "cell": "A2",
+            "text": "Hypothetical: same origin and fire behavior as July 13, 2021, with resources and sensors as of Nov 7, 2026."
+          }
+        ],
+        "cellComments": []
+      }
+    },
+    {
+      "id": "us-ca-dixie-2021:summary-7",
+      "question": "Could we detect it earlier?",
+      "text": "Likely yes, through the camera, but only with a camera-first mode (not built yet): today's pipeline only checks cameras near a satellite hotspot, so it would alert at the first GOES-18 detection (estimated evening), with the camera adding evidence. With camera-first mode, a WATCH could fire once smoke rises above the trees, plausibly hours before the 5:12 PM call. A power-outage source (PG&E public outage map) could flag the 6:48 AM fault. See Timeline tab.",
+      "categories": [
+        "hypothetical_2026_observation",
+        "simulated_firewatch_behavior"
+      ],
+      "workbookConfidence": "Estimate",
+      "verificationStatus": "not_independently_verified",
+      "provenance": {
+        "workbookId": "dixie-reference-workbook",
+        "sheet": "Summary",
+        "row": 11,
+        "range": "A11:E11",
+        "sourceRefs": [
+          "source-8a70e3201af7"
+        ],
+        "sourceText": [
+          "Firebender team estimate (not an official figure)"
+        ],
+        "inheritedNotes": [
+          {
+            "cell": "A2",
+            "text": "Hypothetical: same origin and fire behavior as July 13, 2021, with resources and sensors as of Nov 7, 2026."
+          }
+        ],
+        "cellComments": []
+      }
+    }
+  ]
+}

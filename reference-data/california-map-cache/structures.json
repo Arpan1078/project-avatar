@@ -1,0 +1,428 @@
+{
+    "source":  "https://cartowfs.nationalmap.gov/arcgis/rest/services/structures/MapServer/0",
+    "retrievedOn":  "2026-11-07",
+    "bbox":  [
+                 -121.58,
+                 39.7,
+                 -121.2,
+                 40.04
+             ],
+    "queryUrls":  [
+                      "https://cartowfs.nationalmap.gov/arcgis/rest/services/structures/MapServer/0/query?f=json\u0026where=1%3D1\u0026geometry=-121.58%2C39.70%2C-121.20%2C40.04\u0026geometryType=esriGeometryEnvelope\u0026inSR=4326\u0026outSR=4326\u0026spatialRel=esriSpatialRelIntersects\u0026outFields=OBJECTID%2CNAME%2CFTYPE%2CFCODE%2CADDRESS%2CCITY%2CSTATE%2CZIPCODE%2CSOURCE_ORIGINATOR\u0026returnGeometry=true\u0026geometryPrecision=6\u0026maxAllowableOffset=0.00005\u0026resultRecordCount=1000\u0026resultOffset=0\u0026orderByFields=OBJECTID"
+                  ],
+    "geometryType":  "esriGeometryPoint",
+    "spatialReference":  {
+                             "wkid":  4326,
+                             "latestWkid":  4326
+                         },
+    "features":  [
+                     {
+                         "attributes":  {
+                                            "objectid":  6525343,
+                                            "name":  "Smith - Lunt Family Cemetery",
+                                            "ftype":  820,
+                                            "fcode":  82010,
+                                            "address":  "Nelson Bar Road",
+                                            "city":  "Oroville",
+                                            "state":  "CA",
+                                            "zipcode":  "95965",
+                                            "source_originator":  "U.S. Geological Survey"
+                                        },
+                         "geometry":  {
+                                          "x":  -121.543714,
+                                          "y":  39.720486
+                                      }
+                     },
+                     {
+                         "attributes":  {
+                                            "objectid":  6565092,
+                                            "name":  "Skyway Memorial Park",
+                                            "ftype":  820,
+                                            "fcode":  82010,
+                                            "address":  "13686 Skyway Road",
+                                            "city":  "Magalia",
+                                            "state":  "CA",
+                                            "zipcode":  "95954",
+                                            "source_originator":  "U.S. Geological Survey"
+                                        },
+                         "geometry":  {
+                                          "x":  -121.578583,
+                                          "y":  39.806501
+                                      }
+                     },
+                     {
+                         "attributes":  {
+                                            "objectid":  6630186,
+                                            "name":  "Butte County Fire Department Station 38",
+                                            "ftype":  740,
+                                            "fcode":  74026,
+                                            "address":  "12960 Concow Road",
+                                            "city":  "Oroville",
+                                            "state":  "CA",
+                                            "zipcode":  "95965",
+                                            "source_originator":  "U.S. Geological Survey"
+                                        },
+                         "geometry":  {
+                                          "x":  -121.506666,
+                                          "y":  39.774126
+                                      }
+                     },
+                     {
+                         "attributes":  {
+                                            "objectid":  6638559,
+                                            "name":  "Children\u0027s Community Charter School",
+                                            "ftype":  730,
+                                            "fcode":  73002,
+                                            "address":  "6830 Pentz Road",
+                                            "city":  "Paradise",
+                                            "state":  "CA",
+                                            "zipcode":  "95969",
+                                            "source_originator":  "U.S. Geological Survey"
+                                        },
+                         "geometry":  {
+                                          "x":  -121.578944,
+                                          "y":  39.783875
+                                      }
+                     },
+                     {
+                         "attributes":  {
+                                            "objectid":  6644784,
+                                            "name":  "Cal Fire Station 13 Stirling City",
+                                            "ftype":  740,
+                                            "fcode":  74026,
+                                            "address":  "7882 Quartz Street",
+                                            "city":  "Stirling City",
+                                            "state":  "CA",
+                                            "zipcode":  "95978",
+                                            "source_originator":  "U.S. Geological Survey"
+                                        },
+                         "geometry":  {
+                                          "x":  -121.528251,
+                                          "y":  39.904589
+                                      }
+                     },
+                     {
+                         "attributes":  {
+                                            "objectid":  6645095,
+                                            "name":  "SUNDEW (FAMILY CG)",
+                                            "ftype":  820,
+                                            "fcode":  82008,
+                                            "address":  null,
+                                            "city":  null,
+                                            "state":  "CA",
+                                            "zipcode":  null,
+                                            "source_originator":  "USDA, Forest Service"
+                                        },
+                         "geometry":  {
+                                          "x":  -121.202113,
+                                          "y":  39.900805
+                                      }
+                     },
+                     {
+                         "attributes":  {
+                                            "objectid":  6645971,
+                                            "name":  "Stirling City Cemetery",
+                                            "ftype":  820,
+                                            "fcode":  82010,
+                                            "address":  "Mica Street",
+                                            "city":  "Stirling City",
+                                            "state":  "CA",
+                                            "zipcode":  "95978",
+                                            "source_originator":  "U.S. Geological Survey"
+                                        },
+                         "geometry":  {
+                                          "x":  -121.537921,
+                                          "y":  39.908063
+                                      }
+                     },
+                     {
+                         "attributes":  {
+                                            "objectid":  6656754,
+                                            "name":  "HUTCHINS (GROUP CG)",
+                                            "ftype":  820,
+                                            "fcode":  82008,
+                                            "address":  null,
+                                            "city":  null,
+                                            "state":  "CA",
+                                            "zipcode":  null,
+                                            "source_originator":  "USDA, Forest Service"
+                                        },
+                         "geometry":  {
+                                          "x":  -121.204573,
+                                          "y":  39.901567
+                                      }
+                     },
+                     {
+                         "attributes":  {
+                                            "objectid":  6679242,
+                                            "name":  "MILSAP BAR (FAMILY CG)",
+                                            "ftype":  820,
+                                            "fcode":  82008,
+                                            "address":  null,
+                                            "city":  null,
+                                            "state":  "CA",
+                                            "zipcode":  null,
+                                            "source_originator":  "USDA, Forest Service"
+                                        },
+                         "geometry":  {
+                                          "x":  -121.269793,
+                                          "y":  39.708275
+                                      }
+                     },
+                     {
+                         "attributes":  {
+                                            "objectid":  6680270,
+                                            "name":  "GANSNER BAR (FAMILY CG)",
+                                            "ftype":  820,
+                                            "fcode":  82008,
+                                            "address":  null,
+                                            "city":  null,
+                                            "state":  "CA",
+                                            "zipcode":  null,
+                                            "source_originator":  "USDA, Forest Service"
+                                        },
+                         "geometry":  {
+                                          "x":  -121.223113,
+                                          "y":  40.019905
+                                      }
+                     },
+                     {
+                         "attributes":  {
+                                            "objectid":  6696136,
+                                            "name":  "THREE LAKES TRAILHEAD",
+                                            "ftype":  820,
+                                            "fcode":  82047,
+                                            "address":  null,
+                                            "city":  null,
+                                            "state":  "CA",
+                                            "zipcode":  null,
+                                            "source_originator":  "USDA, Forest Service"
+                                        },
+                         "geometry":  {
+                                          "x":  -121.223425,
+                                          "y":  39.970895
+                                      }
+                     },
+                     {
+                         "attributes":  {
+                                            "objectid":  6701718,
+                                            "name":  "GRIZZLY FOREBAY (FAMILY CG)",
+                                            "ftype":  820,
+                                            "fcode":  82008,
+                                            "address":  null,
+                                            "city":  null,
+                                            "state":  "CA",
+                                            "zipcode":  null,
+                                            "source_originator":  "USDA, Forest Service"
+                                        },
+                         "geometry":  {
+                                          "x":  -121.28974,
+                                          "y":  39.89097
+                                      }
+                     },
+                     {
+                         "attributes":  {
+                                            "objectid":  6711884,
+                                            "name":  "Butte County Fire Department Station 37",
+                                            "ftype":  740,
+                                            "fcode":  74026,
+                                            "address":  "3595 Shuman Lane",
+                                            "city":  "Oroville",
+                                            "state":  "CA",
+                                            "zipcode":  "95965",
+                                            "source_originator":  "U.S. Geological Survey"
+                                        },
+                         "geometry":  {
+                                          "x":  -121.523748,
+                                          "y":  39.720995
+                                      }
+                     },
+                     {
+                         "attributes":  {
+                                            "objectid":  6717372,
+                                            "name":  "California Department of Forestry and Fire Protection Station 36 Jarbo Gap",
+                                            "ftype":  740,
+                                            "fcode":  74026,
+                                            "address":  "11972 State Highway 70",
+                                            "city":  "Oroville",
+                                            "state":  "CA",
+                                            "zipcode":  "95965",
+                                            "source_originator":  "U.S. Geological Survey"
+                                        },
+                         "geometry":  {
+                                          "x":  -121.495936,
+                                          "y":  39.739125
+                                      }
+                     },
+                     {
+                         "attributes":  {
+                                            "objectid":  6740896,
+                                            "name":  "BELDEN TRAILHEAD",
+                                            "ftype":  820,
+                                            "fcode":  82047,
+                                            "address":  null,
+                                            "city":  null,
+                                            "state":  "CA",
+                                            "zipcode":  null,
+                                            "source_originator":  "USDA, Forest Service"
+                                        },
+                         "geometry":  {
+                                          "x":  -121.257101,
+                                          "y":  40.002893
+                                      }
+                     },
+                     {
+                         "attributes":  {
+                                            "objectid":  6788908,
+                                            "name":  "Concow Elementary School",
+                                            "ftype":  730,
+                                            "fcode":  73003,
+                                            "address":  "11679 Nelson Bar Road",
+                                            "city":  "Oroville",
+                                            "state":  "CA",
+                                            "zipcode":  "95965",
+                                            "source_originator":  "U.S. Geological Survey"
+                                        },
+                         "geometry":  {
+                                          "x":  -121.527809,
+                                          "y":  39.730773
+                                      }
+                     },
+                     {
+                         "attributes":  {
+                                            "objectid":  6813064,
+                                            "name":  "LOWER BUCKS (FAMILY CG)",
+                                            "ftype":  820,
+                                            "fcode":  82008,
+                                            "address":  null,
+                                            "city":  null,
+                                            "state":  "CA",
+                                            "zipcode":  null,
+                                            "source_originator":  "USDA, Forest Service"
+                                        },
+                         "geometry":  {
+                                          "x":  -121.208555,
+                                          "y":  39.899278
+                                      }
+                     },
+                     {
+                         "attributes":  {
+                                            "objectid":  6817331,
+                                            "name":  "PHILBROOK",
+                                            "ftype":  820,
+                                            "fcode":  82008,
+                                            "address":  null,
+                                            "city":  null,
+                                            "state":  "CA",
+                                            "zipcode":  null,
+                                            "source_originator":  "USDA, Forest Service"
+                                        },
+                         "geometry":  {
+                                          "x":  -121.466381,
+                                          "y":  40.028272
+                                      }
+                     },
+                     {
+                         "attributes":  {
+                                            "objectid":  6817413,
+                                            "name":  "Inskip Pioneer Cemetery",
+                                            "ftype":  820,
+                                            "fcode":  82010,
+                                            "address":  null,
+                                            "city":  "Stirling City",
+                                            "state":  "CA",
+                                            "zipcode":  "95978",
+                                            "source_originator":  "U.S. Geological Survey"
+                                        },
+                         "geometry":  {
+                                          "x":  -121.539878,
+                                          "y":  39.975946
+                                      }
+                     },
+                     {
+                         "attributes":  {
+                                            "objectid":  6820612,
+                                            "name":  "LITTLE NORTH FORK (FAMILY CG)",
+                                            "ftype":  820,
+                                            "fcode":  82008,
+                                            "address":  null,
+                                            "city":  null,
+                                            "state":  "CA",
+                                            "zipcode":  null,
+                                            "source_originator":  "USDA, Forest Service"
+                                        },
+                         "geometry":  {
+                                          "x":  -121.259014,
+                                          "y":  39.782001
+                                      }
+                     },
+                     {
+                         "attributes":  {
+                                            "objectid":  6828339,
+                                            "name":  "GRIZZLY CREEK (FAMILY CG)",
+                                            "ftype":  820,
+                                            "fcode":  82008,
+                                            "address":  null,
+                                            "city":  null,
+                                            "state":  "CA",
+                                            "zipcode":  null,
+                                            "source_originator":  "USDA, Forest Service"
+                                        },
+                         "geometry":  {
+                                          "x":  -121.207113,
+                                          "y":  39.867205
+                                      }
+                     },
+                     {
+                         "attributes":  {
+                                            "objectid":  6838336,
+                                            "name":  "ROGERS COW CAMP (FAMILY CG)",
+                                            "ftype":  820,
+                                            "fcode":  82008,
+                                            "address":  null,
+                                            "city":  null,
+                                            "state":  "CA",
+                                            "zipcode":  null,
+                                            "source_originator":  "USDA, Forest Service"
+                                        },
+                         "geometry":  {
+                                          "x":  -121.310213,
+                                          "y":  39.768305
+                                      }
+                     },
+                     {
+                         "attributes":  {
+                                            "objectid":  6868447,
+                                            "name":  "Yankee Hill Cemetery",
+                                            "ftype":  820,
+                                            "fcode":  82010,
+                                            "address":  "Yankee Hill Road and Highway 70",
+                                            "city":  "Oroville",
+                                            "state":  "CA",
+                                            "zipcode":  "95965",
+                                            "source_originator":  "U.S. Geological Survey"
+                                        },
+                         "geometry":  {
+                                          "x":  -121.521879,
+                                          "y":  39.712556
+                                      }
+                     },
+                     {
+                         "attributes":  {
+                                            "objectid":  6876335,
+                                            "name":  "Robinson Mine Cemetery",
+                                            "ftype":  820,
+                                            "fcode":  82010,
+                                            "address":  null,
+                                            "city":  "Plumas County",
+                                            "state":  "CA",
+                                            "zipcode":  null,
+                                            "source_originator":  "U.S. Geological Survey"
+                                        },
+                         "geometry":  {
+                                          "x":  -121.247093,
+                                          "y":  39.812532
+                                      }
+                     }
+                 ]
+}

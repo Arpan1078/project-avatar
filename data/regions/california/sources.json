@@ -1,0 +1,417 @@
+{
+  "schemaVersion": "1.0.0",
+  "regionId": "us-ca",
+  "workbook": {
+    "id": "dixie-reference-workbook",
+    "path": "reference-data/Dixie_Today_Scenario.xlsx",
+    "sha256": "f23d2f2403e756bd4946f942d2550956c9dcd0401a49fbe545e7f537ad2bd892",
+    "date1904": "false",
+    "extraction": "Read-only OOXML values, cached formulas, formats, hyperlinks and cell comments; no recalculation",
+    "snapshotPath": "workbook-source.json",
+    "intendedResourceSnapshotAsOf": "2026-11-07"
+  },
+  "records": [
+    {
+      "id": "source-4ec1fb5ee5c2",
+      "kind": "external_reference",
+      "url": "https://www.fire.ca.gov/incidents/2021/7/13/dixie-fire",
+      "citations": [
+        "CAL FIRE Dixie Fire incident page, https://www.fire.ca.gov/incidents/2021/7/13/dixie-fire"
+      ],
+      "workbookOccurrences": [
+        {
+          "sheet": "Summary",
+          "cell": "E5"
+        },
+        {
+          "sheet": "Inputs",
+          "cell": "C4"
+        },
+        {
+          "sheet": "Inputs",
+          "cell": "C5"
+        }
+      ],
+      "verification": {
+        "status": "selected_claims_verified",
+        "checkedOn": "2026-11-07",
+        "verifiedClaims": [
+          "Incident name Dixie Fire",
+          "Historical incident date 2021-07-13",
+          "Origin latitude 39.871306 and longitude -121.389439",
+          "Location above Cresta Dam, Feather River Canyon"
+        ],
+        "note": "CAL FIRE page reviewed during Phase 1. Its published start time is 07/13/2021 5:15 PM, distinct from workbook fault and 911-call times. Other workbook history and 2026 resource claims were not independently checked."
+      }
+    },
+    {
+      "id": "source-557c2e6471cf",
+      "kind": "external_reference",
+      "url": "https://www.wikiwand.com/en/articles/Dixie_Fire",
+      "citations": [
+        "Dixie Fire (Wikiwand), https://www.wikiwand.com/en/articles/Dixie_Fire"
+      ],
+      "workbookOccurrences": [
+        {
+          "sheet": "Summary",
+          "cell": "E6"
+        },
+        {
+          "sheet": "Water",
+          "cell": "G5"
+        },
+        {
+          "sheet": "Timeline today",
+          "cell": "F8"
+        },
+        {
+          "sheet": "Timeline today",
+          "cell": "F9"
+        },
+        {
+          "sheet": "Timeline today",
+          "cell": "F12"
+        }
+      ],
+      "verification": {
+        "status": "not_independently_checked",
+        "checkedOn": null,
+        "verifiedClaims": []
+      }
+    },
+    {
+      "id": "source-b228471a2a64",
+      "kind": "external_reference",
+      "url": "https://www.topoquest.com/place-detail.php?id=2622345",
+      "citations": [
+        "TopoQuest, CAL FIRE Station 36 Jarbo Gap, https://www.topoquest.com/place-detail.php?id=2622345; NERIS, Butte County Fire Department stations, https://neris.fsri.org/departments/FD06007050/stations",
+        "TopoQuest, CAL FIRE Station 36 Jarbo Gap, https://www.topoquest.com/place-detail.php?id=2622345"
+      ],
+      "workbookOccurrences": [
+        {
+          "sheet": "Summary",
+          "cell": "E7"
+        },
+        {
+          "sheet": "Stations",
+          "cell": "G5"
+        }
+      ],
+      "verification": {
+        "status": "not_independently_checked",
+        "checkedOn": null,
+        "verifiedClaims": []
+      }
+    },
+    {
+      "id": "source-ca809fed9617",
+      "kind": "external_reference",
+      "url": "https://neris.fsri.org/departments/FD06007050/stations",
+      "citations": [
+        "TopoQuest, CAL FIRE Station 36 Jarbo Gap, https://www.topoquest.com/place-detail.php?id=2622345; NERIS, Butte County Fire Department stations, https://neris.fsri.org/departments/FD06007050/stations",
+        "NERIS, Butte County Fire Department stations, https://neris.fsri.org/departments/FD06007050/stations"
+      ],
+      "workbookOccurrences": [
+        {
+          "sheet": "Summary",
+          "cell": "E7"
+        },
+        {
+          "sheet": "Stations",
+          "cell": "G6"
+        },
+        {
+          "sheet": "Stations",
+          "cell": "G7"
+        },
+        {
+          "sheet": "Stations",
+          "cell": "G8"
+        },
+        {
+          "sheet": "Stations",
+          "cell": "G9"
+        },
+        {
+          "sheet": "Stations",
+          "cell": "G10"
+        }
+      ],
+      "verification": {
+        "status": "not_independently_checked",
+        "checkedOn": null,
+        "verifiedClaims": []
+      }
+    },
+    {
+      "id": "source-a63fcb5459fd",
+      "kind": "external_reference",
+      "url": "https://www.buttecounty.ca.gov/563/Chico-Air-Attack-Base",
+      "citations": [
+        "Butte County, Chico Air Attack Base, https://www.buttecounty.ca.gov/563/Chico-Air-Attack-Base; Aerial Fire Magazine, Aero-Flite hangar in Chico (2024), https://aerialfiremag.com/2024/03/11/aero-flite-establishes-hangar-base-in-chico-california",
+        "Butte County, Chico Air Attack Base, https://www.buttecounty.ca.gov/563/Chico-Air-Attack-Base"
+      ],
+      "workbookOccurrences": [
+        {
+          "sheet": "Summary",
+          "cell": "E8"
+        },
+        {
+          "sheet": "Aircraft",
+          "cell": "H5"
+        }
+      ],
+      "verification": {
+        "status": "not_independently_checked",
+        "checkedOn": null,
+        "verifiedClaims": []
+      }
+    },
+    {
+      "id": "source-e5e4e7143215",
+      "kind": "external_reference",
+      "url": "https://aerialfiremag.com/2024/03/11/aero-flite-establishes-hangar-base-in-chico-california",
+      "citations": [
+        "Butte County, Chico Air Attack Base, https://www.buttecounty.ca.gov/563/Chico-Air-Attack-Base; Aerial Fire Magazine, Aero-Flite hangar in Chico (2024), https://aerialfiremag.com/2024/03/11/aero-flite-establishes-hangar-base-in-chico-california",
+        "Aerial Fire Magazine, Aero-Flite hangar in Chico (2024), https://aerialfiremag.com/2024/03/11/aero-flite-establishes-hangar-base-in-chico-california"
+      ],
+      "workbookOccurrences": [
+        {
+          "sheet": "Summary",
+          "cell": "E8"
+        },
+        {
+          "sheet": "Aircraft",
+          "cell": "H6"
+        }
+      ],
+      "verification": {
+        "status": "not_independently_checked",
+        "checkedOn": null,
+        "verifiedClaims": []
+      }
+    },
+    {
+      "id": "source-cabcc8eb94c3",
+      "kind": "external_reference",
+      "url": "https://ipfs.aleph.im/ipfs/QmXoypizjW3WknFiJnKLwHCnL72vedxjQkDDP1mXWo6uco/wiki/Feather_River_Canyon.html",
+      "citations": [
+        "North Fork Feather River (Wikipedia mirror), https://ipfs.aleph.im/ipfs/QmXoypizjW3WknFiJnKLwHCnL72vedxjQkDDP1mXWo6uco/wiki/Feather_River_Canyon.html; Poe Dam, Wikipedia, https://en.wikipedia.org/wiki/Poe_Dam",
+        "North Fork Feather River (Wikipedia mirror), https://ipfs.aleph.im/ipfs/QmXoypizjW3WknFiJnKLwHCnL72vedxjQkDDP1mXWo6uco/wiki/Feather_River_Canyon.html"
+      ],
+      "workbookOccurrences": [
+        {
+          "sheet": "Summary",
+          "cell": "E9"
+        },
+        {
+          "sheet": "Water",
+          "cell": "G6"
+        },
+        {
+          "sheet": "Water",
+          "cell": "G8"
+        },
+        {
+          "sheet": "Water",
+          "cell": "G9"
+        },
+        {
+          "sheet": "Water",
+          "cell": "G10"
+        }
+      ],
+      "verification": {
+        "status": "not_independently_checked",
+        "checkedOn": null,
+        "verifiedClaims": []
+      }
+    },
+    {
+      "id": "source-42917e809551",
+      "kind": "external_reference",
+      "url": "https://en.wikipedia.org/wiki/Poe_Dam",
+      "citations": [
+        "North Fork Feather River (Wikipedia mirror), https://ipfs.aleph.im/ipfs/QmXoypizjW3WknFiJnKLwHCnL72vedxjQkDDP1mXWo6uco/wiki/Feather_River_Canyon.html; Poe Dam, Wikipedia, https://en.wikipedia.org/wiki/Poe_Dam",
+        "Poe Dam, Wikipedia, https://en.wikipedia.org/wiki/Poe_Dam"
+      ],
+      "workbookOccurrences": [
+        {
+          "sheet": "Summary",
+          "cell": "E9"
+        },
+        {
+          "sheet": "Water",
+          "cell": "G7"
+        },
+        {
+          "sheet": "Water",
+          "cell": "G11"
+        }
+      ],
+      "verification": {
+        "status": "not_independently_checked",
+        "checkedOn": null,
+        "verifiedClaims": []
+      }
+    },
+    {
+      "id": "source-c2da81094ab5",
+      "kind": "external_reference",
+      "url": "https://cameras.alertcalifornia.org/public-camera-data/all_cameras-v3.json",
+      "citations": [
+        "ALERTCalifornia public camera list (read Nov 7, 2026), https://cameras.alertcalifornia.org/public-camera-data/all_cameras-v3.json",
+        "Source: ALERTCalifornia public camera list (read Nov 7, 2026), https://cameras.alertcalifornia.org/public-camera-data/all_cameras-v3.json"
+      ],
+      "workbookOccurrences": [
+        {
+          "sheet": "Summary",
+          "cell": "E10"
+        },
+        {
+          "sheet": "Cameras",
+          "cell": "A13"
+        }
+      ],
+      "verification": {
+        "status": "not_independently_checked",
+        "checkedOn": null,
+        "verifiedClaims": []
+      }
+    },
+    {
+      "id": "source-8a70e3201af7",
+      "kind": "workbook_attribution",
+      "url": null,
+      "citations": [
+        "Firebender team estimate (not an official figure)"
+      ],
+      "workbookOccurrences": [
+        {
+          "sheet": "Summary",
+          "cell": "E11"
+        },
+        {
+          "sheet": "Timeline today",
+          "cell": "F5"
+        },
+        {
+          "sheet": "Timeline today",
+          "cell": "F6"
+        },
+        {
+          "sheet": "Timeline today",
+          "cell": "F7"
+        },
+        {
+          "sheet": "Timeline today",
+          "cell": "F10"
+        },
+        {
+          "sheet": "Timeline today",
+          "cell": "F11"
+        }
+      ],
+      "verification": {
+        "status": "not_independently_checked",
+        "checkedOn": null,
+        "verifiedClaims": []
+      }
+    },
+    {
+      "id": "source-b37a68a90690",
+      "kind": "external_reference",
+      "url": "https://naicslist.com/company-profile/porter-flying-services-inc-chico-ca-95928",
+      "citations": [
+        "https://naicslist.com/company-profile/porter-flying-services-inc-chico-ca-95928"
+      ],
+      "workbookOccurrences": [
+        {
+          "sheet": "Aircraft",
+          "cell": "H7"
+        }
+      ],
+      "verification": {
+        "status": "not_independently_checked",
+        "checkedOn": null,
+        "verifiedClaims": []
+      }
+    },
+    {
+      "id": "source-3143929f814d",
+      "kind": "external_reference",
+      "url": "https://naicslist.com/company-profile/jones-aviation-biggs-ca-95917",
+      "citations": [
+        "https://naicslist.com/company-profile/jones-aviation-biggs-ca-95917"
+      ],
+      "workbookOccurrences": [
+        {
+          "sheet": "Aircraft",
+          "cell": "H8"
+        }
+      ],
+      "verification": {
+        "status": "not_independently_checked",
+        "checkedOn": null,
+        "verifiedClaims": []
+      }
+    },
+    {
+      "id": "source-d10ba0b03c0c",
+      "kind": "external_reference",
+      "url": "https://naicslist.com/company-profile/c-j-applicators-inc-gridley-ca-95948",
+      "citations": [
+        "https://naicslist.com/company-profile/c-j-applicators-inc-gridley-ca-95948"
+      ],
+      "workbookOccurrences": [
+        {
+          "sheet": "Aircraft",
+          "cell": "H9"
+        }
+      ],
+      "verification": {
+        "status": "not_independently_checked",
+        "checkedOn": null,
+        "verifiedClaims": []
+      }
+    },
+    {
+      "id": "source-92bb57b7e976",
+      "kind": "external_reference",
+      "url": "https://naicslist.com/company-profile/pacific-valley-aviation-inc-colusa-ca-95932",
+      "citations": [
+        "https://naicslist.com/company-profile/pacific-valley-aviation-inc-colusa-ca-95932"
+      ],
+      "workbookOccurrences": [
+        {
+          "sheet": "Aircraft",
+          "cell": "H10"
+        }
+      ],
+      "verification": {
+        "status": "not_independently_checked",
+        "checkedOn": null,
+        "verifiedClaims": []
+      }
+    },
+    {
+      "id": "source-afdbb2e864a1",
+      "kind": "external_reference",
+      "url": "https://naicslist.com/company-profile/andersons-flying-service-inc-yuba-city-ca-95991",
+      "citations": [
+        "https://naicslist.com/company-profile/andersons-flying-service-inc-yuba-city-ca-95991"
+      ],
+      "workbookOccurrences": [
+        {
+          "sheet": "Aircraft",
+          "cell": "H11"
+        }
+      ],
+      "verification": {
+        "status": "not_independently_checked",
+        "checkedOn": null,
+        "verifiedClaims": []
+      }
+    }
+  ]
+}

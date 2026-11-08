@@ -1,0 +1,521 @@
+{
+    "source":  "https://cartowfs.nationalmap.gov/arcgis/rest/services/geonames/MapServer/0",
+    "retrievedOn":  "2026-11-07",
+    "bbox":  [
+                 -121.58,
+                 39.7,
+                 -121.2,
+                 40.04
+             ],
+    "queryUrls":  [
+                      "https://cartowfs.nationalmap.gov/arcgis/rest/services/geonames/MapServer/0/query?f=json\u0026where=gaz_featureclass%3D\u0027Populated%20Place\u0027\u0026geometry=-121.58%2C39.70%2C-121.20%2C40.04\u0026geometryType=esriGeometryEnvelope\u0026inSR=4326\u0026outSR=4326\u0026spatialRel=esriSpatialRelIntersects\u0026outFields=OBJECTID%2Cgaz_name%2Cgaz_featureclass%2Cstate_alpha%2Ccounty_name\u0026returnGeometry=true\u0026geometryPrecision=6\u0026maxAllowableOffset=0.00005\u0026resultRecordCount=1000\u0026resultOffset=0\u0026orderByFields=OBJECTID"
+                  ],
+    "geometryType":  "esriGeometryMultipoint",
+    "spatialReference":  {
+                             "wkid":  4326,
+                             "latestWkid":  4326
+                         },
+    "features":  [
+                     {
+                         "attributes":  {
+                                            "OBJECTID":  4170,
+                                            "gaz_name":  "Powellton",
+                                            "gaz_featureclass":  "Populated Place",
+                                            "state_alpha":  "CA",
+                                            "county_name":  "Butte"
+                                        },
+                         "geometry":  {
+                                          "points":  [
+                                                         [
+                                                             -121.572487,
+                                                             39.928777
+                                                         ]
+                                                     ]
+                                      }
+                     },
+                     {
+                         "attributes":  {
+                                            "OBJECTID":  5668,
+                                            "gaz_name":  "Kister",
+                                            "gaz_featureclass":  "Populated Place",
+                                            "state_alpha":  "CA",
+                                            "county_name":  "Butte"
+                                        },
+                         "geometry":  {
+                                          "points":  [
+                                                         [
+                                                             -121.363313,
+                                                             39.822112
+                                                         ]
+                                                     ]
+                                      }
+                     },
+                     {
+                         "attributes":  {
+                                            "OBJECTID":  15614,
+                                            "gaz_name":  "Deadwood",
+                                            "gaz_featureclass":  "Populated Place",
+                                            "state_alpha":  "CA",
+                                            "county_name":  "Butte"
+                                        },
+                         "geometry":  {
+                                          "points":  [
+                                                         [
+                                                             -121.524706,
+                                                             39.742389
+                                                         ]
+                                                     ]
+                                      }
+                     },
+                     {
+                         "attributes":  {
+                                            "OBJECTID":  37155,
+                                            "gaz_name":  "Cresta",
+                                            "gaz_featureclass":  "Populated Place",
+                                            "state_alpha":  "CA",
+                                            "county_name":  "Butte"
+                                        },
+                         "geometry":  {
+                                          "points":  [
+                                                         [
+                                                             -121.404425,
+                                                             39.843501
+                                                         ]
+                                                     ]
+                                      }
+                     },
+                     {
+                         "attributes":  {
+                                            "OBJECTID":  37192,
+                                            "gaz_name":  "Poe",
+                                            "gaz_featureclass":  "Populated Place",
+                                            "state_alpha":  "CA",
+                                            "county_name":  "Butte"
+                                        },
+                         "geometry":  {
+                                          "points":  [
+                                                         [
+                                                             -121.471371,
+                                                             39.744334
+                                                         ],
+                                                         [
+                                                             -121.47026,
+                                                             39.753778
+                                                         ]
+                                                     ]
+                                      }
+                     },
+                     {
+                         "attributes":  {
+                                            "OBJECTID":  38821,
+                                            "gaz_name":  "Rock Creek",
+                                            "gaz_featureclass":  "Populated Place",
+                                            "state_alpha":  "CA",
+                                            "county_name":  "Plumas"
+                                        },
+                         "geometry":  {
+                                          "points":  [
+                                                         [
+                                                             -121.353035,
+                                                             39.902668
+                                                         ]
+                                                     ]
+                                      }
+                     },
+                     {
+                         "attributes":  {
+                                            "OBJECTID":  48205,
+                                            "gaz_name":  "Rock Crest",
+                                            "gaz_featureclass":  "Populated Place",
+                                            "state_alpha":  "CA",
+                                            "county_name":  "Plumas"
+                                        },
+                         "geometry":  {
+                                          "points":  [
+                                                         [
+                                                             -121.316646,
+                                                             39.926835
+                                                         ]
+                                                     ]
+                                      }
+                     },
+                     {
+                         "attributes":  {
+                                            "OBJECTID":  56161,
+                                            "gaz_name":  "Merrimac",
+                                            "gaz_featureclass":  "Populated Place",
+                                            "state_alpha":  "CA",
+                                            "county_name":  "Butte"
+                                        },
+                         "geometry":  {
+                                          "points":  [
+                                                         [
+                                                             -121.307477,
+                                                             39.766002
+                                                         ]
+                                                     ]
+                                      }
+                     },
+                     {
+                         "attributes":  {
+                                            "OBJECTID":  63097,
+                                            "gaz_name":  "Belden",
+                                            "gaz_featureclass":  "Populated Place",
+                                            "state_alpha":  "CA",
+                                            "county_name":  "Plumas"
+                                        },
+                         "geometry":  {
+                                          "points":  [
+                                                         [
+                                                             -121.249145,
+                                                             40.006002
+                                                         ],
+                                                         [
+                                                             -121.252478,
+                                                             40.007113
+                                                         ]
+                                                     ]
+                                      }
+                     },
+                     {
+                         "attributes":  {
+                                            "OBJECTID":  63099,
+                                            "gaz_name":  "Buckeye",
+                                            "gaz_featureclass":  "Populated Place",
+                                            "state_alpha":  "CA",
+                                            "county_name":  "Plumas"
+                                        },
+                         "geometry":  {
+                                          "points":  [
+                                                         [
+                                                             -121.304144,
+                                                             39.795447
+                                                         ]
+                                                     ]
+                                      }
+                     },
+                     {
+                         "attributes":  {
+                                            "OBJECTID":  93988,
+                                            "gaz_name":  "Stirling City",
+                                            "gaz_featureclass":  "Populated Place",
+                                            "state_alpha":  "CA",
+                                            "county_name":  "Butte"
+                                        },
+                         "geometry":  {
+                                          "points":  [
+                                                         [
+                                                             -121.528041,
+                                                             39.907666
+                                                         ]
+                                                     ]
+                                      }
+                     },
+                     {
+                         "attributes":  {
+                                            "OBJECTID":  102433,
+                                            "gaz_name":  "Parkhill",
+                                            "gaz_featureclass":  "Populated Place",
+                                            "state_alpha":  "CA",
+                                            "county_name":  "Butte"
+                                        },
+                         "geometry":  {
+                                          "points":  [
+                                                         [
+                                                             -121.49665,
+                                                             39.72239
+                                                         ]
+                                                     ]
+                                      }
+                     },
+                     {
+                         "attributes":  {
+                                            "OBJECTID":  120084,
+                                            "gaz_name":  "Concow",
+                                            "gaz_featureclass":  "Populated Place",
+                                            "state_alpha":  "CA",
+                                            "county_name":  "Butte"
+                                        },
+                         "geometry":  {
+                                          "points":  [
+                                                         [
+                                                             -121.526626,
+                                                             39.730185
+                                                         ]
+                                                     ]
+                                      }
+                     },
+                     {
+                         "attributes":  {
+                                            "OBJECTID":  138176,
+                                            "gaz_name":  "Lovelock",
+                                            "gaz_featureclass":  "Populated Place",
+                                            "state_alpha":  "CA",
+                                            "county_name":  "Butte"
+                                        },
+                         "geometry":  {
+                                          "points":  [
+                                                         [
+                                                             -121.577765,
+                                                             39.891277
+                                                         ]
+                                                     ]
+                                      }
+                     },
+                     {
+                         "attributes":  {
+                                            "OBJECTID":  145270,
+                                            "gaz_name":  "Palmetto",
+                                            "gaz_featureclass":  "Populated Place",
+                                            "state_alpha":  "CA",
+                                            "county_name":  "Plumas"
+                                        },
+                         "geometry":  {
+                                          "points":  [
+                                                         [
+                                                             -121.319145,
+                                                             39.82378
+                                                         ]
+                                                     ]
+                                      }
+                     },
+                     {
+                         "attributes":  {
+                                            "OBJECTID":  149631,
+                                            "gaz_name":  "Tobin",
+                                            "gaz_featureclass":  "Populated Place",
+                                            "state_alpha":  "CA",
+                                            "county_name":  "Plumas"
+                                        },
+                         "geometry":  {
+                                          "points":  [
+                                                         [
+                                                             -121.30859,
+                                                             39.937946
+                                                         ]
+                                                     ]
+                                      }
+                     },
+                     {
+                         "attributes":  {
+                                            "OBJECTID":  154222,
+                                            "gaz_name":  "Magalia",
+                                            "gaz_featureclass":  "Populated Place",
+                                            "state_alpha":  "CA",
+                                            "county_name":  "Butte"
+                                        },
+                         "geometry":  {
+                                          "points":  [
+                                                         [
+                                                             -121.578319,
+                                                             39.812111
+                                                         ]
+                                                     ]
+                                      }
+                     },
+                     {
+                         "attributes":  {
+                                            "OBJECTID":  158204,
+                                            "gaz_name":  "Haven",
+                                            "gaz_featureclass":  "Populated Place",
+                                            "state_alpha":  "CA",
+                                            "county_name":  "Plumas"
+                                        },
+                         "geometry":  {
+                                          "points":  [
+                                                         [
+                                                             -121.230255,
+                                                             40.009336
+                                                         ]
+                                                     ]
+                                      }
+                     },
+                     {
+                         "attributes":  {
+                                            "OBJECTID":  161612,
+                                            "gaz_name":  "Rodgers Flat",
+                                            "gaz_featureclass":  "Populated Place",
+                                            "state_alpha":  "CA",
+                                            "county_name":  "Plumas"
+                                        },
+                         "geometry":  {
+                                          "points":  [
+                                                         [
+                                                             -121.278867,
+                                                             39.959613
+                                                         ]
+                                                     ]
+                                      }
+                     },
+                     {
+                         "attributes":  {
+                                            "OBJECTID":  161825,
+                                            "gaz_name":  "Merlin",
+                                            "gaz_featureclass":  "Populated Place",
+                                            "state_alpha":  "CA",
+                                            "county_name":  "Plumas"
+                                        },
+                         "geometry":  {
+                                          "points":  [
+                                                         [
+                                                             -121.366925,
+                                                             39.888223
+                                                         ]
+                                                     ]
+                                      }
+                     },
+                     {
+                         "attributes":  {
+                                            "OBJECTID":  165148,
+                                            "gaz_name":  "Junction House",
+                                            "gaz_featureclass":  "Populated Place",
+                                            "state_alpha":  "CA",
+                                            "county_name":  "Butte"
+                                        },
+                         "geometry":  {
+                                          "points":  [
+                                                         [
+                                                             -121.29192,
+                                                             39.740447
+                                                         ]
+                                                     ]
+                                      }
+                     },
+                     {
+                         "attributes":  {
+                                            "OBJECTID":  177876,
+                                            "gaz_name":  "Mayaro",
+                                            "gaz_featureclass":  "Populated Place",
+                                            "state_alpha":  "CA",
+                                            "county_name":  "Butte"
+                                        },
+                         "geometry":  {
+                                          "points":  [
+                                                         [
+                                                             -121.422203,
+                                                             39.824056
+                                                         ]
+                                                     ]
+                                      }
+                     },
+                     {
+                         "attributes":  {
+                                            "OBJECTID":  177877,
+                                            "gaz_name":  "Pulga",
+                                            "gaz_featureclass":  "Populated Place",
+                                            "state_alpha":  "CA",
+                                            "county_name":  "Butte"
+                                        },
+                         "geometry":  {
+                                          "points":  [
+                                                         [
+                                                             -121.448593,
+                                                             39.802945
+                                                         ]
+                                                     ]
+                                      }
+                     },
+                     {
+                         "attributes":  {
+                                            "OBJECTID":  194140,
+                                            "gaz_name":  "Big Bar",
+                                            "gaz_featureclass":  "Populated Place",
+                                            "state_alpha":  "CA",
+                                            "county_name":  "Butte"
+                                        },
+                         "geometry":  {
+                                          "points":  [
+                                                         [
+                                                             -121.438037,
+                                                             39.805445
+                                                         ]
+                                                     ]
+                                      }
+                     },
+                     {
+                         "attributes":  {
+                                            "OBJECTID":  229726,
+                                            "gaz_name":  "Hughes Place",
+                                            "gaz_featureclass":  "Populated Place",
+                                            "state_alpha":  "CA",
+                                            "county_name":  "Butte"
+                                        },
+                         "geometry":  {
+                                          "points":  [
+                                                         [
+                                                             -121.402202,
+                                                             39.727668
+                                                         ]
+                                                     ]
+                                      }
+                     },
+                     {
+                         "attributes":  {
+                                            "OBJECTID":  234727,
+                                            "gaz_name":  "Rock Creek Camp",
+                                            "gaz_featureclass":  "Populated Place",
+                                            "state_alpha":  "CA",
+                                            "county_name":  "Plumas"
+                                        },
+                         "geometry":  {
+                                          "points":  [
+                                                         [
+                                                             -121.31609,
+                                                             39.926557
+                                                         ]
+                                                     ]
+                                      }
+                     },
+                     {
+                         "attributes":  {
+                                            "OBJECTID":  241695,
+                                            "gaz_name":  "Yankee Hill",
+                                            "gaz_featureclass":  "Populated Place",
+                                            "state_alpha":  "CA",
+                                            "county_name":  "Butte"
+                                        },
+                         "geometry":  {
+                                          "points":  [
+                                                         [
+                                                             -121.522206,
+                                                             39.703501
+                                                         ]
+                                                     ]
+                                      }
+                     },
+                     {
+                         "attributes":  {
+                                            "OBJECTID":  242473,
+                                            "gaz_name":  "Storrie",
+                                            "gaz_featureclass":  "Populated Place",
+                                            "state_alpha":  "CA",
+                                            "county_name":  "Plumas"
+                                        },
+                         "geometry":  {
+                                          "points":  [
+                                                         [
+                                                             -121.323313,
+                                                             39.91739
+                                                         ]
+                                                     ]
+                                      }
+                     },
+                     {
+                         "attributes":  {
+                                            "OBJECTID":  247542,
+                                            "gaz_name":  "Inskip",
+                                            "gaz_featureclass":  "Populated Place",
+                                            "state_alpha":  "CA",
+                                            "county_name":  "Butte"
+                                        },
+                         "geometry":  {
+                                          "points":  [
+                                                         [
+                                                             -121.541098,
+                                                             39.989887
+                                                         ]
+                                                     ]
+                                      }
+                     }
+                 ]
+}

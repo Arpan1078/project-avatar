@@ -1,0 +1,268 @@
+{
+  "schemaVersion": "1.0.0",
+  "regionId": "us-ca",
+  "incidentId": "us-ca-dixie-2021",
+  "replayId": "us-ca-dixie-2026-hypothetical",
+  "kind": "replay_evidence",
+  "status": "hypothetical_replay_assumptions",
+  "note": "Signals are derived from workbook \"Timeline today\" proposed detections (team estimates). They are NOT observed 2021 detections, live feeds, real camera footage or satellite timestamps. observedAt is null wherever no time is documented.",
+  "steps": [
+    {
+      "step": 0,
+      "signals": [
+        {
+          "id": "outage",
+          "type": "utility_outage",
+          "label": "Utility outage",
+          "sourceName": "Utility outage/fault feed (none connected)",
+          "sourceRef": null,
+          "state": "unavailable",
+          "status": "hypothetical",
+          "observedAt": null,
+          "timeLabel": null,
+          "group": null,
+          "explanation": "No outage source is connected. The workbook says an outage on a line in a high-risk canyon could raise a low-level (INFO) flag only if such a source existed."
+        },
+        {
+          "id": "weather",
+          "type": "weather_risk",
+          "label": "Weather / fire risk",
+          "sourceName": "NWS red-flag / fire-weather products",
+          "sourceRef": "https://www.weather.gov/",
+          "state": "unavailable",
+          "status": "hypothetical",
+          "observedAt": null,
+          "timeLabel": null,
+          "group": null,
+          "explanation": "No Dixie-specific historical weather or red-flag record is in the workbook package, so this is not counted either way."
+        },
+        {
+          "id": "burn",
+          "type": "prescribed_burn_absent",
+          "label": "Prescribed-burn records",
+          "sourceName": "Prescribed-burn / permit records (none supplied)",
+          "sourceRef": null,
+          "state": "unavailable",
+          "status": "hypothetical",
+          "observedAt": null,
+          "timeLabel": null,
+          "group": null,
+          "explanation": "No burn-permit or prescribed-burn records were supplied; absence of records is not counted as proof that no burn exists."
+        },
+        {
+          "id": "goes",
+          "type": "goes_thermal",
+          "label": "GOES thermal",
+          "sourceName": "NOAA GOES-18 fire detection",
+          "sourceRef": "https://www.goes-r.gov/",
+          "state": "unavailable",
+          "status": "hypothetical",
+          "observedAt": null,
+          "timeLabel": null,
+          "group": null,
+          "explanation": "No GOES detection is assumed at this step."
+        },
+        {
+          "id": "viirs",
+          "type": "viirs_hotspot",
+          "label": "VIIRS hotspot",
+          "sourceName": "NASA FIRMS / VIIRS",
+          "sourceRef": "https://firms.modaps.eosdis.nasa.gov/",
+          "state": "unavailable",
+          "status": "hypothetical",
+          "observedAt": null,
+          "timeLabel": null,
+          "group": null,
+          "explanation": "No VIIRS detection is assumed at this step."
+        },
+        {
+          "id": "camera",
+          "type": "camera_smoke",
+          "label": "Camera smoke",
+          "sourceName": "ALERTCalifornia cameras",
+          "sourceRef": "https://alertcalifornia.org/",
+          "state": "unavailable",
+          "status": "hypothetical",
+          "observedAt": null,
+          "timeLabel": null,
+          "group": null,
+          "explanation": "No camera observation is assumed at this step."
+        },
+        {
+          "id": "human",
+          "type": "human_confirmation",
+          "label": "Human / responder confirmation",
+          "sourceName": "Human or responder report (none supplied)",
+          "sourceRef": null,
+          "state": "unavailable",
+          "status": "hypothetical",
+          "observedAt": null,
+          "timeLabel": null,
+          "group": null,
+          "explanation": "The 911 call (5:12 PM) is a historical benchmark in the workbook, not an input to Firewatch, so it is not scored."
+        },
+        {
+          "id": "drone",
+          "type": "drone_confirmation",
+          "label": "Drone confirmation",
+          "sourceName": "Drone (none deployed in workbook)",
+          "sourceRef": null,
+          "state": "unavailable",
+          "status": "hypothetical",
+          "observedAt": null,
+          "timeLabel": null,
+          "group": null,
+          "explanation": "The workbook defines no drone confirmation step."
+        }
+      ],
+      "eventId": "us-ca-dixie-2026-hypothetical:event-1"
+    },
+    {
+      "step": 1,
+      "signals": [
+        {
+          "id": "goes",
+          "type": "goes_thermal",
+          "label": "GOES thermal",
+          "sourceName": "NOAA GOES-18 fire detection",
+          "sourceRef": "https://www.goes-r.gov/",
+          "state": "unavailable",
+          "status": "hypothetical",
+          "observedAt": null,
+          "timeLabel": null,
+          "group": null,
+          "explanation": "Workbook: \"GOES-18: too small for 2 km pixels.\" Below sensor resolution, so no detection is expected; this is not evidence that there is no fire."
+        },
+        {
+          "id": "viirs",
+          "type": "viirs_hotspot",
+          "label": "VIIRS hotspot",
+          "sourceName": "NASA FIRMS / VIIRS",
+          "sourceRef": "https://firms.modaps.eosdis.nasa.gov/",
+          "state": "unavailable",
+          "status": "hypothetical",
+          "observedAt": null,
+          "timeLabel": "~1:30 PM pass (workbook; not a detection time)",
+          "group": null,
+          "explanation": "Workbook: VIIRS afternoon pass (~1:30 PM) likely too small. A missed or too-small pass is not evidence that there is no fire."
+        }
+      ],
+      "eventId": "us-ca-dixie-2026-hypothetical:event-2"
+    },
+    {
+      "step": 2,
+      "signals": [
+        {
+          "id": "camera",
+          "type": "camera_smoke",
+          "label": "Camera smoke (Bald Mtn. Butte 1)",
+          "sourceName": "ALERTCalifornia: Bald Mtn. (Butte) 1, ~12 km away",
+          "sourceRef": "https://cameras.alertcalifornia.org/public-camera-data/all_cameras-v3.json",
+          "state": "detected",
+          "status": "hypothetical",
+          "observedAt": null,
+          "timeLabel": "Before the 4:30 PM step; clock time not documented",
+          "group": null,
+          "explanation": "Workbook: the camera, 12 km away and pointed at the origin, \"could flag\" smoke with a smoke model, and only in a camera-first mode that is not built. No actual 2021 footage or detection is asserted. It stays in the score until a later camera check contradicts it."
+        }
+      ],
+      "eventId": "us-ca-dixie-2026-hypothetical:event-3"
+    },
+    {
+      "step": 5,
+      "signals": [
+        {
+          "id": "goes",
+          "type": "goes_thermal",
+          "label": "GOES-18 thermal",
+          "sourceName": "NOAA GOES-18 fire detection",
+          "sourceRef": "https://www.goes-r.gov/",
+          "state": "detected",
+          "status": "hypothetical",
+          "observedAt": null,
+          "timeLabel": "5:42 PM step; detection time unknown",
+          "group": "sat-hotspot",
+          "explanation": "Workbook: first GOES-18 detection \"possible as fire grows\". An assumption, not an observed historical timestamp."
+        },
+        {
+          "id": "camera",
+          "type": "camera_smoke",
+          "label": "Camera smoke (Bald Mtn. Butte 1)",
+          "sourceName": "ALERTCalifornia: Bald Mtn. (Butte) 1, ~12 km away",
+          "sourceRef": "https://cameras.alertcalifornia.org/public-camera-data/all_cameras-v3.json",
+          "state": "detected",
+          "status": "hypothetical",
+          "observedAt": null,
+          "timeLabel": "Before the 4:30 PM step; clock time not documented",
+          "group": null,
+          "explanation": "Workbook: the camera adds evidence near the hotspot. Same camera observation as before, so it is not counted twice. Camera location and facing are not proof the fire was visible through terrain or smoke."
+        }
+      ],
+      "eventId": "us-ca-dixie-2026-hypothetical:event-6"
+    },
+    {
+      "step": 6,
+      "signals": [
+        {
+          "id": "goes",
+          "type": "goes_thermal",
+          "label": "GOES-18 thermal (repeat scans)",
+          "sourceName": "NOAA GOES-18 fire detection",
+          "sourceRef": "https://www.goes-r.gov/",
+          "state": "detected",
+          "status": "hypothetical",
+          "observedAt": null,
+          "timeLabel": "Overnight; scans every ~5 min (workbook)",
+          "group": "sat-hotspot",
+          "explanation": "Workbook: GOES detects every 5 minutes. Repeated scans of one hotspot are one signal, not independent evidence."
+        },
+        {
+          "id": "viirs",
+          "type": "viirs_hotspot",
+          "label": "VIIRS night pass",
+          "sourceName": "NASA FIRMS / VIIRS",
+          "sourceRef": "https://firms.modaps.eosdis.nasa.gov/",
+          "state": "detected",
+          "status": "hypothetical",
+          "observedAt": null,
+          "timeLabel": "Overnight pass; exact time unknown",
+          "group": null,
+          "explanation": "Workbook: the VIIRS night pass confirms. A second satellite is correlated with GOES, so it counts at a discounted corroboration rate."
+        }
+      ],
+      "eventId": "us-ca-dixie-2026-hypothetical:event-7"
+    },
+    {
+      "step": 7,
+      "signals": [
+        {
+          "id": "goes",
+          "type": "goes_thermal",
+          "label": "GOES-18 thermal (repeat scans)",
+          "sourceName": "NOAA GOES-18 fire detection",
+          "sourceRef": "https://www.goes-r.gov/",
+          "state": "detected",
+          "status": "hypothetical",
+          "observedAt": null,
+          "timeLabel": "July 14, 8:00 AM step; detection time unknown",
+          "group": "sat-hotspot",
+          "explanation": "Workbook: fully confirmed by all satellite sources. Still one GOES hotspot signal."
+        },
+        {
+          "id": "viirs",
+          "type": "viirs_hotspot",
+          "label": "VIIRS hotspot",
+          "sourceName": "NASA FIRMS / VIIRS",
+          "sourceRef": "https://firms.modaps.eosdis.nasa.gov/",
+          "state": "detected",
+          "status": "hypothetical",
+          "observedAt": null,
+          "timeLabel": "July 14 morning; exact time unknown",
+          "group": null,
+          "explanation": "Workbook: confirmed by all satellite sources. Correlated with GOES, so discounted."
+        }
+      ],
+      "eventId": "us-ca-dixie-2026-hypothetical:event-8"
+    }
+  ]
+}

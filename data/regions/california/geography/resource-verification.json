@@ -1,0 +1,78 @@
+{
+  "schemaVersion": "1.0.0",
+  "regionId": "us-ca",
+  "note": "Phase 2 supplements are applied only to the live geographic view. Phase 1 workbook records, including nulls, remain unchanged.",
+  "records": [
+    {
+      "recordId": "us-ca:station-38-concow-lake",
+      "location": {
+        "latitude": 39.774126,
+        "longitude": -121.506666,
+        "pointMeaning": "USGS_station_reference_point",
+        "verificationStatus": "usgs_national_structures_location"
+      },
+      "sourceRefs": [
+        "structures"
+      ],
+      "sourceUrl": "https://cartowfs.nationalmap.gov/arcgis/rest/services/structures/MapServer/0/query?where=OBJECTID%3D6630186&outFields=*&outSR=4326&f=pjson",
+      "sourceFeatureId": 6630186,
+      "matchingBasis": "Station number, name and address",
+      "note": "Location sourced from USGS National Structures Dataset. Current staffing and availability are not verified."
+    },
+    {
+      "recordId": "us-ca:station-37-concow",
+      "location": {
+        "latitude": 39.720995,
+        "longitude": -121.523748,
+        "pointMeaning": "USGS_station_reference_point",
+        "verificationStatus": "usgs_national_structures_location"
+      },
+      "sourceRefs": [
+        "structures"
+      ],
+      "sourceUrl": "https://cartowfs.nationalmap.gov/arcgis/rest/services/structures/MapServer/0/query?where=OBJECTID%3D6711884&outFields=*&outSR=4326&f=pjson",
+      "sourceFeatureId": 6711884,
+      "matchingBasis": "Station number, name and address",
+      "note": "Location sourced from USGS National Structures Dataset. Current staffing and availability are not verified."
+    },
+    {
+      "recordId": "us-ca:station-36-jarbo-gap",
+      "location": {
+        "latitude": 39.739125,
+        "longitude": -121.495936,
+        "pointMeaning": "USGS_station_reference_point",
+        "verificationStatus": "usgs_national_structures_location"
+      },
+      "sourceRefs": [
+        "structures"
+      ],
+      "sourceUrl": "https://cartowfs.nationalmap.gov/arcgis/rest/services/structures/MapServer/0/query?where=OBJECTID%3D6717372&outFields=*&outSR=4326&f=pjson",
+      "sourceFeatureId": 6717372,
+      "matchingBasis": "Station number, name and address",
+      "note": "Location sourced from USGS National Structures Dataset. Current staffing and availability are not verified."
+    }
+  ],
+  "additionalStations": [
+    {
+      "id": "us-ca:station-usgs-6644784",
+      "category": "real_geographic_location",
+      "name": "Cal Fire Station 13 Stirling City",
+      "address": "7882 Quartz Street, Stirling City, CA",
+      "location": {
+        "latitude": 39.904589,
+        "longitude": -121.528251,
+        "pointMeaning": "USGS_station_reference_point",
+        "verificationStatus": "usgs_national_structures_location"
+      },
+      "availability": null,
+      "provenance": {
+        "sourceRefs": []
+      },
+      "mapSourceRefs": [
+        "structures"
+      ],
+      "sourceFeatureId": 6644784,
+      "sourceUrl": "https://cartowfs.nationalmap.gov/arcgis/rest/services/structures/MapServer/0/query?where=OBJECTID%3D6644784&outFields=*&outSR=4326&f=pjson"
+    }
+  ]
+}

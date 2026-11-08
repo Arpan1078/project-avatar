@@ -1,0 +1,445 @@
+{
+  "schemaVersion": "1.0.0",
+  "regionId": "us-ca",
+  "kind": "timeline",
+  "workbookId": "dixie-reference-workbook",
+  "records": [
+    {
+      "id": "us-ca-dixie-2026-hypothetical:event-1",
+      "category": "simulated_firewatch_behavior",
+      "order": 1,
+      "time": {
+        "label": "6:48 AM",
+        "timezone": "America/Los_Angeles",
+        "timestamp": null,
+        "replayDate": null,
+        "precision": "workbook_local_clock_only"
+      },
+      "historicalContext": {
+        "category": "unknown_unverified",
+        "basisYear": 2021,
+        "text": "Tree hits power line; fault",
+        "workbookType": "Estimate",
+        "verificationStatus": "not_independently_verified",
+        "sourceScope": "Workbook row attribution; does not verify hypothetical observation"
+      },
+      "observation": {
+        "category": "hypothetical_2026_observation",
+        "text": "Nothing from current sources. With a power-outage source: outage on a line in a high-risk canyon could raise a low-level flag.",
+        "actualHistoricalDetection": false,
+        "detectionTimestamp": null,
+        "evidenceStatus": "team_replay_assumption_not_observation",
+        "inheritsObservationFromEvent": null
+      },
+      "firewatchBehavior": {
+        "category": "simulated_firewatch_behavior",
+        "levelText": "None (INFO with outage source)",
+        "implemented": false,
+        "confidenceWeight": null,
+        "notes": "Imported scenario proposal only; no existing dashboard scoring or pipeline is modified."
+      },
+      "provenance": {
+        "workbookId": "dixie-reference-workbook",
+        "sheet": "Timeline today",
+        "row": 5,
+        "range": "A5:F5",
+        "sourceRefs": [
+          "source-8a70e3201af7"
+        ],
+        "sourceText": [
+          "Firebender team estimate (not an official figure)"
+        ],
+        "inheritedNotes": [
+          {
+            "cell": "A2",
+            "text": "Fire behavior from 2021; detection rows are team estimates for Firewatch with today's sensors."
+          }
+        ],
+        "cellComments": []
+      }
+    },
+    {
+      "id": "us-ca-dixie-2026-hypothetical:event-2",
+      "category": "simulated_firewatch_behavior",
+      "order": 2,
+      "time": {
+        "label": "Morning to afternoon",
+        "timezone": "America/Los_Angeles",
+        "timestamp": null,
+        "replayDate": null,
+        "precision": "unspecified_window"
+      },
+      "historicalContext": {
+        "category": "unknown_unverified",
+        "basisYear": 2021,
+        "text": "Slow ground fire under trees",
+        "workbookType": "Estimate",
+        "verificationStatus": "not_independently_verified",
+        "sourceScope": "Workbook row attribution; does not verify hypothetical observation"
+      },
+      "observation": {
+        "category": "hypothetical_2026_observation",
+        "text": "GOES-18: too small for 2 km pixels. VIIRS afternoon pass (~1:30 PM): likely too small.",
+        "actualHistoricalDetection": false,
+        "detectionTimestamp": null,
+        "evidenceStatus": "team_replay_assumption_not_observation",
+        "inheritsObservationFromEvent": null
+      },
+      "firewatchBehavior": {
+        "category": "simulated_firewatch_behavior",
+        "levelText": "None",
+        "implemented": false,
+        "confidenceWeight": null,
+        "notes": "Imported scenario proposal only; no existing dashboard scoring or pipeline is modified."
+      },
+      "provenance": {
+        "workbookId": "dixie-reference-workbook",
+        "sheet": "Timeline today",
+        "row": 6,
+        "range": "A6:F6",
+        "sourceRefs": [
+          "source-8a70e3201af7"
+        ],
+        "sourceText": [
+          "Firebender team estimate (not an official figure)"
+        ],
+        "inheritedNotes": [
+          {
+            "cell": "A2",
+            "text": "Fire behavior from 2021; detection rows are team estimates for Firewatch with today's sensors."
+          }
+        ],
+        "cellComments": []
+      }
+    },
+    {
+      "id": "us-ca-dixie-2026-hypothetical:event-3",
+      "category": "simulated_firewatch_behavior",
+      "order": 3,
+      "time": {
+        "label": "Once smoke clears the canopy (time unknown)",
+        "timezone": "America/Los_Angeles",
+        "timestamp": null,
+        "replayDate": null,
+        "precision": "unspecified_window"
+      },
+      "historicalContext": {
+        "category": "unknown_unverified",
+        "basisYear": 2021,
+        "text": "Small smoke column",
+        "workbookType": "Estimate",
+        "verificationStatus": "not_independently_verified",
+        "sourceScope": "Workbook row attribution; does not verify hypothetical observation"
+      },
+      "observation": {
+        "category": "hypothetical_2026_observation",
+        "text": "Bald Mtn. (Butte) 1, 12 km away, pointed at origin: smoke model could flag it. Only used with a camera-first mode (not built).",
+        "actualHistoricalDetection": false,
+        "detectionTimestamp": null,
+        "evidenceStatus": "team_replay_assumption_not_observation",
+        "inheritsObservationFromEvent": null
+      },
+      "firewatchBehavior": {
+        "category": "simulated_firewatch_behavior",
+        "levelText": "WATCH (camera-first mode only)",
+        "implemented": false,
+        "confidenceWeight": null,
+        "notes": "Imported scenario proposal only; no existing dashboard scoring or pipeline is modified."
+      },
+      "provenance": {
+        "workbookId": "dixie-reference-workbook",
+        "sheet": "Timeline today",
+        "row": 7,
+        "range": "A7:F7",
+        "sourceRefs": [
+          "source-8a70e3201af7"
+        ],
+        "sourceText": [
+          "Firebender team estimate (not an official figure)"
+        ],
+        "inheritedNotes": [
+          {
+            "cell": "A2",
+            "text": "Fire behavior from 2021; detection rows are team estimates for Firewatch with today's sensors."
+          }
+        ],
+        "cellComments": []
+      }
+    },
+    {
+      "id": "us-ca-dixie-2026-hypothetical:event-4",
+      "category": "simulated_firewatch_behavior",
+      "order": 4,
+      "time": {
+        "label": "4:30 PM",
+        "timezone": "America/Los_Angeles",
+        "timestamp": null,
+        "replayDate": null,
+        "precision": "workbook_local_clock_only"
+      },
+      "historicalContext": {
+        "category": "unknown_unverified",
+        "basisYear": 2021,
+        "text": "~600 to 800 sq ft",
+        "workbookType": "2021 fact",
+        "verificationStatus": "not_independently_verified",
+        "sourceScope": "Workbook row attribution; does not verify hypothetical observation"
+      },
+      "observation": {
+        "category": "hypothetical_2026_observation",
+        "text": "Same as above",
+        "actualHistoricalDetection": false,
+        "detectionTimestamp": null,
+        "evidenceStatus": "team_replay_assumption_not_observation",
+        "inheritsObservationFromEvent": "us-ca-dixie-2026-hypothetical:event-3"
+      },
+      "firewatchBehavior": {
+        "category": "simulated_firewatch_behavior",
+        "levelText": "Same as above",
+        "implemented": false,
+        "confidenceWeight": null,
+        "notes": "Imported scenario proposal only; no existing dashboard scoring or pipeline is modified."
+      },
+      "provenance": {
+        "workbookId": "dixie-reference-workbook",
+        "sheet": "Timeline today",
+        "row": 8,
+        "range": "A8:F8",
+        "sourceRefs": [
+          "source-557c2e6471cf"
+        ],
+        "sourceText": [
+          "Dixie Fire (Wikiwand), https://www.wikiwand.com/en/articles/Dixie_Fire"
+        ],
+        "inheritedNotes": [
+          {
+            "cell": "A2",
+            "text": "Fire behavior from 2021; detection rows are team estimates for Firewatch with today's sensors."
+          }
+        ],
+        "cellComments": []
+      }
+    },
+    {
+      "id": "us-ca-dixie-2026-hypothetical:event-5",
+      "category": "simulated_firewatch_behavior",
+      "order": 5,
+      "time": {
+        "label": "5:12 PM",
+        "timezone": "America/Los_Angeles",
+        "timestamp": null,
+        "replayDate": null,
+        "precision": "workbook_local_clock_only"
+      },
+      "historicalContext": {
+        "category": "unknown_unverified",
+        "basisYear": 2021,
+        "text": "~40 x 40 ft; 911 call (2021)",
+        "workbookType": "2021 fact",
+        "verificationStatus": "not_independently_verified",
+        "sourceScope": "Workbook row attribution; does not verify hypothetical observation"
+      },
+      "observation": {
+        "category": "hypothetical_2026_observation",
+        "text": "Benchmark: the time to beat",
+        "actualHistoricalDetection": false,
+        "detectionTimestamp": null,
+        "evidenceStatus": "team_replay_assumption_not_observation",
+        "inheritsObservationFromEvent": null
+      },
+      "firewatchBehavior": {
+        "category": "simulated_firewatch_behavior",
+        "levelText": null,
+        "implemented": false,
+        "confidenceWeight": null,
+        "notes": "Imported scenario proposal only; no existing dashboard scoring or pipeline is modified."
+      },
+      "provenance": {
+        "workbookId": "dixie-reference-workbook",
+        "sheet": "Timeline today",
+        "row": 9,
+        "range": "A9:F9",
+        "sourceRefs": [
+          "source-557c2e6471cf"
+        ],
+        "sourceText": [
+          "Dixie Fire (Wikiwand), https://www.wikiwand.com/en/articles/Dixie_Fire"
+        ],
+        "inheritedNotes": [
+          {
+            "cell": "A2",
+            "text": "Fire behavior from 2021; detection rows are team estimates for Firewatch with today's sensors."
+          }
+        ],
+        "cellComments": []
+      }
+    },
+    {
+      "id": "us-ca-dixie-2026-hypothetical:event-6",
+      "category": "simulated_firewatch_behavior",
+      "order": 6,
+      "time": {
+        "label": "5:42 PM",
+        "timezone": "America/Los_Angeles",
+        "timestamp": null,
+        "replayDate": null,
+        "precision": "workbook_local_clock_only"
+      },
+      "historicalContext": {
+        "category": "unknown_unverified",
+        "basisYear": 2021,
+        "text": "~2 acres",
+        "workbookType": "Estimate",
+        "verificationStatus": "not_independently_verified",
+        "sourceScope": "Workbook row attribution; does not verify hypothetical observation"
+      },
+      "observation": {
+        "category": "hypothetical_2026_observation",
+        "text": "GOES-18 first detection possible as fire grows; camera adds evidence near the hotspot",
+        "actualHistoricalDetection": false,
+        "detectionTimestamp": null,
+        "evidenceStatus": "team_replay_assumption_not_observation",
+        "inheritsObservationFromEvent": null
+      },
+      "firewatchBehavior": {
+        "category": "simulated_firewatch_behavior",
+        "levelText": "WATCH to ALERT",
+        "implemented": false,
+        "confidenceWeight": null,
+        "notes": "Imported scenario proposal only; no existing dashboard scoring or pipeline is modified."
+      },
+      "provenance": {
+        "workbookId": "dixie-reference-workbook",
+        "sheet": "Timeline today",
+        "row": 10,
+        "range": "A10:F10",
+        "sourceRefs": [
+          "source-8a70e3201af7"
+        ],
+        "sourceText": [
+          "Firebender team estimate (not an official figure)"
+        ],
+        "inheritedNotes": [
+          {
+            "cell": "A2",
+            "text": "Fire behavior from 2021; detection rows are team estimates for Firewatch with today's sensors."
+          }
+        ],
+        "cellComments": []
+      }
+    },
+    {
+      "id": "us-ca-dixie-2026-hypothetical:event-7",
+      "category": "simulated_firewatch_behavior",
+      "order": 7,
+      "time": {
+        "label": "Overnight",
+        "timezone": "America/Los_Angeles",
+        "timestamp": null,
+        "replayDate": null,
+        "precision": "unspecified_window"
+      },
+      "historicalContext": {
+        "category": "unknown_unverified",
+        "basisYear": 2021,
+        "text": "Hundreds of acres",
+        "workbookType": "Estimate",
+        "verificationStatus": "not_independently_verified",
+        "sourceScope": "Workbook row attribution; does not verify hypothetical observation"
+      },
+      "observation": {
+        "category": "hypothetical_2026_observation",
+        "text": "GOES detects every 5 min; VIIRS night pass confirms",
+        "actualHistoricalDetection": false,
+        "detectionTimestamp": null,
+        "evidenceStatus": "team_replay_assumption_not_observation",
+        "inheritsObservationFromEvent": null
+      },
+      "firewatchBehavior": {
+        "category": "simulated_firewatch_behavior",
+        "levelText": "ALERT",
+        "implemented": false,
+        "confidenceWeight": null,
+        "notes": "Imported scenario proposal only; no existing dashboard scoring or pipeline is modified."
+      },
+      "provenance": {
+        "workbookId": "dixie-reference-workbook",
+        "sheet": "Timeline today",
+        "row": 11,
+        "range": "A11:F11",
+        "sourceRefs": [
+          "source-8a70e3201af7"
+        ],
+        "sourceText": [
+          "Firebender team estimate (not an official figure)"
+        ],
+        "inheritedNotes": [
+          {
+            "cell": "A2",
+            "text": "Fire behavior from 2021; detection rows are team estimates for Firewatch with today's sensors."
+          }
+        ],
+        "cellComments": []
+      }
+    },
+    {
+      "id": "us-ca-dixie-2026-hypothetical:event-8",
+      "category": "simulated_firewatch_behavior",
+      "order": 8,
+      "time": {
+        "label": "8:00 AM next day",
+        "timezone": "America/Los_Angeles",
+        "timestamp": null,
+        "replayDate": null,
+        "precision": "workbook_local_clock_only"
+      },
+      "historicalContext": {
+        "category": "unknown_unverified",
+        "basisYear": 2021,
+        "text": "~500 acres",
+        "workbookType": "2021 fact",
+        "verificationStatus": "not_independently_verified",
+        "sourceScope": "Workbook row attribution; does not verify hypothetical observation"
+      },
+      "observation": {
+        "category": "hypothetical_2026_observation",
+        "text": "Fully confirmed by all satellite sources",
+        "actualHistoricalDetection": false,
+        "detectionTimestamp": null,
+        "evidenceStatus": "team_replay_assumption_not_observation",
+        "inheritsObservationFromEvent": null
+      },
+      "firewatchBehavior": {
+        "category": "simulated_firewatch_behavior",
+        "levelText": "ALERT",
+        "implemented": false,
+        "confidenceWeight": null,
+        "notes": "Imported scenario proposal only; no existing dashboard scoring or pipeline is modified."
+      },
+      "provenance": {
+        "workbookId": "dixie-reference-workbook",
+        "sheet": "Timeline today",
+        "row": 12,
+        "range": "A12:F12",
+        "sourceRefs": [
+          "source-557c2e6471cf"
+        ],
+        "sourceText": [
+          "Dixie Fire (Wikiwand), https://www.wikiwand.com/en/articles/Dixie_Fire"
+        ],
+        "inheritedNotes": [
+          {
+            "cell": "A2",
+            "text": "Fire behavior from 2021; detection rows are team estimates for Firewatch with today's sensors."
+          }
+        ],
+        "cellComments": []
+      }
+    }
+  ],
+  "incidentId": "us-ca-dixie-2021",
+  "replayId": "us-ca-dixie-2026-hypothetical",
+  "hypothetical": true,
+  "resourceSnapshotAsOf": "2026-11-07",
+  "replayDate": null
+}

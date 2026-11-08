@@ -1,0 +1,60 @@
+PASS Default one-year incremental budget
+PASS No app completion labor by default
+PASS No application retainer by default
+PASS All responder wages zero
+PASS Only application-only hourly work can be charged
+PASS Existing power and internet not repurchased
+PASS New connection only on request
+PASS Existing hosting excluded if supplied
+PASS Existing supplies uncharged
+PASS River choice does not charge for river water
+PASS Lake permission confirmed clears source check
+PASS New pump budgeted only if needed
+PASS Retardant inventory not bought again
+PASS Extra replenishment counted explicitly
+PASS Volunteer pilot not assumed free aircraft
+PASS Confirmed donated operation has no department flight expense
+PASS Unconfirmed full donation flagged
+PASS Agency funding not invented
+PASS Mutual aid default not charged
+PASS Extra mutual aid costs can be entered
+PASS Mutual aid ETA retained
+PASS No guaranteed aid if unchecked
+PASS No new thermal purchase with existing aircraft
+PASS No duplicate bundled battery purchase
+PASS Hardware retail price not reduced
+PASS Suppression engineering not removed
+PASS Future replacement not terminal
+PASS Extra years produce replacement correctly
+PASS Gross cash reconciles
+PASS Grant does not reduce gross cost
+PASS Negative custom cost rejected
+PASS Invalid ownership rejected
+32 calculation checks passed.
+{"newDrone":7728.211359999999,"existingDrone":1899.31136,"ownHosting":1748.1113599999999}
+
+Browser:
+{
+  "passed": 19,
+  "checks": [
+    "Reduced incremental default total renders",
+    "Supplied Project Avatar artwork loads and links to index",
+    "Supplied Team Firebenders artwork links to repository",
+    "Requested unnecessary footer copy removed",
+    "App completion and recurring support default zero",
+    "Dark mode works with branding",
+    "Logo returns to index; edited prices persist without URL payload",
+    "Rivers accepted without invented water purchase; access flag shown",
+    "Existing supplies excluded",
+    "Volunteer-pilot expense reimbursement does not add wages",
+    "Unconfirmed full donation remains flagged",
+    "Confirmed fully donated flight expenses can be zero",
+    "Only extra mutual-aid obligations are charged",
+    "Custom incremental cost works",
+    "JSON and CSV exports work",
+    "JSON reload preserves extra cost",
+    "Light mode and mobile layout work",
+    "Print hides setup controls",
+    "No uncaught JavaScript errors"
+  ]
+}

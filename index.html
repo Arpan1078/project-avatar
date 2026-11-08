@@ -1,0 +1,927 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Firewatch dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600&display=swap">
+<!-- CesiumJS (3D map), pinned version. To upgrade, change 1.146.0 in BOTH lines. -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cesium@1.146.0/Build/Cesium/Widgets/widgets.css">
+<script src="https://cdn.jsdelivr.net/npm/cesium@1.146.0/Build/Cesium/Cesium.js"></script>
+<!-- Your Cesium ion token. config.js is git-ignored; copy config.example.js to create it. -->
+<script src="config.js"></script>
+<style>
+  :root {
+    --bg: #15120F;
+    --map: #1B1814;
+    --panel: #221E19;
+    --panel-2: #26211C;
+    --line: #3A332B;
+    --line-soft: #332D26;
+    --text: #EDE3CF;
+    --text-2: #D9CFBC;
+    --muted: #A89C88;
+    --dim: #8A7F70;
+    --fire: #F26B2E;
+    --fire-soft: #F2A65A;
+    --warn: #C2410C;
+    --water: #6EA8D6;
+    --water-text: #9CC4E4;
+    --break: #E8B04A;
+    --power: #C9B98F;
+    --calm: #8FA9C2;      /* gray-blue: negative points, "no fire" outcomes */
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); }
+  body { color: var(--text); font-family: 'Barlow', system-ui, sans-serif; font-size: 15px; line-height: 1.35; }
+  button { font-family: inherit; cursor: pointer; }
+  button:focus-visible { outline: 2px solid var(--fire-soft); outline-offset: 2px; }
+  ul { list-style: none; margin: 0; padding: 0; }
+  .num { font-family: 'Barlow Condensed', sans-serif; font-weight: 600; }
+  .muted { color: var(--muted); }
+
+  .app { height: 100vh; display: grid; grid-template-rows: auto auto minmax(0, 1fr); gap: 8px; padding: 0 10px 10px; }
+
+  /* Header fits on one line without cutting text from 1366 px wide up. */
+  header { display: flex; align-items: center; gap: 13px; padding: 6px 4px; border-bottom: 1px solid var(--line); white-space: nowrap; overflow: hidden; }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand b { display: block; font-weight: 600; font-size: 18px; line-height: 1.1; }
+  .brandtext { min-width: 0; }
+  /* District name sits under "Firewatch". Below 1366 px it shortens with … if needed. */
+  .brand { min-width: 0; }
+  .brandtext .muted { display: block; font-size: 12px; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; }
+  .modes { display: flex; border: 1px solid #5A5047; }
+  .modes button { min-height: 32px; padding: 4px 12px; border: none; background: transparent; color: var(--text); font-size: 14px; font-weight: 600; }
+  .modes button.on { background: var(--text); color: #1B1814; }
+  .flag { font-size: 13px; font-weight: 600; background: var(--warn); color: #fff; padding: 3px 10px; }
+  .badge-neutral { font-size: 13px; font-weight: 600; background: #4A4238; color: var(--text); padding: 3px 10px; }
+  .scenario { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+  .scenario select { min-height: 32px; padding: 2px 8px; background: var(--panel); color: var(--text); border: 1px solid #5A5047; font: 600 14px 'Barlow', sans-serif; cursor: pointer; }
+  .conditions { display: flex; align-items: center; gap: 13px; flex: 1 1 auto; min-width: 0; }
+  /* Badge + day note; the note shortens with … when the header is full. */
+  .condday { display: flex; align-items: center; gap: 10px; flex: 0 1 auto; min-width: 0; }
+  .condday > span:first-child { flex: none; }
+  .condnote { font-size: 13px; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .weather { display: flex; flex: none; gap: 12px; margin-left: auto; font-size: 13px; }
+  .weather b { font-weight: 600; }
+
+  .tiles { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; }
+  .tile { background: var(--panel); border: 1px solid var(--line); padding: 6px 12px; display: flex; flex-direction: column; align-items: center; text-align: center; }
+  .tile .tl { font-size: 14px; color: var(--text-2); }
+  .tile .tv { font-size: 38px; line-height: 1.05; }
+  .tile .tv span { font-size: 18px; }
+  .tile .tn { font-size: 12px; color: var(--muted); }
+
+  .body { min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .body.full { grid-template-columns: 340px minmax(0, 1fr); }
+
+  aside[hidden] { display: none; }
+  aside { min-height: 0; overflow: hidden; background: var(--panel); border: 1px solid var(--line); display: grid; grid-template-rows: auto auto minmax(0, 1fr); }
+  .status { padding: 14px 16px; border-bottom: 1px solid var(--line); }
+  .status h2 { margin: 0; font-size: 18px; font-weight: 600; text-align: center; }
+  .ringrow { display: flex; align-items: center; gap: 14px; margin-top: 10px; }
+  .ring { position: relative; flex: 0 0 auto; }
+  .ring .center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .ring .center small { font-size: 11px; color: var(--muted); }
+  .reasons { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+  .reasons li { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; }
+  .reasons li b { font-weight: 600; }
+  .note { font-size: 12px; color: var(--muted); margin-top: 8px; text-align: center; }
+  .facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 12px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
+  .facts div div:first-child { font-size: 12px; color: var(--muted); }
+  .facts div div:last-child { font-weight: 600; font-size: 14px; }
+  .actions { display: flex; gap: 8px; margin-top: 10px; }
+  .actions button { flex: 1 1 0; min-height: 36px; font-size: 13px; font-weight: 600; }
+  .btn-light { background: var(--text); color: #1B1814; border: none; }
+  .btn-ghost { background: none; color: var(--text); border: 1px solid #5A5047; }
+  .action-msg { margin-top: 6px; font-size: 12px; color: var(--fire-soft); }
+  /* Planned-burn rule check under the confidence ring. */
+  .rulecheck { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 8px; font-size: 12px; font-weight: 600; }
+  .rulecheck .ok { color: var(--calm); }
+  .rulecheck .bad { color: var(--fire); }
+  /* Text message shown in the Alerts tab (confirm request, auto-reply). */
+  .smsnote { padding: 8px 16px; font-size: 12px; }
+  .smsbox { margin-top: 4px; padding: 7px 10px; background: var(--text); color: #1B1814; font-size: 13px; line-height: 1.4; }
+  .burnbadge { margin-left: 6px; padding: 1px 6px; font-size: 11px; font-weight: 600; }
+  .burnbadge.calm { background: rgba(143, 169, 194, 0.2); color: var(--calm); }
+  .burnbadge.fire { background: rgba(242, 107, 46, 0.2); color: var(--fire-soft); }
+  .burnrules { margin: 8px 16px; padding: 7px 10px; border-left: 3px solid var(--calm); font-size: 12px; color: var(--text-2); }
+  .burnrules b { font-weight: 600; color: var(--text); }
+
+  .tabs { display: flex; border-bottom: 1px solid var(--line); }
+  .tabs button { flex: 1 1 auto; min-height: 38px; padding: 0 6px; background: none; border: none; border-bottom: 3px solid transparent; color: var(--muted); font-size: 13px; font-weight: 600; white-space: nowrap; }
+  .tabs button.on { border-bottom-color: var(--fire); color: var(--text); }
+  .tabbody { min-height: 0; overflow: hidden; }
+  .row { display: flex; align-items: center; gap: 10px; padding: 7px 16px; border-bottom: 1px solid var(--line-soft); font-size: 13px; }
+  .row .dot { width: 10px; height: 10px; border-radius: 5px; flex: 0 0 auto; }
+  .row .who { flex: 1 1 auto; font-weight: 600; }
+  .tabintro { font-size: 12px; color: var(--muted); padding: 7px 16px; }
+  .burn { padding: 8px 16px; border-bottom: 1px solid var(--line-soft); font-size: 13px; }
+  .burn div:first-child { font-weight: 600; }
+  .burn div:last-child { font-size: 12px; color: var(--muted); }
+
+  .mapwrap { min-width: 0; min-height: 0; display: grid; grid-template-rows: auto minmax(0, 1fr) auto auto; border: 1px solid var(--line); overflow: hidden; background: var(--map); }
+  .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 8px 12px; border-bottom: 1px solid var(--line); background: var(--panel); }
+  .chip { min-height: 30px; padding: 3px 12px; border-radius: 15px; border: 1px solid #5A5047; background: var(--map); color: var(--text); font-size: 13px; font-weight: 500; white-space: nowrap; }
+  .chip.on { background: var(--text); color: #1B1814; border-color: var(--text); }
+  /* Fills the space left on the toolbar's row; shortens with … instead of wrapping to a new row. */
+  /* Fills the space left on the toolbar's row; shortens with … instead of wrapping. */
+  .sim { flex: 1 1 0; min-width: 70px; text-align: right; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .datanote { margin: 8px 16px 0; font-size: 12px; color: var(--muted); }
+  /* Info card for a GOES pixel / FIRMS hotspot (hover or click on the map). */
+  .satinfo { position: absolute; z-index: 4; max-width: 360px; padding: 6px 10px; background: rgba(21, 18, 15, 0.95); border: 1px solid var(--line);
+    font-size: 12px; color: var(--text); pointer-events: none; white-space: normal; }
+  .satinfo[hidden] { display: none; }
+  .satinfo b { font-weight: 600; }
+  .satinfo .muted, .maptag .muted { color: var(--muted); }
+  /* Status dot for fire departments (Help nearby). */
+  .sdot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; vertical-align: 0; }
+  /* Off-screen department: arrow at the map edge pointing toward it. */
+  .edgearrow { position: absolute; left: 0; top: 0; display: none; padding: 2px 7px 2px 4px; background: rgba(21, 18, 15, 0.88);
+    border: 1px solid var(--line); border-left-width: 3px; color: var(--text-2); font-size: 11.5px; line-height: 1.4; white-space: nowrap; will-change: transform; }
+  .maplabels .edgearrow svg { position: static; display: inline-block; width: 12px; height: 12px; vertical-align: -1px; margin-right: 4px; color: var(--text); }
+  /* Nearby help tab (scrolls: it lists every department in range). */
+  .tabbody.scroll { overflow-y: auto; }
+  .helprow .who { flex: 1 1 auto; min-width: 0; font-weight: 600; }
+  .helprow .who small { display: block; font-weight: 400; font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .helprow .when { text-align: right; white-space: nowrap; }
+  .helprow .when small { display: block; font-size: 11px; }
+
+  /* Map text (created by map3d.js): callout cards with leader lines, and small labels. */
+  .maplabels { position: absolute; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
+  .maplabels svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .maplabels .leader { stroke-width: 1.25; }
+  /* Fire cards take their fire type's color (FIRE_TYPES in fire-types.js). */
+  .maplabels .leader.wildfire { stroke: var(--ft-wildfire); }
+  .maplabels .leader.planned { stroke: var(--ft-planned); }
+  .maplabels .leader.escaped { stroke: var(--ft-escaped); }
+  .maplabels .leader.cream { stroke: var(--text); }
+  .maplabels .leaderdot.wildfire { fill: var(--ft-wildfire); }
+  .maplabels .leaderdot.planned { fill: var(--ft-planned); }
+  .maplabels .leaderdot.escaped { fill: var(--ft-escaped); }
+  .maplabels .leaderdot.cream { fill: var(--text); }
+  .callout, .maptag { position: absolute; left: 0; top: 0; display: none; white-space: nowrap; will-change: transform; }
+  .callout { padding: 6px 12px 7px; line-height: 1.25; color: #1B1814;
+    clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px); }
+  .callout b { display: block; font-size: 14px; font-weight: 600; }
+  .callout span { display: block; font-size: 12px; opacity: 0.8; }
+  .callout.wildfire { background: var(--ft-wildfire); }
+  .callout.planned { background: var(--ft-planned); }
+  .callout.escaped { background: var(--ft-escaped); }
+  .callout.cream { background: var(--text); }
+  .maptag { padding: 1px 6px; font-size: 11.5px; font-weight: 500; line-height: 1.4; background: rgba(21, 18, 15, 0.82); color: var(--text-2); }
+  .maptag.fire { color: var(--fire-soft); }
+  .maptag.brk { color: var(--break); }
+  .maptag.water { color: var(--water-text); }
+  .maptag.power { color: var(--power); }
+  .maptag.muted { color: var(--muted); }
+
+  .map { position: relative; min-height: 0; overflow: hidden; background: var(--map); }
+  /* The Cesium viewer lives here. It is created once and never re-rendered. */
+  #cesiumContainer { position: absolute; inset: 0; }
+  #cesiumContainer .cesium-viewer, #cesiumContainer .cesium-widget { width: 100%; height: 100%; }
+
+  /* Required Cesium / data credits, kept small in the bottom-left corner. */
+  .credits { position: absolute; left: 8px; bottom: 6px; z-index: 2; max-width: 70%; padding: 2px 6px; background: rgba(21, 18, 15, 0.6); font-size: 10px; line-height: 1.3; color: var(--muted); }
+  .credits img { max-height: 18px; vertical-align: middle; }
+  .credits a { color: var(--muted); }
+  .credits { display: flex; flex-direction: column; align-items: flex-start; }
+  .datacredit { margin-top: 1px; white-space: nowrap; }
+  #cesiumCredits .cesium-widget-credits { position: static; display: block; }   /* Cesium places it absolutely; keep it in the box */
+
+  .resetview { position: absolute; top: 10px; right: 10px; z-index: 2; min-height: 30px; padding: 3px 12px; background: rgba(34, 30, 25, 0.92); color: var(--text); border: 1px solid #5A5047; font-size: 13px; font-weight: 600; }
+  .resetview:hover { border-color: var(--text); }
+
+  /* Wind compass card, bottom right (credits are bottom left, so they never overlap). */
+  .windcard { position: absolute; right: 10px; bottom: 10px; z-index: 2; display: flex; align-items: center; gap: 10px; padding: 8px 12px 8px 8px; background: rgba(34, 30, 25, 0.92); border: 1px solid var(--line); font-size: 13px; line-height: 1.3; color: var(--text-2); pointer-events: none; }
+  .windcard[hidden] { display: none; }
+  .windcard b { font-weight: 600; color: var(--text); }
+
+  /* Message shown instead of a blank map (missing token, loading, errors). */
+  .mapmsg { position: absolute; inset: 0; z-index: 3; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 20px; text-align: center; background: var(--map); }
+  .mapmsg[hidden] { display: none; }
+  .mapmsg-title { font-size: 18px; font-weight: 600; color: var(--fire-soft); }
+  .mapmsg.loading .mapmsg-title { color: var(--muted); font-weight: 500; }
+  .mapmsg-detail { max-width: 460px; font-size: 13px; color: var(--muted); }
+  .mapmsg code { color: var(--text); }
+
+  .confcard { position: absolute; z-index: 2; top: 12px; left: 12px; width: 270px; background: rgba(34, 30, 25, 0.95); border: 1px solid var(--line); padding: 12px 14px; }
+  .confcard h2 { margin: 0; font-size: 17px; font-weight: 600; }
+  /* End-of-scenario outcome card (top center of the map). */
+  .outcome { position: absolute; z-index: 2; top: 12px; left: 50%; transform: translateX(-50%); max-width: calc(100% - 24px); padding: 10px 18px; text-align: center;
+    background: rgba(34, 30, 25, 0.95); border: 1px solid var(--line); border-top: 4px solid var(--calm); }
+  .outcome-title { font-size: 16px; font-weight: 600; }
+  /* Planned burn broke its registration (outside the area / after the end time).
+     Stays until the end of the scenario. Map labels keep clear of it. */
+  .mapflag { position: absolute; z-index: 2; top: 12px; left: 50%; transform: translateX(-50%); max-width: calc(100% - 260px);
+    padding: 7px 16px; background: var(--ft-escaped); color: #1B1814; font-size: 14px; font-weight: 600; text-align: center; line-height: 1.35;
+    clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px); }
+  .mapflag div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* Header badge in the current fire type's color (dark text for contrast). */
+  .badge-type { font-size: 13px; font-weight: 600; color: #1B1814; padding: 3px 10px; }
+  .outcome-sub { margin-top: 2px; font-size: 12px; color: var(--muted); }
+
+  .legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 20px; padding: 6px 12px; border-top: 1px solid var(--line); font-size: 12px; color: var(--text-2); }
+  .legend span { display: flex; align-items: center; gap: 6px; }
+  .legend i { display: inline-block; }
+
+  footer { background: var(--panel); border-top: 1px solid var(--line); padding: 10px 16px; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 8px 22px; align-items: center; }
+  .ctlcol { display: flex; flex-direction: column; gap: 6px; }
+  .controls { display: flex; gap: 6px; }
+  /* Optional data on/off switch (not used by the current incident). */
+  .pswitch { display: flex; align-items: center; gap: 7px; padding: 0; background: none; border: none; color: var(--text-2); font-size: 12px; }
+  .pswitch b { font-weight: 600; color: var(--text); }
+  .pswitch-track { position: relative; width: 26px; height: 14px; border-radius: 7px; background: #4A4238; transition: background 0.15s; }
+  .pswitch-knob { position: absolute; top: 2px; left: 2px; width: 10px; height: 10px; border-radius: 5px; background: var(--text); transition: left 0.15s; }
+  .pswitch.on .pswitch-track { background: var(--fire); }
+  .pswitch.on .pswitch-knob { left: 14px; }
+  .controls button { min-height: 38px; min-width: 60px; background: var(--panel-2); color: var(--text); border: 1px solid #4A4238; font-size: 14px; font-weight: 600; }
+  .controls button.play { min-width: 74px; background: var(--fire); color: #1B1814; border: none; }
+  .steps { display: flex; gap: 4px; margin-bottom: 4px; }
+  .steps button { flex: 1 1 0; min-width: 0; min-height: 24px; padding: 0; border: none; border-top: 3px solid var(--line); background: none; color: var(--muted); font-size: 12px; font-weight: 600; }
+  .steps button.done { border-top-color: #7A4A2E; }
+  .steps button.on { border-top-color: var(--fire); color: var(--text); }
+  /* Up to 3 lines (some scenario captions are long), then … */
+  .caption { font-size: 14px; font-weight: 500; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
+  .offnote { font-size: 12px; color: var(--calm); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .real { font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .compare { display: grid; grid-template-columns: auto auto auto; gap: 1px 14px; align-items: baseline; font-size: 13px; padding-left: 18px; border-left: 1px solid var(--line); }
+  .compare span { max-width: 150px; }
+  .body.full .compare { font-size: 12px; }
+
+  .overlay { position: absolute; inset: 0; z-index: 5; background: rgba(14, 12, 10, 0.6); display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .alert { width: 100%; max-width: 420px; background: var(--panel-2); border: 1px solid #4A4238; border-top: 6px solid var(--fire); padding: 16px 22px; }
+  .alert .sms { margin-top: 10px; background: var(--text); color: #1B1814; padding: 12px 16px; font-size: 15px; line-height: 1.5; }
+  .alert button { margin-top: 12px; min-height: 44px; width: 100%; background: var(--fire); color: #1B1814; border: none; font-size: 15px; font-weight: 600; }
+
+  /* Calculator tab. The budget calculator is a separate static app shown in an
+     iframe, so its own CSS and JS never touch the dashboard. The map is only
+     hidden (never re-created) while this view is open. */
+  .calcview { display: none; min-height: 0; grid-template-rows: auto minmax(0, 1fr); border: 1px solid var(--line); background: var(--bg); }
+  .app.calc { grid-template-rows: auto minmax(0, 1fr); }
+  .app.calc .calcview { display: grid; }
+  .app.calc #tiles, .app.calc #body, .app.calc .scenario, .app.calc #conditions { display: none; }
+  .calcbar { display: flex; align-items: center; gap: 12px; padding: 6px 12px; background: var(--panel); border-bottom: 1px solid var(--line); }
+  .calcbar b { font-size: 15px; font-weight: 600; }
+  .calcbar .btn-ghost { margin-left: auto; min-height: 30px; padding: 3px 12px; font-size: 13px; font-weight: 600; }
+  .calcbar .btn-ghost:hover { border-color: var(--text); }
+  .calcframe { display: block; width: 100%; height: 100%; border: 0; background: var(--bg); }
+  @media (max-width: 700px) { .app.calc .brand .muted { display: none; } }
+
+  .drivers { border-top: 1px solid var(--line); margin-top: 8px; padding-top: 6px; font-size: 11px; }
+  .drivers summary { cursor: pointer; font-weight: 600; font-size: 12px; }
+  .drivers dl { margin: 5px 0; display: grid; grid-template-columns: 52px 1fr; gap: 3px 6px; }
+  .drivers dt { color: var(--muted); } .drivers dd { margin: 0; }
+  .drivers p { margin: 5px 0; color: var(--muted); line-height: 1.3; }
+  .tabs { overflow-x: auto; flex-shrink: 0; }
+  aside .status { max-height: 52vh; overflow-y: auto; }
+  .confcard { max-height: calc(100% - 24px); overflow-y: auto; box-sizing: border-box; }
+  .dronefeed { padding: 10px; font-size: 12px; }
+  .dronefeed p { margin: 6px 0; }
+
+  .mapstage { position: relative; min-height: 0; overflow: hidden; background: var(--map); }
+  .view-window { position: absolute; box-sizing: border-box; overflow: hidden; background: var(--panel); }
+  .view-window[hidden] { display: none; }
+  .view-window.primary { inset: 0; z-index: 0; }
+  .view-window.floating { z-index: 6; border: 1px solid var(--line); box-shadow: 0 6px 24px #0009; }
+  .view-window > .map { position: absolute; inset: 0; }
+  .view-window.floating > .map { top: 32px; }
+  .windowbar { height: 32px; box-sizing: border-box; padding: 0 7px; display: flex; align-items: center; justify-content: space-between; gap: 6px; border-bottom: 1px solid var(--line); background: #25211c; color: var(--text); font-size: 12px; user-select: none; touch-action: none; }
+  .floating .windowbar { cursor: move; }
+  .windowbar > div { display: flex; gap: 4px; }
+  .windowbar button { padding: 3px 5px; background: var(--panel); color: var(--text); border: 1px solid var(--line); font: inherit; cursor: pointer; }
+  .windowbar button:hover { border-color: var(--fire); }
+  #mapWindow.primary .mapbar, .primary > .window-resize { display: none; }
+  #droneWindow.primary .windowbar { padding-left: 80px; }
+  .drone-control { position: absolute; top: 5px; left: 8px; z-index: 9; background: var(--panel); }
+  .mapstage .confcard { top: 42px; max-height: calc(100% - 54px); }
+  #droneContent { height: calc(100% - 32px); overflow: hidden; }
+  .dronefeed { height: 100%; box-sizing: border-box; display: flex; flex-direction: column; padding: 6px 8px; gap: 3px; }
+  .dronefeed p { flex: 0 0 auto; margin: 0; font-size: 10px; line-height: 1.25; }
+  .camera-status { color: var(--text); }
+  .camera-image { flex: 1 1 auto; min-height: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; background: #090523; }
+  .camera-image canvas { width: 100%; height: 100%; object-fit: contain; aspect-ratio: 16/9; }
+  .camera-image.unavailable { color: var(--muted); background: #191713; }
+  .window-resize { position: absolute; width: 18px; height: 18px; right: 0; bottom: 0; cursor: nwse-resize; touch-action: none; background: linear-gradient(135deg, transparent 60%, var(--fire) 61%, transparent 72%); }
+  .minimized #droneContent, .minimized .window-resize { display: none; }
+  #mapWindow.floating .confcard { max-width: calc(100% - 24px); }
+  .camera-open #mapWindow.primary .windcard { top: 50px; bottom: auto; }
+
+  .legend-section { min-height: 0; border-top: 1px solid var(--line); }
+  .legend-toggle { display: flex; align-items: center; gap: 6px; padding: 3px 12px; border: 0; background: transparent; color: var(--text-2); font-size: 12px; }
+  .legend-toggle span { display: inline-block; transition: transform 180ms ease; }
+  .legend-toggle[aria-expanded="true"] span { transform: rotate(90deg); }
+  .legend-collapse { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows 180ms ease, opacity 180ms ease; }
+  .legend-collapse.expanded { grid-template-rows: 1fr; opacity: 1; }
+  .legend-clip { min-height: 0; overflow: hidden; }
+  .legend { border-top: 0; gap: 4px 14px; padding: 4px 12px 7px; }
+  .weather { gap: 10px; }
+  .tiles { gap: 8px; }
+  .tile { padding: 5px 8px; justify-content: center; min-width: 0; }
+  .tile .tl { font-size: 12px; line-height: 1.2; }
+  .tile .tv { font-size: clamp(24px, 2.5vw, 34px); line-height: 1.1; white-space: nowrap; }
+  .tile .tv span { font-size: 0.55em; }
+  footer { padding: 7px 12px; gap: 6px 12px; }
+  .compare, .body.full .compare { font-size: 11px; gap: 1px 8px; padding-left: 10px; color: var(--muted); }
+  .compare span { max-width: 86px; line-height: 1.2; }
+  @media (max-width: 900px) {
+    .tiles { gap: 4px; }
+    .tile { padding: 4px; }
+    .tile .tl { font-size: 11px; }
+    .compare, .body.full .compare { gap: 1px 5px; padding-left: 6px; }
+  }
+  @media (prefers-reduced-motion: reduce) { .legend-collapse, .legend-toggle span { transition: none; } }
+  .regional-info { pointer-events: auto; max-width: min(360px, calc(100% - 12px)); max-height: calc(100% - 42px); overflow: auto; box-sizing: border-box; }
+  .datacredit a { color: inherit; }
+  .regional-info a { color: var(--fire-soft); }
+  .regional-info button { float: right; background: var(--panel); color: var(--text); border: 1px solid var(--line); font: inherit; }
+</style>
+</head>
+<body>
+<!--
+  Page layout. The parts with an id="..." are re-filled by render() on every
+  state change. Everything else, including the 3D map container, is created
+  once here and never replaced.
+-->
+<div id="app" class="app">
+  <header>
+    <div class="brand">
+      <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="#F26B2E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c1 4 5 5 5 10a5 5 0 0 1-10 0c0-3 2-4 2-7 2 1 3 3 3 5"/></svg>
+      <div class="brandtext">
+        <b>Firewatch</b>
+        <span class="muted" id="regionName">Regional wildfire monitoring</span>
+      </div>
+    </div>
+    <div class="modes" id="modes" role="group" aria-label="Dashboard view"></div>
+    <!-- Incident picker. Options come from the region manifest (incidentMenu()); only implemented replays are listed. -->
+    <label class="scenario">Incident <select id="scenarioSelect" aria-label="Incident"></select></label>
+    <!-- Day badge + weather for the current scenario and step (re-rendered). -->
+    <div class="conditions" id="conditions"></div>
+  </header>
+
+  <section class="tiles" id="tiles" aria-label="Key numbers"></section>
+
+  <div class="body" id="body">
+    <aside id="aside" hidden></aside>
+    <div class="mapwrap">
+      <div class="toolbar" id="toolbar"></div>
+
+      <main class="mapstage" id="mapStage">
+        <button type="button" class="drone-control chip" id="droneControl" data-act="drone" aria-controls="droneWindow" aria-expanded="false">Drone</button>
+        <section id="mapWindow" class="view-window primary" aria-label="Map view">
+          <div class="windowbar mapbar"><b>3D Map</b><button type="button" data-window="swap">Swap</button></div>
+          <div class="map" id="mapSurface">
+        <!-- 3D map (Cesium). Filled by map3d.js; never touched by render(). -->
+        <div id="cesiumContainer" role="img" aria-label="3D map of Dixie Fire origin in Feather River Canyon, California, with documented cameras, stations, water and aerial-support base"></div>
+        <!-- Cesium credits, then the credit for the real map data (data/). -->
+        <div class="credits"><div id="cesiumCredits"></div><div class="datacredit">Map data: <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">&copy; OpenStreetMap contributors (ODbL)</a> &middot; <a href="https://www.usgs.gov/programs/national-geospatial-program/national-map" target="_blank" rel="noopener noreferrer">USGS</a></div></div>
+        <button type="button" class="resetview" data-act="resetView">Reset view</button>
+        <!-- Wind compass (bottom right). map3d.js rotates the arrow with the camera
+             and hides the card when the "Wind" chip is off. -->
+        <div id="windCompass" class="windcard" hidden>
+          <!-- Dial centered at (28, 28). "N" sits outside the ring so the arrow never hides it. -->
+          <svg width="56" height="56" viewBox="0 0 56 56" aria-hidden="true">
+            <circle cx="28" cy="28" r="18" fill="none" stroke="#5A5047" stroke-width="1.5"/>
+            <g data-wind="north">
+              <line x1="28" y1="10" x2="28" y2="14" stroke="#A89C88" stroke-width="1.5"/>
+              <text x="28" y="8" text-anchor="middle" fill="#A89C88" font-size="8" font-weight="600" font-family="Barlow, sans-serif">N</text>
+            </g>
+            <g data-wind="arrow">
+              <line x1="28" y1="40" x2="28" y2="21" stroke="#EDE3CF" stroke-width="2.5" stroke-linecap="round"/>
+              <path d="M28 14 L33.5 22 H22.5 Z" fill="#EDE3CF"/>
+            </g>
+          </svg>
+          <div class="windtext"><b>North</b><br>Weather unavailable</div>
+        </div>
+        <div id="mapMsg" class="mapmsg" hidden></div>
+        <!-- Confidence card and 1:53 alert pop-up (re-rendered). -->
+        <div id="mapOverlays"></div>
+          </div>
+          <div class="window-resize" data-resize="map" role="separator" tabindex="0" aria-label="Resize map window; use arrow keys"></div>
+        </section>
+        <section id="droneWindow" class="view-window floating" aria-label="Drone Camera" hidden>
+          <div class="windowbar"><b>Drone Camera</b><div><button type="button" data-window="minimize">Minimize</button><button type="button" data-window="swap">Expand</button><button type="button" data-window="close">Close</button></div></div>
+          <div id="droneContent"></div>
+          <div class="window-resize" data-resize="drone" role="separator" tabindex="0" aria-label="Resize drone window; use arrow keys"></div>
+        </section>
+      </main>
+
+      <section class="legend-section" aria-label="Map legend">
+        <button type="button" class="legend-toggle" aria-expanded="false" aria-controls="legendItems" data-act="legend">Legend <span aria-hidden="true">&#8250;</span></button>
+        <div id="legendItems" class="legend-collapse" inert><div class="legend-clip"><div class="legend">
+        <!-- Wildfire / Planned burn / Escaped burn entries are filled in from FIRE_TYPES (see the script). -->
+        <span><i style="color:#E8B04A">C</i>Camera (recorded 2026 view)</span><span><i>A</i>Aerial-support base (availability unknown)</span>
+        <span id="legendFireTypes" style="display:contents"></span>
+        <span title="Shown with Help nearby"><i style="color:#aaa">&#10021;</i>Drone (simulated)</span>
+        <span><i style="width:14px;height:10px;border:1px dashed #F26B2E;background:rgba(242,107,46,0.17)"></i>Likely path, next hour</span>
+        <span><i style="width:7px;height:7px;background:#F2A65A;border:1.25px solid #F26B2E"></i>Building in the path</span>
+        <span><i style="width:7px;height:7px;background:#EDE3CF;border:1px solid #15120F"></i>Building</span>
+        <span><i style="width:14px;height:8px;background:#A8D4F2;border:1px solid #6FAED9"></i>Water</span>
+        <span><svg width="12" height="12" viewBox="0 0 18 18" aria-hidden="true"><path d="M9 1.5 L16.5 7.5 V16.5 H1.5 V7.5 Z" fill="#221E19" stroke="#EDE3CF" stroke-width="1.5"/><path d="M9 6.5 C12 9.5 12.5 11.5 11.8 13.2 C11 15.2 7 15.2 6.2 13.2 C5.6 11.6 6.8 10.4 7.6 9.4 C7.9 10.6 8.4 11 8.9 11.2 C9.4 9.8 9.4 8.2 9 6.5 Z" fill="#F26B2E"/></svg>Fire department</span>
+        <span><i style="width:14px;height:2px;background:#C9B98F"></i>Power line</span>
+        <span><i style="width:14px;height:3px;background:#E8B04A"></i>Firebreak</span>
+        <span><i style="width:14px;height:10px;border:1px dashed #EDE3CF"></i>District boundary</span>
+        <span><svg width="18" height="8" viewBox="0 0 18 8" aria-hidden="true"><defs><linearGradient id="windGrad" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="13" y2="0"><stop offset="0" stop-color="#EDE3CF" stop-opacity="0"/><stop offset="1" stop-color="#EDE3CF" stop-opacity="0.9"/></linearGradient></defs><line x1="0" y1="4" x2="13" y2="4" stroke="url(#windGrad)" stroke-width="2"/><path d="M12 1 L17 4 L12 7 Z" fill="#EDE3CF"/></svg>Wind direction</span>
+        <span><i style="width:16px;height:16px;border-radius:50%;background:radial-gradient(circle, rgba(255,160,90,0.95) 0, rgba(242,107,46,0.55) 35%, rgba(242,107,46,0) 70%)"></i>GOES heat (coarse, about 2 km)</span>
+        <span><i style="width:7px;height:7px;border-radius:50%;background:#FFD23F;box-shadow:0 0 0 2px #FFFFFF"></i>VIIRS hotspot (about 375 m)</span>
+      </div></div></div></section>
+
+      <footer id="footer"></footer>
+    </div>
+  </div>
+
+  <!-- Calculator tab: the department budget calculator (Project_Avatar_Incremental_Budget_Site/).
+       Its page is loaded into the iframe the first time the tab is opened. -->
+  <section class="calcview" id="calcView" aria-label="Budget calculator">
+    <div class="calcbar">
+      <b>Budget calculator</b>
+      <button type="button" class="btn-ghost" data-act="view:dashboard">Back to map</button>
+    </div>
+    <iframe class="calcframe" id="calcFrame" title="Department budget calculator"></iframe>
+  </section>
+</div>
+
+<!-- Fire types: colors, glow and labels for wildfire / planned burn / escaped burn. -->
+<script src="fire-types.js"></script>
+<!-- Satellite fire detections (simulated now, same format as NOAA GOES / NASA FIRMS). -->
+<!-- Where the story happens (on real geography) and the real map data in data/. -->
+<script src="story.js"></script>
+<script src="regional-map.js" data-region="data/regions/california/region.json"></script>
+<script src="confidence-engine.js"></script>
+<script src="dixie-scenario.js"></script>
+<script src="dixie-fire.js"></script>
+<script src="mapdata.js"></script>
+<script src="satellite.js"></script>
+<script src="map3d.js"></script>
+<script src="drone-ui.js"></script>
+<script>
+/* ======================================================================
+   SCENARIO DATA
+   Incident replays are data-driven: region.json lists incidents, and each implemented
+   replay has a module (see SCENARIO_MODULES). Step numbers start at 0.
+   Captions: every timing that is our assumption (not from the real day or
+   the scenario script) is marked "(assumed)".
+   ====================================================================== */
+
+// Scenario replay modules, keyed by the scenario key declared in the region manifest (region.json "incidents").
+// An incident is selectable only if a replay module exists for it. Legacy Kansas demo scenarios are archived in archive/kansas/.
+const SCENARIO_MODULES = { dixie: DixieScenario };
+function incidentMenu() {
+  const m = window.RegionalMap && RegionalMap.data && RegionalMap.data.manifest;
+  const list = m ? m.incidents.filter(i => i.scenarioKey && SCENARIO_MODULES[i.scenarioKey]).map(i => [i.scenarioKey, i.label]) : [];
+  return list.length ? list : [['dixie', 'Dixie Fire \u2014 Historical Replay']];
+}
+function syncIncidentMenu() {
+  const menu = incidentMenu(), sel = regions.scenarioSelect;
+  if ((sel.options ? sel.options.length : -1) !== menu.length) sel.innerHTML = menu.map(([key, label]) => `<option value="${key}">${label}</option>`).join('');
+}
+
+// Short fire-mask words for the "Satellite sees heat (GOES, ...)" reason.
+const MASK_SHORT = { 10: 'processed fire', 11: 'saturated fire', 12: 'cloud-contaminated fire', 13: 'high probability', 14: 'medium probability', 15: 'low probability' };
+
+// Tabs, chips.
+const CHIPS = [
+  { key: 'spread', label: 'Likely path' }, { key: 'houses', label: 'Homes' }, { key: 'water', label: 'Water' },
+  { key: 'stations', label: 'Fire stations' }, { key: 'power', label: 'Power lines' },
+  { key: 'burns', label: 'Permitted burns' }, { key: 'risk', label: 'Fire risk today' },
+  { key: 'wind', label: 'Wind' }, { key: 'sat', label: 'Satellite' }, { key: 'cameras', label: 'Cameras', regionalOnly: true }, { key: 'help', label: 'Help nearby' }
+];
+
+const TABS = [
+  { key: 'alerts', label: 'Alerts' }, { key: 'people', label: 'People' },
+  { key: 'burns', label: 'Permitted burns' }, { key: 'data', label: 'Data' }, { key: 'help', label: 'Nearby help' }
+];
+
+/* ---------- State ---------- */
+const state = {
+  scenario: window.RegionalMap && RegionalMap.active ? 'dixie' : 'real',
+  view: 'dashboard',   // 'dashboard' (map) or 'calculator' (Calculator tab)
+  mode: 'simple',
+  step: 0,
+  playing: false,
+  tab: 'alerts',
+  alertClosed: false,
+  actionMsg: '',
+  layers: { spread: true, houses: true, water: true, stations: true, power: true, burns: false, risk: false, wind: true, sat: true, cameras: true, help: true, conf: false }
+};
+let timer = null;
+
+// The scenario data in use (Real fire switches variant with the power-data switch).
+function scenario() {
+  return SCENARIO_MODULES[state.scenario].scenario(RegionalMap.data);
+}
+
+/* ---------- Helpers ---------- */
+function pickStatus(list, k) {
+  let out = null;
+  for (const [from, text] of list) if (k >= from) out = text;
+  return out;
+}
+// Last entry of a [{ from, ... }] list that applies at step k.
+function pickFrom(list, k) {
+  let out = list[0];
+  for (const e of list) if (k >= e.from) out = e;
+  return out;
+}
+// "12:48" + "pm" -> minutes after midnight.
+function toMinutes(time, ampm) {
+  const [h, m] = time.split(':').map(Number);
+  return ((h % 12) + (ampm === 'pm' ? 12 : 0)) * 60 + m;
+}
+const stepAmPm = (sc, s) => s.ampm || sc.ampm;
+
+/* ---------- Planned-burn rules ----------
+   A registered burn counts as planned (and is NOT paged) only while BOTH hold:
+     1. all heat is inside the registered area, and
+     2. it is before the registered end time.
+   If heat shows up outside the area, or the burn is still burning after the
+   end time, it stops counting as planned and is treated as a possible wildfire. */
+// Homes inside the likely-path zone on the map (Map3D.pathHomes), so the number always matches.
+const confidenceColor = score => score < 40 ? '#F26B2E' : score < 70 ? '#E8B04A' : '#5FBF77';
+
+const TONE = { fire: 'var(--fire)', calm: 'var(--calm)', text: 'var(--text)' };
+
+/* ---------- Help nearby (real fire departments, simulated status) ----------
+   Real fire: one of the two nearest departments is busy on its own fire.
+   From headsUpFrom on, the 3 nearest available ones get a heads-up. */
+const fill = (text, v) => String(text).replace(/\{(\w+)\}/g, (m, key) => (v.tokens && key in v.tokens ? v.tokens[key] : m));
+const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+const escHtml = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+function compute() {
+  return SCENARIO_MODULES[state.scenario].compute(RegionalMap.data, state);
+}
+
+/* ---------- Phase 3: simulated drone and forecast explanation ---------- */
+function droneState(v) {
+  return null; // No drone deployment is defined for the implemented incident (Dixie).
+}
+function forecastDrivers(v) {
+  if (window.RegionalMap && RegionalMap.active) {
+    const roads = RegionalMap.data.geography.roads.features;
+    const rows = [['Terrain', 'Feather River Canyon; geometry draped on Cesium terrain, no slope-driven spread calculation'], ['Fuel', 'Workbook: slow ground fire under trees; measured fuel model and moisture unavailable'], ['Weather / risk', 'Historical wind, humidity, temperature and risk rating unavailable'], ['Roads', roads.length + ' mapped California road segments, including Highway 70; no verified containment effect'], ['Buildings', 'OSM reference points in the selected-step envelope, not confirmed residences or a complete 2021 inventory']];
+    return '<details class="drivers" open><summary>Replay assumptions</summary><dl>' + rows.map(([k, value]) => '<dt>' + k + '</dt><dd>' + escHtml(value) + '</dd>').join('') + '</dl><p>Simplified illustrative footprint and 1.4× radial envelope, not a verified forecast. No forecast horizon. Unknown areas retain the last supported footprint; transitions are visual only. No operational availability or response gains are implied.</p></details>';
+  }
+  return '';
+}
+function droneFeed(v) {
+  if (v.sc.key === 'dixie') return '<div class="dronefeed"><p class="camera-status" role="status">Dixie Fire: drone confirmation unavailable</p><div class="camera-image unavailable">Camera unavailable</div><p class="muted">SIMULATED FEED · Historical replay, not live. No drone flight, confirmation time or footage is documented in this scenario. No actual 2021 drone response is asserted.</p></div>';
+  return '<div class="dronefeed"><p class="camera-status" role="status">Camera unavailable: no drone deployment is defined for this incident.</p><div class="camera-image unavailable">Camera unavailable</div></div>';
+}
+function startThermal() {}   // No simulated thermal feed for the implemented incident.
+
+// Display abbreviations only; scenario values and timings are unchanged.
+function compactComparison(text) {
+  return ({ 'Fire known': 'Known', 'Truck leaves': 'Leaves', 'Truck arrives': 'Arrives',
+    'District paged': 'Paged', 'Volunteers pulled from work': 'Volunteers',
+    'Smoke reports': 'Reports', 'District paged for the planned burn': 'Burn paged', 'Escape noticed': 'Known',
+    'Answered automatically': 'Auto-reply', 'Each one paged or called back': 'Page / callback',
+    'Maybe, if someone calls in': 'Maybe (call)', 'When someone calls': 'On call' })[text] || text;
+}
+
+/* ---------- Pieces ---------- */
+function ring(conf, size, fontSize, color, unit = '%', caption = 'confidence') {
+  const dash = (conf / 100 * 314.16).toFixed(1);
+  return `
+    <div class="ring" style="width:${size}px;height:${size}px">
+      <svg width="${size}" height="${size}" viewBox="0 0 120 120" aria-hidden="true">
+        <circle cx="60" cy="60" r="50" fill="none" stroke="#3A332B" stroke-width="14"/>
+        <circle cx="60" cy="60" r="50" fill="none" stroke="${color}" stroke-width="14" stroke-dasharray="${dash} 400" transform="rotate(-90 60 60)"/>
+      </svg>
+      <div class="center"><span class="num" style="font-size:${fontSize}px;line-height:1;color:${color}">${conf === null ? '—' : conf + unit}</span><small>${conf === null ? 'unavailable' : caption}</small></div>
+    </div>`;
+}
+
+function reasonList(v) {
+  return `<ul class="reasons">${v.reasons.map(r =>
+    `<li style="color:${r.color}"><span>${r.label}</span><b>${r.pts}</b></li>`).join('')}</ul>`;
+}
+
+// Planned-burn rule check ("Inside registered area ✓  Before 2:00 pm end time ✓").
+function ruleCheck(v) {
+  if (!v.rules) return '';
+  return `<div class="rulecheck">${v.rules.map(r =>
+    `<span class="${r.ok ? 'ok' : 'bad'}">${r.label} ${r.ok ? '✓' : '✗'}</span>`).join('')}</div>`;
+}
+
+function asideInner(v) {
+  let body = '';
+  if (v.sc.key === 'dixie' && state.tab === 'alerts') {
+    body = '<div class="tabintro">Dixie Fire / Butte County: hypothetical proposal ' + escHtml(v.now.level || 'No level specified') + '. No actual alerts, CAL FIRE dispatch or response times are recorded.</div>';
+  } else if (v.sc.key === 'dixie' && state.tab === 'burns') {
+    body = '<div class="tabintro">No Dixie replay burn registrations supplied.</div>';
+  } else if (state.tab === 'alerts') {
+    const note = v.sc.alertNote && v.k >= v.sc.alertNote.from
+      ? `<div class="smsnote"><div class="muted">${v.sc.alertNote.title}</div><div class="smsbox">${v.sc.alertNote.text}</div></div>` : '';
+    body = `<ul>${v.alertRows.map(a => `
+      <li class="row"><span class="dot" style="background:${a.dot}"></span><span class="who">${a.who}</span><span style="color:${a.color}">${a.status}</span></li>`).join('')}</ul>${note}`;
+  } else if (state.tab === 'people') {
+    body = `<div class="tabintro">${v.sc.people.intro}</div><ul>${v.peopleRows.map(p => `
+      <li class="row"><span class="dot" style="background:${p.dot}"></span><span style="flex:1 1 auto"><b>${p.who}</b> <span class="muted">${p.note}</span></span><span style="color:${p.color}">${p.status}</span></li>`).join('')}</ul>`;
+  } else if (state.tab === 'burns') {
+    const bt = v.sc.burnsTab(v.k);
+    body = `<div class="tabintro">Prescribed-burn records: none were supplied for this incident. Missing records are not evidence that no burn exists.</div>
+      <ul>${bt.items.map(b => `
+        <li class="burn"><div>${b.title}${b.badge ? ` <span class="burnbadge ${b.badgeTone}">${b.badge}</span>` : ''}</div><div>${b.sub}</div></li>`).join('')}
+      </ul>`;
+  } else if (state.tab === 'help' && window.RegionalMap && RegionalMap.active) {
+    body = RegionalMap.helpHtml();
+  } else if (state.tab === 'help') {
+    body = `<div class="tabintro">Real fire departments, by drive time from the fire. Drive time is an estimate: straight line × 1.3 at 45 mph. Status and equipment are simulated.</div>
+      <ul>${v.help.rows.map(r => {
+        const st = STORY.HELP_STATUS[v.help.status[r.dept.id] || 'available'];
+        return `<li class="row helprow"><span class="dot" style="background:${st.color}"></span>
+          <span class="who">${escHtml(r.dept.label)}<small>${escHtml(r.dept.name)} · ${escHtml(r.dept.equipment)}</small></span>
+          <span class="when">${r.text}<small style="color:${st.color}">${st.text}</small></span></li>`;
+      }).join('')}</ul>`;
+  } else {
+    body = `<ul>${v.dataRows.map(([name, age]) => `
+      <li class="row" style="justify-content:space-between"><b>${name}</b><span class="muted" style="text-align:right">${age}</span></li>`).join('')}</ul>
+      ${v.firmsNote ? `<div class="datanote">${v.firmsNote}</div>` : ''}
+      <div class="datanote">${v.sc.key === 'dixie' ? 'California locations are reference inventory, not active resource availability. Building points are not confirmed homes. Precise utility geometry is omitted.' : 'Water, power lines, roads, buildings and towns: real public data. Fire, people, and equipment: simulated.'}</div>
+      <div class="datanote">${v.sc.key === 'dixie' ? 'Workbook assumptions only; no live sensor feed or historical detection evidence.' : Satellite.DATA_SOURCE === 'api' ? 'Live data from NOAA GOES Fire Detection and NASA FIRMS.'
+        : 'Simulated in the same format as NOAA GOES Fire Detection and NASA FIRMS. Ready for live data.'}</div>`;
+  }
+
+  return `
+    <section class="status" aria-label="Fire status">
+      <h2 style="color:${v.statusColor}">${v.statusLabel}</h2>
+      <div class="ringrow">${ring(v.conf, 112, 32, v.ringColor, v.confUnit, v.confLabel)}${reasonList(v)}</div>
+      ${forecastDrivers(v)}
+    ${ruleCheck(v)}
+      <div class="note">${v.sc.key === 'dixie' ? v.confNote : 'Alerts go out automatically at 70%'}</div>
+      <div class="facts">
+        ${v.facts.map(([label, value]) => `<div><div>${label}</div><div>${value}</div></div>`).join('')}
+      </div>
+      <div class="actions">
+        <button type="button" class="btn-light" data-act="ask">Ask nearby people</button>
+        <button type="button" class="btn-ghost" data-act="false">Mark false alarm</button>
+      </div>
+      ${state.actionMsg ? `<div class="action-msg">${state.actionMsg}</div>` : ''}
+    </section>
+    <nav class="tabs" aria-label="Details">
+      ${TABS.map(t => `<button type="button" class="${state.tab === t.key ? 'on' : ''}" aria-pressed="${state.tab === t.key}" data-act="tab:${t.key}">${t.label}</button>`).join('')}
+    </nav>
+    <div class="tabbody scroll">${body}</div>`;
+}
+
+function confCard(v) {
+  return `
+  <section class="confcard" aria-label="Fire status">
+    <h2 style="color:${v.statusColor}">${v.statusLabel}</h2>
+    <div class="ringrow" style="gap:12px;margin-top:8px">${ring(v.conf, 92, 26, v.ringColor, v.confUnit, v.confLabel)}${reasonList(v)}</div>
+    ${forecastDrivers(v)}
+    ${ruleCheck(v)}
+    <div class="facts" style="margin-top:10px;padding-top:8px">
+      ${v.facts.slice(0, 2).map(([label, value]) => `<div><div>${label}</div><div style="font-size:13px">${value}</div></div>`).join('')}
+    </div>
+  </section>`;
+}
+
+function alertHtml(p) {
+  return `
+  <div class="overlay">
+    <div class="alert" role="alertdialog" aria-label="Firewatch alert sent">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px">
+        <div style="font-weight:600;font-size:18px">Firewatch alert sent</div>
+        <div class="muted" style="font-size:13px">${p.time}</div>
+      </div>
+      <div class="muted" style="font-size:13px;margin-top:4px">This is the text people get on their phones:</div>
+      <div class="sms">
+        ${p.sms.map(line => line.startsWith('<b>') ? `<div style="font-weight:600">${line.slice(3, -4)}</div>` : `<div>${line}</div>`).join('')}
+        <div style="text-decoration:underline">Open map</div>
+      </div>
+      <div class="muted" style="margin-top:10px;font-size:13px">${p.sentTo}</div>
+      <button type="button" data-act="closeAlert">Close</button>
+    </div>
+  </div>`;
+}
+
+function outcomeHtml(o) {
+  return `<section class="outcome" aria-label="Outcome"><div class="outcome-title">${o.title}</div><div class="outcome-sub">${o.sub}</div></section>`;
+}
+
+/* ---------- Render ---------- */
+// render() re-fills only the regions that change. The 3D map is never
+// re-created: it is updated through Map3D.update() at the end.
+const app = document.getElementById('app');
+const regions = {
+  modes: document.getElementById('modes'),
+  conditions: document.getElementById('conditions'),
+  scenarioSelect: document.getElementById('scenarioSelect'),
+  tiles: document.getElementById('tiles'),
+  body: document.getElementById('body'),
+  aside: document.getElementById('aside'),
+  toolbar: document.getElementById('toolbar'),
+  overlays: document.getElementById('mapOverlays'),
+  windText: document.querySelector('#windCompass .windtext'),
+  footer: document.getElementById('footer')
+};
+// Calculator tab: the budget calculator's page, shown in #calcFrame.
+const CALCULATOR_URL = 'Project_Avatar_Incremental_Budget_Site/index.html';
+const calcFrame = document.getElementById('calcFrame');
+// Legend: one entry per fire type, from FIRE_TYPES.
+document.getElementById('legendFireTypes').innerHTML = Object.values(FIRE_TYPES).map(t =>
+  `<span><i style="width:14px;height:10px;border:2px solid ${t.color};background:#1A1512;border-radius:5px 7px 6px 4px;box-shadow:0 0 5px ${t.color}CC"></i>${t.label}</span>`).join('');
+syncIncidentMenu();
+
+function render(focusAct) {
+  const v = compute();
+  const sc = v.sc;
+  const regional = !!(window.RegionalMap && RegionalMap.active);
+  document.getElementById('regionName').textContent = regional ? (RegionalMap.data ? RegionalMap.data.config.title : 'Dixie Fire, California') : 'Regional wildfire monitoring';
+  const chips = (v.full ? CHIPS : CHIPS.concat([{ key: 'conf', label: 'Confidence' }])).filter(c => !c.regionalOnly || (window.RegionalMap && RegionalMap.active));
+
+  const dash = state.view === 'dashboard';
+  regions.modes.innerHTML = `
+    <button type="button" class="${dash && !v.full ? 'on' : ''}" aria-pressed="${dash && !v.full}" data-act="mode:simple">Simple</button>
+    <button type="button" class="${dash && v.full ? 'on' : ''}" aria-pressed="${dash && v.full}" data-act="mode:full">Full</button>
+    <button type="button" class="${!dash ? 'on' : ''}" aria-pressed="${!dash}" data-act="view:calculator">Calculator</button>`;
+  // Calculator tab: hides the tiles and map area (the map keeps its state) and shows the calculator.
+  app.classList.toggle('calc', !dash);
+  syncIncidentMenu();
+  regions.scenarioSelect.value = state.scenario;
+
+  // Header: day type badge and weather for this scenario and step.
+  const c = v.conditions;
+  regions.conditions.innerHTML = `
+    <div class="condday">
+      ${v.typeColor ? `<span class="badge-type" style="background:${v.typeColor}">${c.badge}</span>` : `<span class="${c.badgeClass}">${c.badge}</span>`}
+      <span class="condnote muted">${c.note}</span>
+    </div>
+    <div class="weather">
+      ${c.weather.filter(([label]) => label !== 'Wind').map(([label, value]) => `<div><span class="muted">${label} </span><b>${value}</b></div>`).join('')}
+    </div>`;
+  regions.windText.innerHTML = `<b>Wind from ${v.wind.dir},</b><br>${v.wind.text}`;
+
+  const syncDixieArea = () => {   // Dixie Area burned KPI follows the displayed (animated) fire polygon
+    const tv = regions.tiles.querySelector('[data-kpi="area"] .tv'), a = window.DixieFire && DixieFire.liveArea;
+    if (!tv || state.scenario !== 'dixie' || a === undefined || a === null) return;
+    if (!(a > 0)) { tv.innerHTML = '—<span></span>'; return; }
+    const f = DixieFire.format(a), i = f.indexOf(' ');
+    tv.innerHTML = f.slice(0, i) + '<span> ' + f.slice(i + 1) + '</span>';
+  };
+  window.syncDixieArea = syncDixieArea;
+  regions.tiles.innerHTML = v.tiles.map(t => `
+    <div class="tile"${t.key ? ` data-kpi="${t.key}"` : ''} title="${escHtml(t.note || '')}">
+      <div class="tl">${/^Volunteers/.test(t.label) ? 'Volunteer Response' : t.label === 'Ahead of 911' ? 'Ahead of 911 Responder' : t.label}</div>
+      <div class="tv num" style="color:${t.color}">${t.value}<span>${t.unit === 'of 5' ? '/5' : (t.unit === '%' || !t.unit ? '' : ' ') + t.unit}</span></div>
+    </div>`).join('');
+  syncDixieArea();
+
+  regions.body.classList.toggle('full', v.full);
+  regions.aside.hidden = !v.full;
+  regions.aside.innerHTML = v.full ? fill(asideInner(v), v) : '';
+
+  regions.toolbar.innerHTML = `
+    <span class="muted" style="font-size:13px;margin-right:4px">Show on map</span>
+    ${chips.map(c => {
+      const on = !!state.layers[c.key];
+      return `<button type="button" class="chip ${on ? 'on' : ''}" aria-pressed="${on}" data-act="layer:${c.key}" title="${regional ? (c.key === 'cameras' ? 'Recorded camera locations (Nov 2026 snapshot); not 2021 footage or proof of visibility' : c.key === 'sat' ? 'No satellite detections are drawn for Dixie' : c.key === 'spread' ? 'Illustrative Dixie envelope; not a verified forecast' : ['power', 'burns', 'risk'].includes(c.key) ? 'Not drawn: no verified geometry supplied' : c.key === 'wind' ? 'Animated wind streaks and compass; direction and speed are a scenario assumption, not sourced Dixie weather' : c.label) : c.label}">${c.label}</button>`;
+    }).join('')}
+    <span class="sim" title="${regional ? '2021 historical replay with hypothetical November 2026 capabilities; not actual detections.' : 'Simulated scenario'}">${regional ? 'Dixie historical replay; not live data' : 'Simulated scenario, not live data'}</span>`;
+
+  regions.overlays.innerHTML = fill(
+    (!v.full && state.layers.conf ? confCard(v) : '') +
+    (!regional && sc.outcome && v.k >= sc.outcome.at ? outcomeHtml(sc.outcome) : '') +
+    (!regional && v.flags.length ? `<div class="mapflag" role="status">${v.flags.map(f => `<div>${f}</div>`).join('')}</div>` : '') +
+    (!regional && sc.popup && v.k === sc.popup.at && !state.alertClosed ? alertHtml(sc.popup) : ''), v);
+
+  const powerSwitch = '';
+
+  regions.footer.innerHTML = fill(`
+    <div class="ctlcol">
+      <div class="controls">
+        <button type="button" data-act="back">Back</button>
+        <button type="button" class="play" data-act="play">${state.playing ? 'Pause' : 'Play'}</button>
+        <button type="button" data-act="next">Next</button>
+      </div>
+      ${powerSwitch}
+    </div>
+    <div style="min-width:0">
+      <div class="steps">
+        ${sc.steps.map((s, i) => `<button type="button" class="${i === v.k ? 'on' : i < v.k ? 'done' : ''}" aria-label="Go to ${s.label || s.time + ' ' + stepAmPm(sc, s)}" title="${s.label || s.time}" data-act="step:${i}">${s.time}</button>`).join('')}
+      </div>
+      <div class="caption">${v.now.caption}</div>
+      ${v.now.real ? `<div class="real">What really happened at ${v.now.time}: ${v.now.real}</div>` : ''}
+      ${sc.extraLine ? `<div class="offnote">${sc.extraLine}</div>` : ''}
+    </div>
+    <div class="compare" aria-label="${sc.compareCols.join(' versus ')}" title="${sc.compareCols.join(' vs ')}">
+      <span></span>
+      <span style="font-size:12px;font-weight:600;color:var(--fire)">FW</span>
+      <span class="muted" style="font-size:12px">Real</span>
+      ${v.compare.map(c => `
+        <span class="muted" title="${escHtml(c.note || c.label)}">${compactComparison(c.label)}</span>
+        <span style="font-weight:600;color:${c.color}">${compactComparison(c.ours)}</span>
+        <span class="muted">${compactComparison(c.other)}</span>`).join('')}
+    </div>`, v);
+
+  // 3D map: only moves/resizes/hides existing objects.
+  Map3D.update(Object.assign({ layers: state.layers, wind: { towardDeg: v.wind.towardDeg, mph: v.wind.mph }, goes: v.goes, firms: v.firms }, v.map));
+
+  DroneUI.update(v, state.view);
+  if (focusAct) {
+    const el = app.querySelector(`[data-act="${focusAct}"]`);
+    if (el) el.focus();
+  }
+}
+
+if (window.addEventListener) window.addEventListener('dixie-area', () => window.syncDixieArea && window.syncDixieArea());
+
+/* ---------- Actions ---------- */
+function stopTimer() {
+  if (timer) { clearInterval(timer); timer = null; }
+  state.playing = false;
+}
+
+function goTo(i) {
+  state.step = Math.max(0, Math.min(scenario().steps.length - 1, i));
+  state.alertClosed = false;
+  state.actionMsg = '';
+}
+
+// Switching scenario (or the power-data switch) restarts playback at step 1.
+function setScenario(key) {
+  stopTimer();
+  state.scenario = key;
+  // Layers a scenario turns on by itself (Planned burn shows Permitted burns).
+  state.layers.burns = !!(scenario().layersOnEnter && scenario().layersOnEnter.burns);
+  goTo(0);
+}
+
+function togglePlay() {
+  if (state.playing) { stopTimer(); return; }
+  if (state.step >= scenario().steps.length - 1) goTo(0);
+  state.playing = true;
+  timer = setInterval(() => {
+    if (state.step >= scenario().steps.length - 1) { stopTimer(); render(); return; }
+    goTo(state.step + 1);
+    render();
+  }, 2800);
+}
+
+app.addEventListener('click', e => {
+  const btn = e.target.closest('[data-act]');
+  if (!btn) return;
+  const act = btn.dataset.act;
+  const [name, arg] = act.split(':');
+
+  if (name === 'legend') {
+    const expanded = btn.getAttribute('aria-expanded') !== 'true';
+    btn.setAttribute('aria-expanded', String(expanded));
+    document.getElementById('legendItems').classList.toggle('expanded', expanded);
+    document.getElementById('legendItems').inert = !expanded;
+    return;
+  }
+  if (name === 'resetView') { Map3D.resetView(); return; }   // camera only, no re-render
+
+  if (name === 'mode') { state.mode = arg; state.view = 'dashboard'; }
+  else if (name === 'view') {
+    if (arg === 'calculator') {
+      stopTimer();   // don't keep playing the replay out of sight
+      if (!calcFrame.getAttribute('src')) calcFrame.src = CALCULATOR_URL;   // load once, keep its state
+    }
+    state.view = arg;
+    render(arg === 'dashboard' ? `mode:${state.mode}` : act);
+    return;
+  }
+  else if (name === 'layer') state.layers[arg] = !state.layers[arg];
+  else if (name === 'drone') { DroneUI.open(); return; }
+  else if (name === 'tab') state.tab = arg;
+  else if (name === 'step') { stopTimer(); goTo(Number(arg)); }
+  else if (name === 'back') { stopTimer(); goTo(state.step - 1); }
+  else if (name === 'next') { stopTimer(); goTo(state.step + 1); }
+  else if (name === 'play') togglePlay();
+  else if (name === 'closeAlert') state.alertClosed = true;
+  else if (name === 'ask') state.actionMsg = 'Hypothetical replay: no messages sent; contacts and response times unknown.';
+  else if (name === 'false') state.actionMsg = 'Replay annotation only. No live alerts or historical incident records are changed.';
+
+  render(act);
+});
+
+regions.scenarioSelect.addEventListener('change', e => {
+  setScenario(e.target.value);
+  render();
+  Map3D.resetView();   // center the map on the selected incident
+});
+
+// The real map data (data/*.geojson) is loaded first: the counts, distances
+// and texts about real places come from it. Then the dashboard is drawn.
+DroneUI.init({ content: droneFeed, animate: startThermal, resizeMap: () => Map3D.resize() });
+Map3D.onDroneClick = () => DroneUI.open();
+window.addEventListener('map3d-heights', () => { if (MapData.loaded) render(); });
+MapData.load().then(() => render());
+
+// Create the 3D map once (it also waits for the map data). Shows a message in
+// the map area if the token is missing or wrong, or the data did not load.
+Map3D.init({
+  container: document.getElementById('cesiumContainer'),
+  credits: document.getElementById('cesiumCredits'),
+  message: document.getElementById('mapMsg'),
+  compass: document.getElementById('windCompass')
+});
+</script>
+</body>
+</html>
