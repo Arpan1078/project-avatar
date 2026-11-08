@@ -333,6 +333,10 @@
     .compare, .body.full .compare { gap: 1px 5px; padding-left: 6px; }
   }
   @media (prefers-reduced-motion: reduce) { .legend-collapse, .legend-toggle span { transition: none; } }
+  .regional-info { pointer-events: auto; max-width: min(360px, calc(100% - 12px)); max-height: calc(100% - 42px); overflow: auto; box-sizing: border-box; }
+  .datacredit a { color: inherit; }
+  .regional-info a { color: var(--fire-soft); }
+  .regional-info button { float: right; background: var(--panel); color: var(--text); border: 1px solid var(--line); font: inherit; }
 </style>
 </head>
 <body>
@@ -347,7 +351,7 @@
       <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="#F26B2E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c1 4 5 5 5 10a5 5 0 0 1-10 0c0-3 2-4 2-7 2 1 3 3 3 5"/></svg>
       <div class="brandtext">
         <b>Firewatch</b>
-        <span class="muted">Cottonwood Creek Fire District</span>
+        <span class="muted" id="regionName">Regional wildfire monitoring</span>
       </div>
     </div>
     <div class="modes" id="modes" role="group" aria-label="Dashboard view"></div>
@@ -370,9 +374,9 @@
           <div class="windowbar mapbar"><b>3D Map</b><button type="button" data-window="swap">Swap</button></div>
           <div class="map" id="mapSurface">
         <!-- 3D map (Cesium). Filled by map3d.js; never touched by render(). -->
-        <div id="cesiumContainer" role="img" aria-label="3D map of the Cottonwood Creek district with the fire, real power lines, buildings, water, roads and fire departments"></div>
+        <div id="cesiumContainer" role="img" aria-label="3D map of Dixie Fire origin in Feather River Canyon, California, with documented cameras, stations, water and aerial-support base"></div>
         <!-- Cesium credits, then the credit for the real map data (data/). -->
-        <div class="credits"><div id="cesiumCredits"></div><div class="datacredit">Map data: © OpenStreetMap contributors · USGS</div></div>
+        <div class="credits"><div id="cesiumCredits"></div><div class="datacredit">Map data: <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">&copy; OpenStreetMap contributors (ODbL)</a> &middot; <a href="https://www.usgs.gov/programs/national-geospatial-program/national-map" target="_blank" rel="noopener noreferrer">USGS</a></div></div>
         <button type="button" class="resetview" data-act="resetView">Reset view</button>
         <!-- Wind compass (bottom right). map3d.js rotates the arrow with the camera
              and hides the card when the "Wind" chip is off. -->
@@ -408,6 +412,7 @@
         <button type="button" class="legend-toggle" aria-expanded="false" aria-controls="legendItems" data-act="legend">Legend <span aria-hidden="true">&#8250;</span></button>
         <div id="legendItems" class="legend-collapse" inert><div class="legend-clip"><div class="legend">
         <!-- Wildfire / Planned burn / Escaped burn entries are filled in from FIRE_TYPES (see the script). -->
+        <span><i style="color:#E8B04A">C</i>Camera (recorded 2026 view)</span><span><i>A</i>Aerial-support base (availability unknown)</span>
         <span id="legendFireTypes" style="display:contents"></span>
         <span title="Shown with Help nearby"><i style="color:#aaa">&#10021;</i>Drone (simulated)</span>
         <span><i style="width:14px;height:10px;border:1px dashed #F26B2E;background:rgba(242,107,46,0.17)"></i>Likely path, next hour</span>
@@ -443,6 +448,8 @@
 <!-- Satellite fire detections (simulated now, same format as NOAA GOES / NASA FIRMS). -->
 <!-- Where the story happens (on real geography) and the real map data in data/. -->
 <script src="story.js"></script>
+<script src="regional-map.js" data-region="data/regions/california/region.json"></script>
+<script src="dixie-scenario.js"></script>
 <script src="mapdata.js"></script>
 <script src="satellite.js"></script>
 <script src="map3d.js"></script>
@@ -458,7 +465,7 @@
    ====================================================================== */
 
 // The scenario menu in the top bar (key in SCENARIOS, label shown).
-const SCENARIO_MENU = [
+const SCENARIO_MENU = window.RegionalMap && RegionalMap.active ? [['dixie', 'Dixie Fire historical replay']] : [
   ['real',   'Real fire'],
   ['outage', 'Power outage, no fire'],
   ['burn',   'Planned burn']
@@ -878,7 +885,7 @@ const TABS = [
 
 /* ---------- State ---------- */
 const state = {
-  scenario: 'real',
+  scenario: window.RegionalMap && RegionalMap.active ? 'dixie' : 'real',
   powerData: true,     // "Co-op power data" switch (Real fire only)
   view: 'dashboard',   // 'dashboard' (map) or 'calculator' (Calculator tab)
   mode: 'simple',
@@ -893,6 +900,7 @@ let timer = null;
 
 // The scenario data in use (Real fire switches variant with the power-data switch).
 function scenario() {
+  if (state.scenario === 'dixie') return DixieScenario.scenario(RegionalMap.data);
   return state.scenario === 'real' && !state.powerData ? SCENARIOS.realNoPower : SCENARIOS[state.scenario];
 }
 
@@ -1020,6 +1028,7 @@ function storyTokens(v) {
 const escHtml = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 function compute() {
+  if (state.scenario === 'dixie') return DixieScenario.compute(RegionalMap.data, state);
   const sc = scenario();
   const k = Math.min(state.step, sc.steps.length - 1);
   const now = sc.steps[k];
@@ -1135,6 +1144,7 @@ function compute() {
 
 /* ---------- Phase 3: simulated drone and forecast explanation ---------- */
 function droneState(v) {
+  if (window.RegionalMap && RegionalMap.active) return null; // No California deployment authorized in Phase 2.
   if (!['real', 'realNoPower', 'burn'].includes(v.sc.key)) return null;
   const burn = v.sc.key === 'burn', town = MapData.nearestTown(STORY.PLACES[burn ? 'escape' : 'line']);
   if (!town) return null;
@@ -1145,6 +1155,7 @@ function droneState(v) {
     info: !burn ? 'Grounded: gusts 55 mph. No flight.' : 'Simulated launch 12:52 PM; arrival 12:58 PM. Timing and capabilities assumed.' };
 }
 function forecastDrivers(v) {
+  if (window.RegionalMap && RegionalMap.active) return '<details class="drivers" open><summary>Replay assumptions</summary><p>Historical Dixie Fire context with hypothetical November 2026 Firewatch observations. Confidence weights, response times and detection timestamps are unknown. No fire progression or forecast geometry is implemented.</p></details>';
   const fire = v.map.fires.A || v.map.fires.B;
   const f = Map3D.forecast(fire || { place: v.sc.key === 'burn' ? 'burn' : 'line', acres: 0 }, v.wind.towardDeg);
   const slope = f && f.slopePct;
@@ -1162,7 +1173,7 @@ function forecastDrivers(v) {
 }
 function droneFeed(v) {
   const d = v.drone;
-  const status = !d ? 'No drone assigned to this scenario.' : !d.active ? d.label : !d.onScene ?
+  const status = !d ? (window.RegionalMap && RegionalMap.active ? 'Camera unavailable: no Dixie drone deployment is defined in Phase 2.' : 'No drone assigned to this scenario.') : !d.active ? d.label : !d.onScene ?
     (v.k >= 6 ? 'Waiting for drone, ETA 6 min' : 'Waiting for simulated launch at 12:52 PM') : 'On scene at 12:58 PM (assumed)';
   return '<div class="dronefeed"><p class="camera-status" role="status">' + escHtml(status) + '</p>' +
     (d && d.onScene ? '<div class="camera-image"><canvas id="thermalFeed" width="640" height="360" aria-label="Animated thermal simulation of the escaped fire"></canvas></div><p>Fire edge outside the registered area, 0.5 mi NE of Section 22</p>' : '<div class="camera-image unavailable">Camera unavailable</div>') +
@@ -1223,7 +1234,7 @@ function ring(conf, size, fontSize, color) {
         <circle cx="60" cy="60" r="50" fill="none" stroke="#3A332B" stroke-width="14"/>
         <circle cx="60" cy="60" r="50" fill="none" stroke="${color}" stroke-width="14" stroke-dasharray="${dash} 400" transform="rotate(-90 60 60)"/>
       </svg>
-      <div class="center"><span class="num" style="font-size:${fontSize}px;line-height:1;color:${color}">${conf}%</span><small>confidence</small></div>
+      <div class="center"><span class="num" style="font-size:${fontSize}px;line-height:1;color:${color}">${conf === null ? '?' : conf + '%'}</span><small>confidence</small></div>
     </div>`;
 }
 
@@ -1241,7 +1252,11 @@ function ruleCheck(v) {
 
 function asideInner(v) {
   let body = '';
-  if (state.tab === 'alerts') {
+  if (v.sc.key === 'dixie' && state.tab === 'alerts') {
+    body = '<div class="tabintro">Hypothetical proposal: ' + escHtml(v.now.level || 'No level specified') + '. No actual alerts or dispatch times are recorded.</div>';
+  } else if (v.sc.key === 'dixie' && state.tab === 'burns') {
+    body = '<div class="tabintro">No Dixie replay burn registrations supplied.</div>';
+  } else if (state.tab === 'alerts') {
     const note = v.sc.alertNote && v.k >= v.sc.alertNote.from
       ? `<div class="smsnote"><div class="muted">${v.sc.alertNote.title}</div><div class="smsbox">${v.sc.alertNote.text}</div></div>` : '';
     body = `<ul>${v.alertRows.map(a => `
@@ -1257,6 +1272,8 @@ function asideInner(v) {
       </ul>
       <div class="burnrules">A registered burn stops counting as planned, and is treated as a possible wildfire, if it is
         <b>outside the registered area</b> or <b>still burning after the end time</b>.</div>`;
+  } else if (state.tab === 'help' && window.RegionalMap && RegionalMap.active) {
+    body = RegionalMap.helpHtml();
   } else if (state.tab === 'help') {
     body = `<div class="tabintro">Real fire departments, by drive time from the fire. Drive time is an estimate: straight line × 1.3 at 45 mph. Status and equipment are simulated.</div>
       <ul>${v.help.rows.map(r => {
@@ -1270,7 +1287,7 @@ function asideInner(v) {
       <li class="row" style="justify-content:space-between"><b>${name}</b><span class="muted" style="text-align:right">${age}</span></li>`).join('')}</ul>
       ${v.firmsNote ? `<div class="datanote">${v.firmsNote}</div>` : ''}
       <div class="datanote">Water, power lines, roads, buildings and towns: real public data. Fire, people, and equipment: simulated.</div>
-      <div class="datanote">${Satellite.DATA_SOURCE === 'api' ? 'Live data from NOAA GOES Fire Detection and NASA FIRMS.'
+      <div class="datanote">${v.sc.key === 'dixie' ? 'Workbook assumptions only; no live sensor feed or historical detection evidence.' : Satellite.DATA_SOURCE === 'api' ? 'Live data from NOAA GOES Fire Detection and NASA FIRMS.'
         : 'Simulated in the same format as NOAA GOES Fire Detection and NASA FIRMS. Ready for live data.'}</div>`;
   }
 
@@ -1280,7 +1297,7 @@ function asideInner(v) {
       <div class="ringrow">${ring(v.conf, 112, 32, v.ringColor)}${reasonList(v)}</div>
       ${forecastDrivers(v)}
     ${ruleCheck(v)}
-      <div class="note">Alerts go out automatically at 70%</div>
+      <div class="note">${v.sc.key === 'dixie' ? 'Hypothetical behavior only; confidence not calculated' : 'Alerts go out automatically at 70%'}</div>
       <div class="facts">
         ${v.facts.map(([label, value]) => `<div><div>${label}</div><div>${value}</div></div>`).join('')}
       </div>
@@ -1359,6 +1376,8 @@ regions.scenarioSelect.innerHTML = SCENARIO_MENU.map(([key, label]) => `<option 
 function render(focusAct) {
   const v = compute();
   const sc = v.sc;
+  const regional = !!(window.RegionalMap && RegionalMap.active);
+  document.getElementById('regionName').textContent = regional && RegionalMap.data ? RegionalMap.data.config.title : 'Cottonwood Creek Fire District';
   const chips = v.full ? CHIPS : CHIPS.concat([{ key: 'conf', label: 'Confidence' }]);
 
   const dash = state.view === 'dashboard';
@@ -1396,15 +1415,15 @@ function render(focusAct) {
     <span class="muted" style="font-size:13px;margin-right:4px">Show on map</span>
     ${chips.map(c => {
       const on = !!state.layers[c.key];
-      return `<button type="button" class="chip ${on ? 'on' : ''}" aria-pressed="${on}" data-act="layer:${c.key}">${c.label}</button>`;
+      return `<button type="button" class="chip ${on ? 'on' : ''}" aria-pressed="${on}" data-act="layer:${c.key}" title="${regional ? (c.key === 'sat' ? 'Recorded camera locations; no Dixie satellite detections in Phase 2' : ['spread', 'power', 'burns', 'risk'].includes(c.key) ? 'Not drawn in Phase 2 geographic mode' : c.key === 'wind' ? 'North compass; California weather is not configured' : c.label) : c.label}">${c.label}</button>`;
     }).join('')}
-    <span class="sim">Simulated scenario, not live data</span>`;
+    <span class="sim" title="${regional ? '2021 historical replay with hypothetical November 2026 capabilities; not actual detections.' : 'Simulated scenario'}">${regional ? 'Dixie historical replay; not live data' : 'Simulated scenario, not live data'}</span>`;
 
   regions.overlays.innerHTML = fill(
     (!v.full && state.layers.conf ? confCard(v) : '') +
-    (sc.outcome && v.k >= sc.outcome.at ? outcomeHtml(sc.outcome) : '') +
-    (v.flags.length ? `<div class="mapflag" role="status">${v.flags.map(f => `<div>${f}</div>`).join('')}</div>` : '') +
-    (sc.popup && v.k === sc.popup.at && !state.alertClosed ? alertHtml(sc.popup) : ''), v);
+    (!regional && sc.outcome && v.k >= sc.outcome.at ? outcomeHtml(sc.outcome) : '') +
+    (!regional && v.flags.length ? `<div class="mapflag" role="status">${v.flags.map(f => `<div>${f}</div>`).join('')}</div>` : '') +
+    (!regional && sc.popup && v.k === sc.popup.at && !state.alertClosed ? alertHtml(sc.popup) : ''), v);
 
   const powerSwitch = state.scenario === 'real' ? `
       <button type="button" class="pswitch ${state.powerData ? 'on' : ''}" aria-pressed="${state.powerData}" data-act="power">
@@ -1422,7 +1441,7 @@ function render(focusAct) {
     </div>
     <div style="min-width:0">
       <div class="steps">
-        ${sc.steps.map((s, i) => `<button type="button" class="${i === v.k ? 'on' : i < v.k ? 'done' : ''}" aria-label="Go to ${s.time} ${stepAmPm(sc, s)}" data-act="step:${i}">${s.time}</button>`).join('')}
+        ${sc.steps.map((s, i) => `<button type="button" class="${i === v.k ? 'on' : i < v.k ? 'done' : ''}" aria-label="Go to ${s.label || s.time + ' ' + stepAmPm(sc, s)}" title="${s.label || s.time}" data-act="step:${i}">${s.time}</button>`).join('')}
       </div>
       <div class="caption">${v.now.caption}</div>
       ${v.now.real ? `<div class="real">What really happened at ${v.now.time}: ${v.now.real}</div>` : ''}
@@ -1465,7 +1484,7 @@ function setScenario(key) {
   stopTimer();
   state.scenario = key;
   // Layers a scenario turns on by itself (Planned burn shows Permitted burns).
-  state.layers.burns = !!(SCENARIOS[key].layersOnEnter && SCENARIOS[key].layersOnEnter.burns);
+  state.layers.burns = !!(scenario().layersOnEnter && scenario().layersOnEnter.burns);
   goTo(0);
 }
 
@@ -1514,7 +1533,7 @@ app.addEventListener('click', e => {
   else if (name === 'play') togglePlay();
   else if (name === 'power') { stopTimer(); state.powerData = !state.powerData; goTo(0); }
   else if (name === 'closeAlert') state.alertClosed = true;
-  else if (name === 'ask') state.actionMsg = 'Texted 4 people within 5 miles: “Can you see smoke? Reply YES or NO.”';
+  else if (name === 'ask') state.actionMsg = state.scenario === 'dixie' ? 'Hypothetical replay: no messages sent; contacts and response times unknown.' : 'Texted 4 people within 5 miles: “Can you see smoke? Reply YES or NO.”';
   else if (name === 'false') state.actionMsg = 'Marked as a false alarm. Alerts stop.';
 
   render(act);

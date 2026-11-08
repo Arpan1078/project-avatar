@@ -59,6 +59,7 @@
   // (data/*.geojson). Positions are miles [east, north] of the fire start.
   const STORY = window.STORY;
   const MD = window.MapData;
+  const regional = !!(window.RegionalMap && RegionalMap.active);
   const ORIGIN = STORY.ORIGIN;
   const METERS_PER_MILE = STORY.METERS_PER_MILE;
   const METERS_PER_DEG_LAT = STORY.METERS_PER_DEG_LAT;
@@ -359,6 +360,7 @@
   // the slope (terrain height at the fire start vs 1 mile downwind). Pure math,
   // works without a token; slope is null until the terrain heights are sampled.
   function forecast(specFire, towardDeg) {
+    if (regional) return null; // Dixie spread/forecast is Phase 3.
     if (!MD.loaded) return null;
     const spec = specFire && PLACES[specFire.place] ? specFire : { place: 'line', acres: 0 };
     const keep = WIND.towardDeg;
@@ -394,6 +396,7 @@
   //   pathBuildings: every building in the path (drawn orange)
   //   pathHomes:     only those that count as homes (houses + unlabeled buildings)
   function pathBuildings(specA, towardDeg) {
+    if (regional) return []; // No structures-at-risk forecast in geography-only mode.
     if (!specA || !specA.path || !PLACES[specA.place] || !MD.loaded) return [];
     const keep = WIND.towardDeg;
     setBearing(towardDeg ?? keep);
@@ -1758,6 +1761,7 @@
   /* ---------- 10. Camera ---------- */
 
   function resetView(duration = 1.5) {
+    if (regional) { RegionalMap.resetView(duration); return; }
     if (!ready) return;
     const cam = CAMERAS[curView] || CAMERAS.district;
     const [lon, lat] = lonLat(cam.target);
@@ -1864,6 +1868,20 @@
     scene.screenSpaceCameraController.minimumZoomDistance = 300;
     scene.screenSpaceCameraController.maximumZoomDistance = 150000;
 
+    if (regional) {
+      try {
+        await RegionalMap.init(viewer, mapRoot, compassEl);
+        ready = true;
+        RegionalMap.update(pending || { layers: {} });
+        pending = null;
+        hideMsg();
+      } catch (err) {
+        console.error('Regional map initialization failed:', err);
+        showMsg('California map could not load', 'Check the regional data files and browser console. Kansas geometry is not used as a fallback.');
+      }
+      return;
+    }
+
     // Ground height at the camera target, so the starting view is centered on the hills.
     try {
       const [lon, lat] = lonLat(CAMERAS.district.target);
@@ -1886,6 +1904,7 @@
 
   // Called by index.html on every render. Cheap: only touches existing objects.
   function update(u) {
+    if (regional && ready) { RegionalMap.update(u); return; }
     if (!ready) { pending = u; return; }
     applyState(u);
   }

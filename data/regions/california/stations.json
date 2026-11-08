@@ -1,0 +1,404 @@
+{
+  "schemaVersion": "1.0.0",
+  "regionId": "us-ca",
+  "kind": "stations",
+  "workbookId": "dixie-reference-workbook",
+  "records": [
+    {
+      "id": "us-ca:station-36-jarbo-gap",
+      "category": "real_geographic_location",
+      "name": "CAL FIRE Station 36, Jarbo Gap",
+      "address": "Highway 70, Jarbo Gap",
+      "location": {
+        "latitude": 39.739057,
+        "longitude": -121.495992,
+        "pointMeaning": "station",
+        "verificationStatus": "workbook_coordinates_unverified",
+        "datumInWorkbook": null
+      },
+      "workbookGeometry": {
+        "basis": "workbook_cached_formulas",
+        "recalculatedDuringImport": false,
+        "originRef": "us-ca-dixie-2021#historical.origin",
+        "values": {
+          "distanceToOriginKm": 17.2944332020578
+        },
+        "formulaCells": [
+          "E5"
+        ]
+      },
+      "notes": "Closest confirmed station; canyon entrance",
+      "staffing": null,
+      "apparatus": null,
+      "availability": null,
+      "responseTimeMinutes": null,
+      "verification": {
+        "status": "not_independently_verified",
+        "inventoryAsOf": null,
+        "workbookSnapshotAsOf": "2026-11-07",
+        "workbookConfidence": {
+          "sheet": "Summary",
+          "cell": "D7",
+          "text": "Confirmed (4 stations lack coordinates)"
+        },
+        "notes": [
+          "Butte County Fire / CAL FIRE Butte Unit. Distance fills in automatically once coordinates are added.",
+          "Summary mentions four missing station coordinates; the Stations sheet actually has five."
+        ]
+      },
+      "provenance": {
+        "workbookId": "dixie-reference-workbook",
+        "sheet": "Stations",
+        "row": 5,
+        "range": "A5:G5",
+        "sourceRefs": [
+          "source-b228471a2a64"
+        ],
+        "sourceText": [
+          "TopoQuest, CAL FIRE Station 36 Jarbo Gap, https://www.topoquest.com/place-detail.php?id=2622345"
+        ],
+        "inheritedNotes": [
+          {
+            "cell": "A2",
+            "text": "Butte County Fire / CAL FIRE Butte Unit. Distance fills in automatically once coordinates are added."
+          },
+          {
+            "cell": "A12",
+            "text": "Yellow = coordinates to fill in (e.g. from Google Maps)."
+          }
+        ],
+        "cellComments": []
+      }
+    },
+    {
+      "id": "us-ca:station-37-concow",
+      "category": "real_geographic_location",
+      "name": "Concow 37",
+      "address": "3595 Shuman Ln, Oroville, CA 95965",
+      "location": {
+        "latitude": null,
+        "longitude": null,
+        "pointMeaning": "station",
+        "verificationStatus": "coordinates_missing",
+        "datumInWorkbook": null
+      },
+      "workbookGeometry": {
+        "basis": "workbook_cached_formulas",
+        "recalculatedDuringImport": false,
+        "originRef": "us-ca-dixie-2021#historical.origin",
+        "values": {
+          "distanceToOriginKm": null
+        },
+        "formulaCells": [
+          "E6"
+        ]
+      },
+      "notes": "Coordinates not found",
+      "staffing": null,
+      "apparatus": null,
+      "availability": null,
+      "responseTimeMinutes": null,
+      "verification": {
+        "status": "not_independently_verified",
+        "inventoryAsOf": null,
+        "workbookSnapshotAsOf": "2026-11-07",
+        "workbookConfidence": {
+          "sheet": "Summary",
+          "cell": "D7",
+          "text": "Confirmed (4 stations lack coordinates)"
+        },
+        "notes": [
+          "Butte County Fire / CAL FIRE Butte Unit. Distance fills in automatically once coordinates are added.",
+          "Summary mentions four missing station coordinates; the Stations sheet actually has five."
+        ]
+      },
+      "provenance": {
+        "workbookId": "dixie-reference-workbook",
+        "sheet": "Stations",
+        "row": 6,
+        "range": "A6:G6",
+        "sourceRefs": [
+          "source-ca809fed9617"
+        ],
+        "sourceText": [
+          "NERIS, Butte County Fire Department stations, https://neris.fsri.org/departments/FD06007050/stations"
+        ],
+        "inheritedNotes": [
+          {
+            "cell": "A2",
+            "text": "Butte County Fire / CAL FIRE Butte Unit. Distance fills in automatically once coordinates are added."
+          },
+          {
+            "cell": "A12",
+            "text": "Yellow = coordinates to fill in (e.g. from Google Maps)."
+          }
+        ],
+        "cellComments": []
+      }
+    },
+    {
+      "id": "us-ca:station-38-concow-lake",
+      "category": "real_geographic_location",
+      "name": "Concow Lake 38",
+      "address": "12960 Concow Rd, Oroville, CA 95965",
+      "location": {
+        "latitude": null,
+        "longitude": null,
+        "pointMeaning": "station",
+        "verificationStatus": "coordinates_missing",
+        "datumInWorkbook": null
+      },
+      "workbookGeometry": {
+        "basis": "workbook_cached_formulas",
+        "recalculatedDuringImport": false,
+        "originRef": "us-ca-dixie-2021#historical.origin",
+        "values": {
+          "distanceToOriginKm": null
+        },
+        "formulaCells": [
+          "E7"
+        ]
+      },
+      "notes": "Coordinates not found",
+      "staffing": null,
+      "apparatus": null,
+      "availability": null,
+      "responseTimeMinutes": null,
+      "verification": {
+        "status": "not_independently_verified",
+        "inventoryAsOf": null,
+        "workbookSnapshotAsOf": "2026-11-07",
+        "workbookConfidence": {
+          "sheet": "Summary",
+          "cell": "D7",
+          "text": "Confirmed (4 stations lack coordinates)"
+        },
+        "notes": [
+          "Butte County Fire / CAL FIRE Butte Unit. Distance fills in automatically once coordinates are added.",
+          "Summary mentions four missing station coordinates; the Stations sheet actually has five."
+        ]
+      },
+      "provenance": {
+        "workbookId": "dixie-reference-workbook",
+        "sheet": "Stations",
+        "row": 7,
+        "range": "A7:G7",
+        "sourceRefs": [
+          "source-ca809fed9617"
+        ],
+        "sourceText": [
+          "NERIS, Butte County Fire Department stations, https://neris.fsri.org/departments/FD06007050/stations"
+        ],
+        "inheritedNotes": [
+          {
+            "cell": "A2",
+            "text": "Butte County Fire / CAL FIRE Butte Unit. Distance fills in automatically once coordinates are added."
+          },
+          {
+            "cell": "A12",
+            "text": "Yellow = coordinates to fill in (e.g. from Google Maps)."
+          }
+        ],
+        "cellComments": []
+      }
+    },
+    {
+      "id": "us-ca:station-60-brush-creek",
+      "category": "real_geographic_location",
+      "name": "Brush Creek 60",
+      "address": "12845 Oroville Quincy Hwy, Berry Creek, CA 95916",
+      "location": {
+        "latitude": null,
+        "longitude": null,
+        "pointMeaning": "station",
+        "verificationStatus": "coordinates_missing",
+        "datumInWorkbook": null
+      },
+      "workbookGeometry": {
+        "basis": "workbook_cached_formulas",
+        "recalculatedDuringImport": false,
+        "originRef": "us-ca-dixie-2021#historical.origin",
+        "values": {
+          "distanceToOriginKm": null
+        },
+        "formulaCells": [
+          "E8"
+        ]
+      },
+      "notes": "Coordinates not found",
+      "staffing": null,
+      "apparatus": null,
+      "availability": null,
+      "responseTimeMinutes": null,
+      "verification": {
+        "status": "not_independently_verified",
+        "inventoryAsOf": null,
+        "workbookSnapshotAsOf": "2026-11-07",
+        "workbookConfidence": {
+          "sheet": "Summary",
+          "cell": "D7",
+          "text": "Confirmed (4 stations lack coordinates)"
+        },
+        "notes": [
+          "Butte County Fire / CAL FIRE Butte Unit. Distance fills in automatically once coordinates are added.",
+          "Summary mentions four missing station coordinates; the Stations sheet actually has five."
+        ]
+      },
+      "provenance": {
+        "workbookId": "dixie-reference-workbook",
+        "sheet": "Stations",
+        "row": 8,
+        "range": "A8:G8",
+        "sourceRefs": [
+          "source-ca809fed9617"
+        ],
+        "sourceText": [
+          "NERIS, Butte County Fire Department stations, https://neris.fsri.org/departments/FD06007050/stations"
+        ],
+        "inheritedNotes": [
+          {
+            "cell": "A2",
+            "text": "Butte County Fire / CAL FIRE Butte Unit. Distance fills in automatically once coordinates are added."
+          },
+          {
+            "cell": "A12",
+            "text": "Yellow = coordinates to fill in (e.g. from Google Maps)."
+          }
+        ],
+        "cellComments": []
+      }
+    },
+    {
+      "id": "us-ca:station-61-berry-creek",
+      "category": "real_geographic_location",
+      "name": "Berry Creek 61",
+      "address": "280 Rockerfeller Rd, Berry Creek, CA 95916",
+      "location": {
+        "latitude": null,
+        "longitude": null,
+        "pointMeaning": "station",
+        "verificationStatus": "coordinates_missing",
+        "datumInWorkbook": null
+      },
+      "workbookGeometry": {
+        "basis": "workbook_cached_formulas",
+        "recalculatedDuringImport": false,
+        "originRef": "us-ca-dixie-2021#historical.origin",
+        "values": {
+          "distanceToOriginKm": null
+        },
+        "formulaCells": [
+          "E9"
+        ]
+      },
+      "notes": "Coordinates not found",
+      "staffing": null,
+      "apparatus": null,
+      "availability": null,
+      "responseTimeMinutes": null,
+      "verification": {
+        "status": "not_independently_verified",
+        "inventoryAsOf": null,
+        "workbookSnapshotAsOf": "2026-11-07",
+        "workbookConfidence": {
+          "sheet": "Summary",
+          "cell": "D7",
+          "text": "Confirmed (4 stations lack coordinates)"
+        },
+        "notes": [
+          "Butte County Fire / CAL FIRE Butte Unit. Distance fills in automatically once coordinates are added.",
+          "Summary mentions four missing station coordinates; the Stations sheet actually has five."
+        ]
+      },
+      "provenance": {
+        "workbookId": "dixie-reference-workbook",
+        "sheet": "Stations",
+        "row": 9,
+        "range": "A9:G9",
+        "sourceRefs": [
+          "source-ca809fed9617"
+        ],
+        "sourceText": [
+          "NERIS, Butte County Fire Department stations, https://neris.fsri.org/departments/FD06007050/stations"
+        ],
+        "inheritedNotes": [
+          {
+            "cell": "A2",
+            "text": "Butte County Fire / CAL FIRE Butte Unit. Distance fills in automatically once coordinates are added."
+          },
+          {
+            "cell": "A12",
+            "text": "Yellow = coordinates to fill in (e.g. from Google Maps)."
+          }
+        ],
+        "cellComments": []
+      }
+    },
+    {
+      "id": "us-ca:oroville-fs",
+      "category": "real_geographic_location",
+      "name": "Oroville FS",
+      "address": "176 Nelson Ave, Oroville, CA 95965",
+      "location": {
+        "latitude": null,
+        "longitude": null,
+        "pointMeaning": "station",
+        "verificationStatus": "coordinates_missing",
+        "datumInWorkbook": null
+      },
+      "workbookGeometry": {
+        "basis": "workbook_cached_formulas",
+        "recalculatedDuringImport": false,
+        "originRef": "us-ca-dixie-2021#historical.origin",
+        "values": {
+          "distanceToOriginKm": null
+        },
+        "formulaCells": [
+          "E10"
+        ]
+      },
+      "notes": "Coordinates not found",
+      "staffing": null,
+      "apparatus": null,
+      "availability": null,
+      "responseTimeMinutes": null,
+      "verification": {
+        "status": "not_independently_verified",
+        "inventoryAsOf": null,
+        "workbookSnapshotAsOf": "2026-11-07",
+        "workbookConfidence": {
+          "sheet": "Summary",
+          "cell": "D7",
+          "text": "Confirmed (4 stations lack coordinates)"
+        },
+        "notes": [
+          "Butte County Fire / CAL FIRE Butte Unit. Distance fills in automatically once coordinates are added.",
+          "Summary mentions four missing station coordinates; the Stations sheet actually has five."
+        ]
+      },
+      "provenance": {
+        "workbookId": "dixie-reference-workbook",
+        "sheet": "Stations",
+        "row": 10,
+        "range": "A10:G10",
+        "sourceRefs": [
+          "source-ca809fed9617"
+        ],
+        "sourceText": [
+          "NERIS, Butte County Fire Department stations, https://neris.fsri.org/departments/FD06007050/stations"
+        ],
+        "inheritedNotes": [
+          {
+            "cell": "A2",
+            "text": "Butte County Fire / CAL FIRE Butte Unit. Distance fills in automatically once coordinates are added."
+          },
+          {
+            "cell": "A12",
+            "text": "Yellow = coordinates to fill in (e.g. from Google Maps)."
+          }
+        ],
+        "cellComments": []
+      }
+    }
+  ]
+}

@@ -1,0 +1,126 @@
+{
+  "schemaVersion": "1.0.0",
+  "regionId": "us-ca",
+  "records": [
+    {
+      "id": "roads-state",
+      "url": "https://cartowfs.nationalmap.gov/arcgis/rest/services/transportation/MapServer/5",
+      "license": "Public domain (U.S. Government)",
+      "attribution": "USGS The National Map (public domain)",
+      "queryBounds": [
+        -121.58,
+        39.7,
+        -121.2,
+        40.04
+      ],
+      "retrievedOn": "2026-11-07",
+      "sourceRecordCount": 128,
+      "sha256": "1de55d821030d43ce26080549e5d8b07485bf6d88db097fddd9ac10245d643d4",
+      "cachePath": "reference-data/california-map-cache/roads-state.json"
+    },
+    {
+      "id": "roads-local",
+      "url": "https://cartowfs.nationalmap.gov/arcgis/rest/services/transportation/MapServer/7",
+      "license": "Public domain (U.S. Government)",
+      "attribution": "USGS The National Map (public domain)",
+      "queryBounds": [
+        -121.58,
+        39.7,
+        -121.2,
+        40.04
+      ],
+      "retrievedOn": "2026-11-07",
+      "sourceRecordCount": 3661,
+      "sha256": "c91078ad2760360615861c70002c0e560dbd969c4100938fb413ecfbee501e27",
+      "cachePath": "reference-data/california-map-cache/roads-local.json"
+    },
+    {
+      "id": "creeks",
+      "url": "https://hydro.nationalmap.gov/arcgis/rest/services/nhd/MapServer/6",
+      "license": "Public domain (U.S. Government)",
+      "attribution": "USGS The National Map (public domain)",
+      "queryBounds": [
+        -121.58,
+        39.7,
+        -121.2,
+        40.04
+      ],
+      "retrievedOn": "2026-11-07",
+      "sourceRecordCount": 2721,
+      "sha256": "d3ad4f419977a9310e094b0fabc6a5d1b4da328a67e2adc5162c1aa98ad88cb2",
+      "cachePath": "reference-data/california-map-cache/creeks.json"
+    },
+    {
+      "id": "water",
+      "url": "https://hydro.nationalmap.gov/arcgis/rest/services/nhd/MapServer/12",
+      "license": "Public domain (U.S. Government)",
+      "attribution": "USGS The National Map (public domain)",
+      "queryBounds": [
+        -121.58,
+        39.7,
+        -121.2,
+        40.04
+      ],
+      "retrievedOn": "2026-11-07",
+      "sourceRecordCount": 222,
+      "sha256": "738169abe4c3021a1ed8b35a5a01940ca532c0c49c355ffa3a4ff1a37ef8b636",
+      "cachePath": "reference-data/california-map-cache/water.json"
+    },
+    {
+      "id": "towns",
+      "url": "https://cartowfs.nationalmap.gov/arcgis/rest/services/geonames/MapServer/0",
+      "license": "Public domain (U.S. Government)",
+      "attribution": "USGS The National Map (public domain)",
+      "queryBounds": [
+        -121.58,
+        39.7,
+        -121.2,
+        40.04
+      ],
+      "retrievedOn": "2026-11-07",
+      "sourceRecordCount": 29,
+      "sha256": "10bc3e145d2069c58bd4bda86a0bf0130caaabedc3006e881950621202dac6f1",
+      "cachePath": "reference-data/california-map-cache/towns.json"
+    },
+    {
+      "id": "buildings",
+      "url": "https://services6.arcgis.com/Do88DoK2xjTUCXd1/ArcGIS/rest/services/OSM_NA_Buildings/FeatureServer/0",
+      "license": "https://www.openstreetmap.org/copyright",
+      "attribution": "OpenStreetMap contributors, ODbL 1.0",
+      "queryBounds": [
+        -121.58,
+        39.7,
+        -121.2,
+        40.04
+      ],
+      "retrievedOn": "2026-11-07",
+      "sourceRecordCount": 373,
+      "sha256": "45e13b5d7e3780d686e0a90659f45a9dc964b54be4e20a183a3a0b2c52c0bbf6",
+      "cachePath": "reference-data/california-map-cache/buildings.json"
+    },
+    {
+      "id": "structures",
+      "url": "https://cartowfs.nationalmap.gov/arcgis/rest/services/structures/MapServer/0",
+      "license": "Public domain (U.S. Government)",
+      "attribution": "USGS The National Map (public domain)",
+      "queryBounds": [
+        -121.58,
+        39.7,
+        -121.2,
+        40.04
+      ],
+      "retrievedOn": "2026-11-07",
+      "sourceRecordCount": 24,
+      "sha256": "c1f8e192bd9dd6378c771eb9a27ddf61511900d70014bf15f97f214857f0fdbd",
+      "cachePath": "reference-data/california-map-cache/structures.json"
+    }
+  ],
+  "limitations": [
+    "Overpass services were inaccessible (406, timeout, DNS); public USGS and ArcGIS OSM services were used instead.",
+    "No incident-specific power-line geometry verified.",
+    "Building footprints may predate the 2021 fire; these points do not verify current structures or occupancy.",
+    "Hydrography points/polygons do not establish operational water access.",
+    "Source query maxAllowableOffset and local line simplification are 0.00005 degrees; geometry is for display, not routing or exact boundaries.",
+    "Aerial-base existence is documented by Butte County; approximate airport coordinates remain as supplied in the workbook."
+  ]
+}

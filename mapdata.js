@@ -76,6 +76,14 @@
   function load() { return loading || (loading = doLoad()); }
   async function doLoad() {
     try {
+      // Regional geography is independent of the retained Kansas scenario model.
+      // Do not fetch Kansas features or project them into California.
+      if (window.RegionalMap && RegionalMap.active) {
+        await RegionalMap.load();
+        MD.regionalResources = RegionalMap.data.resources;
+        MD.loaded = true;
+        return MD;
+      }
       const raw = await Promise.all(FILES.map(async n => {
         const r = await fetch(`data/${n}.geojson`);
         if (!r.ok) throw new Error(`data/${n}.geojson: HTTP ${r.status}`);

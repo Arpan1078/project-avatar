@@ -1,0 +1,442 @@
+{
+  "schemaVersion": "1.0.0",
+  "regionId": "us-ca",
+  "kind": "water",
+  "workbookId": "dixie-reference-workbook",
+  "records": [
+    {
+      "id": "us-ca:water:north-fork-feather-river",
+      "category": "real_geographic_location",
+      "name": "Feather River, North Fork",
+      "pointUsed": "River below origin",
+      "location": {
+        "latitude": null,
+        "longitude": null,
+        "pointMeaning": "waterbody_point_not_supplied",
+        "verificationStatus": "coordinates_missing",
+        "datumInWorkbook": null
+      },
+      "workbookGeometry": {
+        "basis": "workbook_cached_formulas",
+        "recalculatedDuringImport": false,
+        "originRef": "us-ca-dixie-2021#historical.origin",
+        "values": {
+          "distanceToOriginKm": null
+        },
+        "formulaCells": [
+          "E5"
+        ]
+      },
+      "notes": "Directly below origin; helicopters drew water here in 2021",
+      "availability": null,
+      "accessVerified": null,
+      "scoopingSuitabilityVerified": null,
+      "currentWaterLevel": null,
+      "verification": {
+        "status": "not_independently_verified",
+        "inventoryAsOf": null,
+        "workbookSnapshotAsOf": "2026-11-07",
+        "workbookConfidence": {
+          "sheet": "Summary",
+          "cell": "D9",
+          "text": "Confirmed coordinates"
+        },
+        "notes": [
+          "Dam coordinates mark each reservoir. Distances recalculate from the Inputs tab.",
+          "Dam reference coordinates do not establish a usable intake, dipping site, or scooping corridor. Current access, depth and aviation suitability are unknown."
+        ]
+      },
+      "provenance": {
+        "workbookId": "dixie-reference-workbook",
+        "sheet": "Water",
+        "row": 5,
+        "range": "A5:G5",
+        "sourceRefs": [
+          "source-557c2e6471cf"
+        ],
+        "sourceText": [
+          "Dixie Fire (Wikiwand), https://www.wikiwand.com/en/articles/Dixie_Fire"
+        ],
+        "inheritedNotes": [
+          {
+            "cell": "A2",
+            "text": "Dam coordinates mark each reservoir. Distances recalculate from the Inputs tab."
+          }
+        ],
+        "cellComments": []
+      }
+    },
+    {
+      "id": "us-ca:water:cresta-reservoir",
+      "category": "real_geographic_location",
+      "name": "Cresta Reservoir",
+      "pointUsed": "Cresta Dam",
+      "location": {
+        "latitude": 39.876118,
+        "longitude": -121.373477,
+        "pointMeaning": "dam_reference_point_not_water_access_point",
+        "verificationStatus": "workbook_coordinates_unverified",
+        "datumInWorkbook": null
+      },
+      "workbookGeometry": {
+        "basis": "workbook_cached_formulas",
+        "recalculatedDuringImport": false,
+        "originRef": "us-ca-dixie-2021#historical.origin",
+        "values": {
+          "distanceToOriginKm": 1.46348277730969
+        },
+        "formulaCells": [
+          "E6"
+        ]
+      },
+      "notes": "At the origin",
+      "availability": null,
+      "accessVerified": null,
+      "scoopingSuitabilityVerified": null,
+      "currentWaterLevel": null,
+      "verification": {
+        "status": "not_independently_verified",
+        "inventoryAsOf": null,
+        "workbookSnapshotAsOf": "2026-11-07",
+        "workbookConfidence": {
+          "sheet": "Summary",
+          "cell": "D9",
+          "text": "Confirmed coordinates"
+        },
+        "notes": [
+          "Dam coordinates mark each reservoir. Distances recalculate from the Inputs tab.",
+          "Dam reference coordinates do not establish a usable intake, dipping site, or scooping corridor. Current access, depth and aviation suitability are unknown."
+        ]
+      },
+      "provenance": {
+        "workbookId": "dixie-reference-workbook",
+        "sheet": "Water",
+        "row": 6,
+        "range": "A6:G6",
+        "sourceRefs": [
+          "source-cabcc8eb94c3"
+        ],
+        "sourceText": [
+          "North Fork Feather River (Wikipedia mirror), https://ipfs.aleph.im/ipfs/QmXoypizjW3WknFiJnKLwHCnL72vedxjQkDDP1mXWo6uco/wiki/Feather_River_Canyon.html"
+        ],
+        "inheritedNotes": [
+          {
+            "cell": "A2",
+            "text": "Dam coordinates mark each reservoir. Distances recalculate from the Inputs tab."
+          }
+        ],
+        "cellComments": []
+      }
+    },
+    {
+      "id": "us-ca:water:poe-reservoir",
+      "category": "real_geographic_location",
+      "name": "Poe Reservoir",
+      "pointUsed": "Poe Dam",
+      "location": {
+        "latitude": 39.80944,
+        "longitude": -121.4325,
+        "pointMeaning": "dam_reference_point_not_water_access_point",
+        "verificationStatus": "workbook_coordinates_unverified",
+        "datumInWorkbook": null
+      },
+      "workbookGeometry": {
+        "basis": "workbook_cached_formulas",
+        "recalculatedDuringImport": false,
+        "originRef": "us-ca-dixie-2021#historical.origin",
+        "values": {
+          "distanceToOriginKm": 7.8000039588639
+        },
+        "formulaCells": [
+          "E7"
+        ]
+      },
+      "notes": "Downstream; flows into upper Lake Oroville",
+      "availability": null,
+      "accessVerified": null,
+      "scoopingSuitabilityVerified": null,
+      "currentWaterLevel": null,
+      "verification": {
+        "status": "not_independently_verified",
+        "inventoryAsOf": null,
+        "workbookSnapshotAsOf": "2026-11-07",
+        "workbookConfidence": {
+          "sheet": "Summary",
+          "cell": "D9",
+          "text": "Confirmed coordinates"
+        },
+        "notes": [
+          "Dam coordinates mark each reservoir. Distances recalculate from the Inputs tab.",
+          "Dam reference coordinates do not establish a usable intake, dipping site, or scooping corridor. Current access, depth and aviation suitability are unknown."
+        ]
+      },
+      "provenance": {
+        "workbookId": "dixie-reference-workbook",
+        "sheet": "Water",
+        "row": 7,
+        "range": "A7:G7",
+        "sourceRefs": [
+          "source-42917e809551"
+        ],
+        "sourceText": [
+          "Poe Dam, Wikipedia, https://en.wikipedia.org/wiki/Poe_Dam"
+        ],
+        "inheritedNotes": [
+          {
+            "cell": "A2",
+            "text": "Dam coordinates mark each reservoir. Distances recalculate from the Inputs tab."
+          }
+        ],
+        "cellComments": []
+      }
+    },
+    {
+      "id": "us-ca:water:rock-creek-reservoir",
+      "category": "real_geographic_location",
+      "name": "Rock Creek Reservoir",
+      "pointUsed": "Rock Creek Dam",
+      "location": {
+        "latitude": 39.986919,
+        "longitude": -121.28314,
+        "pointMeaning": "dam_reference_point_not_water_access_point",
+        "verificationStatus": "workbook_coordinates_unverified",
+        "datumInWorkbook": null
+      },
+      "workbookGeometry": {
+        "basis": "workbook_cached_formulas",
+        "recalculatedDuringImport": false,
+        "originRef": "us-ca-dixie-2021#historical.origin",
+        "values": {
+          "distanceToOriginKm": 15.7296546583144
+        },
+        "formulaCells": [
+          "E8"
+        ]
+      },
+      "notes": "Upstream",
+      "availability": null,
+      "accessVerified": null,
+      "scoopingSuitabilityVerified": null,
+      "currentWaterLevel": null,
+      "verification": {
+        "status": "not_independently_verified",
+        "inventoryAsOf": null,
+        "workbookSnapshotAsOf": "2026-11-07",
+        "workbookConfidence": {
+          "sheet": "Summary",
+          "cell": "D9",
+          "text": "Confirmed coordinates"
+        },
+        "notes": [
+          "Dam coordinates mark each reservoir. Distances recalculate from the Inputs tab.",
+          "Dam reference coordinates do not establish a usable intake, dipping site, or scooping corridor. Current access, depth and aviation suitability are unknown."
+        ]
+      },
+      "provenance": {
+        "workbookId": "dixie-reference-workbook",
+        "sheet": "Water",
+        "row": 8,
+        "range": "A8:G8",
+        "sourceRefs": [
+          "source-cabcc8eb94c3"
+        ],
+        "sourceText": [
+          "North Fork Feather River (Wikipedia mirror), https://ipfs.aleph.im/ipfs/QmXoypizjW3WknFiJnKLwHCnL72vedxjQkDDP1mXWo6uco/wiki/Feather_River_Canyon.html"
+        ],
+        "inheritedNotes": [
+          {
+            "cell": "A2",
+            "text": "Dam coordinates mark each reservoir. Distances recalculate from the Inputs tab."
+          }
+        ],
+        "cellComments": []
+      }
+    },
+    {
+      "id": "us-ca:water:belden-forebay",
+      "category": "real_geographic_location",
+      "name": "Belden Forebay",
+      "pointUsed": "Belden Forebay dam",
+      "location": {
+        "latitude": 40.076167,
+        "longitude": -121.160789,
+        "pointMeaning": "dam_reference_point_not_water_access_point",
+        "verificationStatus": "workbook_coordinates_unverified",
+        "datumInWorkbook": null
+      },
+      "workbookGeometry": {
+        "basis": "workbook_cached_formulas",
+        "recalculatedDuringImport": false,
+        "originRef": "us-ca-dixie-2021#historical.origin",
+        "values": {
+          "distanceToOriginKm": 29.9755117113082
+        },
+        "formulaCells": [
+          "E9"
+        ]
+      },
+      "notes": "Upstream",
+      "availability": null,
+      "accessVerified": null,
+      "scoopingSuitabilityVerified": null,
+      "currentWaterLevel": null,
+      "verification": {
+        "status": "not_independently_verified",
+        "inventoryAsOf": null,
+        "workbookSnapshotAsOf": "2026-11-07",
+        "workbookConfidence": {
+          "sheet": "Summary",
+          "cell": "D9",
+          "text": "Confirmed coordinates"
+        },
+        "notes": [
+          "Dam coordinates mark each reservoir. Distances recalculate from the Inputs tab.",
+          "Dam reference coordinates do not establish a usable intake, dipping site, or scooping corridor. Current access, depth and aviation suitability are unknown."
+        ]
+      },
+      "provenance": {
+        "workbookId": "dixie-reference-workbook",
+        "sheet": "Water",
+        "row": 9,
+        "range": "A9:G9",
+        "sourceRefs": [
+          "source-cabcc8eb94c3"
+        ],
+        "sourceText": [
+          "North Fork Feather River (Wikipedia mirror), https://ipfs.aleph.im/ipfs/QmXoypizjW3WknFiJnKLwHCnL72vedxjQkDDP1mXWo6uco/wiki/Feather_River_Canyon.html"
+        ],
+        "inheritedNotes": [
+          {
+            "cell": "A2",
+            "text": "Dam coordinates mark each reservoir. Distances recalculate from the Inputs tab."
+          }
+        ],
+        "cellComments": []
+      }
+    },
+    {
+      "id": "us-ca:water:lake-almanor",
+      "category": "real_geographic_location",
+      "name": "Lake Almanor",
+      "pointUsed": "Canyon Dam",
+      "location": {
+        "latitude": 40.174578,
+        "longitude": -121.087017,
+        "pointMeaning": "dam_reference_point_not_water_access_point",
+        "verificationStatus": "workbook_coordinates_unverified",
+        "datumInWorkbook": null
+      },
+      "workbookGeometry": {
+        "basis": "workbook_cached_formulas",
+        "recalculatedDuringImport": false,
+        "originRef": "us-ca-dixie-2021#historical.origin",
+        "values": {
+          "distanceToOriginKm": 42.4304719620686
+        },
+        "formulaCells": [
+          "E10"
+        ]
+      },
+      "notes": "Large lake; scooping possible",
+      "availability": null,
+      "accessVerified": null,
+      "scoopingSuitabilityVerified": null,
+      "currentWaterLevel": null,
+      "verification": {
+        "status": "not_independently_verified",
+        "inventoryAsOf": null,
+        "workbookSnapshotAsOf": "2026-11-07",
+        "workbookConfidence": {
+          "sheet": "Summary",
+          "cell": "D9",
+          "text": "Confirmed coordinates"
+        },
+        "notes": [
+          "Dam coordinates mark each reservoir. Distances recalculate from the Inputs tab.",
+          "Dam reference coordinates do not establish a usable intake, dipping site, or scooping corridor. Current access, depth and aviation suitability are unknown."
+        ]
+      },
+      "provenance": {
+        "workbookId": "dixie-reference-workbook",
+        "sheet": "Water",
+        "row": 10,
+        "range": "A10:G10",
+        "sourceRefs": [
+          "source-cabcc8eb94c3"
+        ],
+        "sourceText": [
+          "North Fork Feather River (Wikipedia mirror), https://ipfs.aleph.im/ipfs/QmXoypizjW3WknFiJnKLwHCnL72vedxjQkDDP1mXWo6uco/wiki/Feather_River_Canyon.html"
+        ],
+        "inheritedNotes": [
+          {
+            "cell": "A2",
+            "text": "Dam coordinates mark each reservoir. Distances recalculate from the Inputs tab."
+          }
+        ],
+        "cellComments": []
+      }
+    },
+    {
+      "id": "us-ca:water:lake-oroville",
+      "category": "real_geographic_location",
+      "name": "Lake Oroville",
+      "pointUsed": null,
+      "location": {
+        "latitude": null,
+        "longitude": null,
+        "pointMeaning": "waterbody_point_not_supplied",
+        "verificationStatus": "coordinates_missing",
+        "datumInWorkbook": null
+      },
+      "workbookGeometry": {
+        "basis": "workbook_cached_formulas",
+        "recalculatedDuringImport": false,
+        "originRef": "us-ca-dixie-2021#historical.origin",
+        "values": {
+          "distanceToOriginKm": null
+        },
+        "formulaCells": [
+          "E11"
+        ]
+      },
+      "notes": "Large lake downstream; scooping possible; coordinates not pulled",
+      "availability": null,
+      "accessVerified": null,
+      "scoopingSuitabilityVerified": null,
+      "currentWaterLevel": null,
+      "verification": {
+        "status": "not_independently_verified",
+        "inventoryAsOf": null,
+        "workbookSnapshotAsOf": "2026-11-07",
+        "workbookConfidence": {
+          "sheet": "Summary",
+          "cell": "D9",
+          "text": "Confirmed coordinates"
+        },
+        "notes": [
+          "Dam coordinates mark each reservoir. Distances recalculate from the Inputs tab.",
+          "Dam reference coordinates do not establish a usable intake, dipping site, or scooping corridor. Current access, depth and aviation suitability are unknown."
+        ]
+      },
+      "provenance": {
+        "workbookId": "dixie-reference-workbook",
+        "sheet": "Water",
+        "row": 11,
+        "range": "A11:G11",
+        "sourceRefs": [
+          "source-42917e809551"
+        ],
+        "sourceText": [
+          "Poe Dam, Wikipedia, https://en.wikipedia.org/wiki/Poe_Dam"
+        ],
+        "inheritedNotes": [
+          {
+            "cell": "A2",
+            "text": "Dam coordinates mark each reservoir. Distances recalculate from the Inputs tab."
+          }
+        ],
+        "cellComments": []
+      }
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "1.0.0",
+  "regions": [
+    {
+      "id": "us-ca",
+      "manifest": "california/region.json",
+      "lifecycle": "geography_only"
+    }
+  ],
+  "notes": [
+    "The script data-region attribute selects the active manifest; this registry remains available for a future region selector.",
+    "Kansas data remains archived in data/*.geojson and story.js. It is not requested by the active California map."
+  ]
+}

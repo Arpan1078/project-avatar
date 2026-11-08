@@ -1,0 +1,48 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "us-ca",
+  "slug": "california",
+  "name": "California",
+  "countryCode": "US",
+  "subdivisionCode": "US-CA",
+  "timezone": "America/Los_Angeles",
+  "lifecycle": "geography_only",
+  "enabledInDashboard": true,
+  "coordinates": {
+    "format": "named_decimal_degree_latitude_longitude",
+    "sourceDatum": "not_explicitly_stated_in_workbook",
+    "missingValue": null
+  },
+  "incidents": [
+    {
+      "id": "us-ca-dixie-2021",
+      "path": "dixie-incident.json",
+      "replayIds": [
+        "us-ca-dixie-2026-hypothetical"
+      ]
+    }
+  ],
+  "collections": {
+    "cameras": "cameras.json",
+    "stations": "stations.json",
+    "aviation": "aircraft.json",
+    "water": "water.json",
+    "timeline": "timeline.json"
+  },
+  "sourcesPath": "sources.json",
+  "workbookSnapshotPath": "workbook-source.json",
+  "categories": [
+    "verified_historical_fact",
+    "real_geographic_location",
+    "current_resource_inventory",
+    "hypothetical_2026_observation",
+    "simulated_firewatch_behavior",
+    "unknown_unverified"
+  ],
+  "verifiedCurrentInventory": [],
+  "notes": [
+    "Phase 2 geographic view only. Legacy dashboard timelines are not Dixie progression.",
+    "Resource presence does not imply availability. Unknown coordinates remain omitted."
+  ],
+  "mapConfigPath": "map.json"
+}

@@ -1,0 +1,44 @@
+{
+  "schemaVersion": "1.0.0",
+  "regionId": "us-ca",
+  "incidentId": "us-ca-dixie-2021",
+  "mode": "geography_only",
+  "title": "Dixie Fire - Feather River Canyon",
+  "origin": {
+    "latitude": 39.871306,
+    "longitude": -121.389439
+  },
+  "camera": {
+    "headingDegrees": 15,
+    "pitchDegrees": -55,
+    "rangeMeters": 65000
+  },
+  "contextBounds": [
+    -121.58,
+    39.7,
+    -121.2,
+    40.04
+  ],
+  "resourceBounds": [
+    -122,
+    39.4,
+    -120.8,
+    40.3
+  ],
+  "geographicLayers": {
+    "roads": "geography/roads.geojson",
+    "buildings": "geography/buildings.geojson",
+    "water": "geography/water.geojson",
+    "creeks": "geography/creeks.geojson",
+    "towns": "geography/towns.geojson",
+    "powerlines": "geography/powerlines.geojson"
+  },
+  "mapSourcesPath": "geography/sources.json",
+  "resourceOverridesPath": "geography/resource-verification.json",
+  "notes": [
+    "No fire progression, forecast zone, power-line fault or synthetic satellite detections are drawn in Phase 2.",
+    "Camera facing is the workbook November 2026 snapshot, not verified 2021 pointing.",
+    "No power-line geometry is rendered without independent route verification."
+  ],
+  "utilityGeometryVerified": false
+}

@@ -1,0 +1,617 @@
+{
+  "schemaVersion": "1.0.0",
+  "regionId": "us-ca",
+  "kind": "cameras",
+  "workbookId": "dixie-reference-workbook",
+  "records": [
+    {
+      "id": "us-ca:camera:baldmtnbutte-cam01",
+      "category": "real_geographic_location",
+      "externalId": "baldmtnbutte-cam01",
+      "name": "Bald Mtn. (Butte) 1",
+      "location": {
+        "latitude": 39.952499,
+        "longitude": -121.482498,
+        "pointMeaning": "camera_mount",
+        "verificationStatus": "workbook_coordinates_unverified",
+        "datumInWorkbook": null
+      },
+      "elevationMeters": 1762,
+      "orientationSnapshot": {
+        "facingDegrees": 148.13,
+        "fieldOfViewDegrees": 62.8,
+        "asOf": "2026-11-07",
+        "observedAt": null,
+        "basis": "workbook_reports_public_camera_list_snapshot",
+        "dynamic": true
+      },
+      "workbookGeometry": {
+        "basis": "workbook_cached_formulas",
+        "recalculatedDuringImport": false,
+        "originRef": "us-ca-dixie-2021#historical.origin",
+        "values": {
+          "distanceToOriginKm": 12.0210538276717,
+          "bearingToOriginDegrees": 138.650457933512
+        },
+        "formulaCells": [
+          "H5",
+          "I5"
+        ],
+        "originInHorizontalView": true,
+        "withinConfiguredRange": true,
+        "classificationCells": [
+          "J5",
+          "K5"
+        ],
+        "terrainLineOfSightVerified": false,
+        "notEvidenceOfDetection": true
+      },
+      "availability": null,
+      "detectionTimestamp": null,
+      "verification": {
+        "status": "not_independently_verified",
+        "inventoryAsOf": null,
+        "workbookSnapshotAsOf": "2026-11-07",
+        "workbookConfidence": {
+          "sheet": "Summary",
+          "cell": "D10",
+          "text": "Confirmed positions; view can change (cameras pan)"
+        },
+        "notes": [
+          "Positions and facing from the public camera list, read Nov 7, 2026. Cameras pan, so 'Facing' is a snapshot. List may be incomplete (file was read partially).",
+          "The list was only partially read. Facing and field of view are snapshots, not current coverage guarantees.",
+          "Horizontal alignment does not establish terrain visibility or smoke detection."
+        ]
+      },
+      "provenance": {
+        "workbookId": "dixie-reference-workbook",
+        "sheet": "Cameras",
+        "row": 5,
+        "range": "A5:K5",
+        "sourceRefs": [
+          "source-c2da81094ab5"
+        ],
+        "sourceText": [
+          "Source: ALERTCalifornia public camera list (read Nov 7, 2026), https://cameras.alertcalifornia.org/public-camera-data/all_cameras-v3.json"
+        ],
+        "inheritedNotes": [
+          {
+            "cell": "A2",
+            "text": "Positions and facing from the public camera list, read Nov 7, 2026. Cameras pan, so 'Facing' is a snapshot. List may be incomplete (file was read partially)."
+          },
+          {
+            "cell": "A13",
+            "text": "Source: ALERTCalifornia public camera list (read Nov 7, 2026), https://cameras.alertcalifornia.org/public-camera-data/all_cameras-v3.json"
+          },
+          {
+            "cell": "A14",
+            "text": "Blue = recorded values; black = formulas."
+          }
+        ],
+        "cellComments": []
+      }
+    },
+    {
+      "id": "us-ca:camera:baldmtnbutte-cam02",
+      "category": "real_geographic_location",
+      "externalId": "baldmtnbutte-cam02",
+      "name": "Bald Mtn. (Butte) 2",
+      "location": {
+        "latitude": 39.952499,
+        "longitude": -121.482498,
+        "pointMeaning": "camera_mount",
+        "verificationStatus": "workbook_coordinates_unverified",
+        "datumInWorkbook": null
+      },
+      "elevationMeters": 1762,
+      "orientationSnapshot": {
+        "facingDegrees": 350.95,
+        "fieldOfViewDegrees": 62.8,
+        "asOf": "2026-11-07",
+        "observedAt": null,
+        "basis": "workbook_reports_public_camera_list_snapshot",
+        "dynamic": true
+      },
+      "workbookGeometry": {
+        "basis": "workbook_cached_formulas",
+        "recalculatedDuringImport": false,
+        "originRef": "us-ca-dixie-2021#historical.origin",
+        "values": {
+          "distanceToOriginKm": 12.0210538276717,
+          "bearingToOriginDegrees": 138.650457933512
+        },
+        "formulaCells": [
+          "H6",
+          "I6"
+        ],
+        "originInHorizontalView": false,
+        "withinConfiguredRange": true,
+        "classificationCells": [
+          "J6",
+          "K6"
+        ],
+        "terrainLineOfSightVerified": false,
+        "notEvidenceOfDetection": true
+      },
+      "availability": null,
+      "detectionTimestamp": null,
+      "verification": {
+        "status": "not_independently_verified",
+        "inventoryAsOf": null,
+        "workbookSnapshotAsOf": "2026-11-07",
+        "workbookConfidence": {
+          "sheet": "Summary",
+          "cell": "D10",
+          "text": "Confirmed positions; view can change (cameras pan)"
+        },
+        "notes": [
+          "Positions and facing from the public camera list, read Nov 7, 2026. Cameras pan, so 'Facing' is a snapshot. List may be incomplete (file was read partially).",
+          "The list was only partially read. Facing and field of view are snapshots, not current coverage guarantees.",
+          "Horizontal alignment does not establish terrain visibility or smoke detection."
+        ]
+      },
+      "provenance": {
+        "workbookId": "dixie-reference-workbook",
+        "sheet": "Cameras",
+        "row": 6,
+        "range": "A6:K6",
+        "sourceRefs": [
+          "source-c2da81094ab5"
+        ],
+        "sourceText": [
+          "Source: ALERTCalifornia public camera list (read Nov 7, 2026), https://cameras.alertcalifornia.org/public-camera-data/all_cameras-v3.json"
+        ],
+        "inheritedNotes": [
+          {
+            "cell": "A2",
+            "text": "Positions and facing from the public camera list, read Nov 7, 2026. Cameras pan, so 'Facing' is a snapshot. List may be incomplete (file was read partially)."
+          },
+          {
+            "cell": "A13",
+            "text": "Source: ALERTCalifornia public camera list (read Nov 7, 2026), https://cameras.alertcalifornia.org/public-camera-data/all_cameras-v3.json"
+          },
+          {
+            "cell": "A14",
+            "text": "Blue = recorded values; black = formulas."
+          }
+        ],
+        "cellComments": []
+      }
+    },
+    {
+      "id": "us-ca:camera:baldeaglemtn-cam01",
+      "category": "real_geographic_location",
+      "externalId": "baldeaglemtn-cam01",
+      "name": "Bald Eagle Mtn. 1",
+      "location": {
+        "latitude": 39.938406,
+        "longitude": -121.236002,
+        "pointMeaning": "camera_mount",
+        "verificationStatus": "workbook_coordinates_unverified",
+        "datumInWorkbook": null
+      },
+      "elevationMeters": 2188,
+      "orientationSnapshot": {
+        "facingDegrees": 229.83,
+        "fieldOfViewDegrees": 17.64,
+        "asOf": "2026-11-07",
+        "observedAt": null,
+        "basis": "workbook_reports_public_camera_list_snapshot",
+        "dynamic": true
+      },
+      "workbookGeometry": {
+        "basis": "workbook_cached_formulas",
+        "recalculatedDuringImport": false,
+        "originRef": "us-ca-dixie-2021#historical.origin",
+        "values": {
+          "distanceToOriginKm": 15.0653698526213,
+          "bearingToOriginDegrees": 240.362716050571
+        },
+        "formulaCells": [
+          "H7",
+          "I7"
+        ],
+        "originInHorizontalView": false,
+        "withinConfiguredRange": true,
+        "classificationCells": [
+          "J7",
+          "K7"
+        ],
+        "terrainLineOfSightVerified": false,
+        "notEvidenceOfDetection": true
+      },
+      "availability": null,
+      "detectionTimestamp": null,
+      "verification": {
+        "status": "not_independently_verified",
+        "inventoryAsOf": null,
+        "workbookSnapshotAsOf": "2026-11-07",
+        "workbookConfidence": {
+          "sheet": "Summary",
+          "cell": "D10",
+          "text": "Confirmed positions; view can change (cameras pan)"
+        },
+        "notes": [
+          "Positions and facing from the public camera list, read Nov 7, 2026. Cameras pan, so 'Facing' is a snapshot. List may be incomplete (file was read partially).",
+          "The list was only partially read. Facing and field of view are snapshots, not current coverage guarantees.",
+          "Horizontal alignment does not establish terrain visibility or smoke detection."
+        ]
+      },
+      "provenance": {
+        "workbookId": "dixie-reference-workbook",
+        "sheet": "Cameras",
+        "row": 7,
+        "range": "A7:K7",
+        "sourceRefs": [
+          "source-c2da81094ab5"
+        ],
+        "sourceText": [
+          "Source: ALERTCalifornia public camera list (read Nov 7, 2026), https://cameras.alertcalifornia.org/public-camera-data/all_cameras-v3.json"
+        ],
+        "inheritedNotes": [
+          {
+            "cell": "A2",
+            "text": "Positions and facing from the public camera list, read Nov 7, 2026. Cameras pan, so 'Facing' is a snapshot. List may be incomplete (file was read partially)."
+          },
+          {
+            "cell": "A13",
+            "text": "Source: ALERTCalifornia public camera list (read Nov 7, 2026), https://cameras.alertcalifornia.org/public-camera-data/all_cameras-v3.json"
+          },
+          {
+            "cell": "A14",
+            "text": "Blue = recorded values; black = formulas."
+          }
+        ],
+        "cellComments": []
+      }
+    },
+    {
+      "id": "us-ca:camera:baldeaglemtn-cam02",
+      "category": "real_geographic_location",
+      "externalId": "baldeaglemtn-cam02",
+      "name": "Bald Eagle Mtn. 2",
+      "location": {
+        "latitude": 39.938406,
+        "longitude": -121.236002,
+        "pointMeaning": "camera_mount",
+        "verificationStatus": "workbook_coordinates_unverified",
+        "datumInWorkbook": null
+      },
+      "elevationMeters": 2188,
+      "orientationSnapshot": {
+        "facingDegrees": 117.98,
+        "fieldOfViewDegrees": 65.1,
+        "asOf": "2026-11-07",
+        "observedAt": null,
+        "basis": "workbook_reports_public_camera_list_snapshot",
+        "dynamic": true
+      },
+      "workbookGeometry": {
+        "basis": "workbook_cached_formulas",
+        "recalculatedDuringImport": false,
+        "originRef": "us-ca-dixie-2021#historical.origin",
+        "values": {
+          "distanceToOriginKm": 15.0653698526213,
+          "bearingToOriginDegrees": 240.362716050571
+        },
+        "formulaCells": [
+          "H8",
+          "I8"
+        ],
+        "originInHorizontalView": false,
+        "withinConfiguredRange": true,
+        "classificationCells": [
+          "J8",
+          "K8"
+        ],
+        "terrainLineOfSightVerified": false,
+        "notEvidenceOfDetection": true
+      },
+      "availability": null,
+      "detectionTimestamp": null,
+      "verification": {
+        "status": "not_independently_verified",
+        "inventoryAsOf": null,
+        "workbookSnapshotAsOf": "2026-11-07",
+        "workbookConfidence": {
+          "sheet": "Summary",
+          "cell": "D10",
+          "text": "Confirmed positions; view can change (cameras pan)"
+        },
+        "notes": [
+          "Positions and facing from the public camera list, read Nov 7, 2026. Cameras pan, so 'Facing' is a snapshot. List may be incomplete (file was read partially).",
+          "The list was only partially read. Facing and field of view are snapshots, not current coverage guarantees.",
+          "Horizontal alignment does not establish terrain visibility or smoke detection."
+        ]
+      },
+      "provenance": {
+        "workbookId": "dixie-reference-workbook",
+        "sheet": "Cameras",
+        "row": 8,
+        "range": "A8:K8",
+        "sourceRefs": [
+          "source-c2da81094ab5"
+        ],
+        "sourceText": [
+          "Source: ALERTCalifornia public camera list (read Nov 7, 2026), https://cameras.alertcalifornia.org/public-camera-data/all_cameras-v3.json"
+        ],
+        "inheritedNotes": [
+          {
+            "cell": "A2",
+            "text": "Positions and facing from the public camera list, read Nov 7, 2026. Cameras pan, so 'Facing' is a snapshot. List may be incomplete (file was read partially)."
+          },
+          {
+            "cell": "A13",
+            "text": "Source: ALERTCalifornia public camera list (read Nov 7, 2026), https://cameras.alertcalifornia.org/public-camera-data/all_cameras-v3.json"
+          },
+          {
+            "cell": "A14",
+            "text": "Blue = recorded values; black = formulas."
+          }
+        ],
+        "cellComments": []
+      }
+    },
+    {
+      "id": "us-ca:camera:bloomer-cam01",
+      "category": "real_geographic_location",
+      "externalId": "bloomer-cam01",
+      "name": "Bloomer Lookout 1",
+      "location": {
+        "latitude": 39.651001,
+        "longitude": -121.463402,
+        "pointMeaning": "camera_mount",
+        "verificationStatus": "workbook_coordinates_unverified",
+        "datumInWorkbook": null
+      },
+      "elevationMeters": 895,
+      "orientationSnapshot": {
+        "facingDegrees": 129.2,
+        "fieldOfViewDegrees": 18.17,
+        "asOf": "2026-11-07",
+        "observedAt": null,
+        "basis": "workbook_reports_public_camera_list_snapshot",
+        "dynamic": true
+      },
+      "workbookGeometry": {
+        "basis": "workbook_cached_formulas",
+        "recalculatedDuringImport": false,
+        "originRef": "us-ca-dixie-2021#historical.origin",
+        "values": {
+          "distanceToOriginKm": 25.2994975335018,
+          "bearingToOriginDegrees": 14.4475628956295
+        },
+        "formulaCells": [
+          "H9",
+          "I9"
+        ],
+        "originInHorizontalView": false,
+        "withinConfiguredRange": true,
+        "classificationCells": [
+          "J9",
+          "K9"
+        ],
+        "terrainLineOfSightVerified": false,
+        "notEvidenceOfDetection": true
+      },
+      "availability": null,
+      "detectionTimestamp": null,
+      "verification": {
+        "status": "not_independently_verified",
+        "inventoryAsOf": null,
+        "workbookSnapshotAsOf": "2026-11-07",
+        "workbookConfidence": {
+          "sheet": "Summary",
+          "cell": "D10",
+          "text": "Confirmed positions; view can change (cameras pan)"
+        },
+        "notes": [
+          "Positions and facing from the public camera list, read Nov 7, 2026. Cameras pan, so 'Facing' is a snapshot. List may be incomplete (file was read partially).",
+          "The list was only partially read. Facing and field of view are snapshots, not current coverage guarantees.",
+          "Horizontal alignment does not establish terrain visibility or smoke detection."
+        ]
+      },
+      "provenance": {
+        "workbookId": "dixie-reference-workbook",
+        "sheet": "Cameras",
+        "row": 9,
+        "range": "A9:K9",
+        "sourceRefs": [
+          "source-c2da81094ab5"
+        ],
+        "sourceText": [
+          "Source: ALERTCalifornia public camera list (read Nov 7, 2026), https://cameras.alertcalifornia.org/public-camera-data/all_cameras-v3.json"
+        ],
+        "inheritedNotes": [
+          {
+            "cell": "A2",
+            "text": "Positions and facing from the public camera list, read Nov 7, 2026. Cameras pan, so 'Facing' is a snapshot. List may be incomplete (file was read partially)."
+          },
+          {
+            "cell": "A13",
+            "text": "Source: ALERTCalifornia public camera list (read Nov 7, 2026), https://cameras.alertcalifornia.org/public-camera-data/all_cameras-v3.json"
+          },
+          {
+            "cell": "A14",
+            "text": "Blue = recorded values; black = formulas."
+          }
+        ],
+        "cellComments": []
+      }
+    },
+    {
+      "id": "us-ca:camera:bloomer-cam02",
+      "category": "real_geographic_location",
+      "externalId": "bloomer-cam02",
+      "name": "Bloomer Lookout 2",
+      "location": {
+        "latitude": 39.651001,
+        "longitude": -121.463402,
+        "pointMeaning": "camera_mount",
+        "verificationStatus": "workbook_coordinates_unverified",
+        "datumInWorkbook": null
+      },
+      "elevationMeters": 895,
+      "orientationSnapshot": {
+        "facingDegrees": 273.96,
+        "fieldOfViewDegrees": 43.54,
+        "asOf": "2026-11-07",
+        "observedAt": null,
+        "basis": "workbook_reports_public_camera_list_snapshot",
+        "dynamic": true
+      },
+      "workbookGeometry": {
+        "basis": "workbook_cached_formulas",
+        "recalculatedDuringImport": false,
+        "originRef": "us-ca-dixie-2021#historical.origin",
+        "values": {
+          "distanceToOriginKm": 25.2994975335018,
+          "bearingToOriginDegrees": 14.4475628956295
+        },
+        "formulaCells": [
+          "H10",
+          "I10"
+        ],
+        "originInHorizontalView": false,
+        "withinConfiguredRange": true,
+        "classificationCells": [
+          "J10",
+          "K10"
+        ],
+        "terrainLineOfSightVerified": false,
+        "notEvidenceOfDetection": true
+      },
+      "availability": null,
+      "detectionTimestamp": null,
+      "verification": {
+        "status": "not_independently_verified",
+        "inventoryAsOf": null,
+        "workbookSnapshotAsOf": "2026-11-07",
+        "workbookConfidence": {
+          "sheet": "Summary",
+          "cell": "D10",
+          "text": "Confirmed positions; view can change (cameras pan)"
+        },
+        "notes": [
+          "Positions and facing from the public camera list, read Nov 7, 2026. Cameras pan, so 'Facing' is a snapshot. List may be incomplete (file was read partially).",
+          "The list was only partially read. Facing and field of view are snapshots, not current coverage guarantees.",
+          "Horizontal alignment does not establish terrain visibility or smoke detection."
+        ]
+      },
+      "provenance": {
+        "workbookId": "dixie-reference-workbook",
+        "sheet": "Cameras",
+        "row": 10,
+        "range": "A10:K10",
+        "sourceRefs": [
+          "source-c2da81094ab5"
+        ],
+        "sourceText": [
+          "Source: ALERTCalifornia public camera list (read Nov 7, 2026), https://cameras.alertcalifornia.org/public-camera-data/all_cameras-v3.json"
+        ],
+        "inheritedNotes": [
+          {
+            "cell": "A2",
+            "text": "Positions and facing from the public camera list, read Nov 7, 2026. Cameras pan, so 'Facing' is a snapshot. List may be incomplete (file was read partially)."
+          },
+          {
+            "cell": "A13",
+            "text": "Source: ALERTCalifornia public camera list (read Nov 7, 2026), https://cameras.alertcalifornia.org/public-camera-data/all_cameras-v3.json"
+          },
+          {
+            "cell": "A14",
+            "text": "Blue = recorded values; black = formulas."
+          }
+        ],
+        "cellComments": []
+      }
+    },
+    {
+      "id": "us-ca:camera:baldmtnlaporte-cam01",
+      "category": "real_geographic_location",
+      "externalId": "baldmtnlaporte-cam01",
+      "name": "Bald Mtn. La Porte 1",
+      "location": {
+        "latitude": 39.69688,
+        "longitude": -120.980133,
+        "pointMeaning": "camera_mount",
+        "verificationStatus": "workbook_coordinates_unverified",
+        "datumInWorkbook": null
+      },
+      "elevationMeters": 1777,
+      "orientationSnapshot": {
+        "facingDegrees": 326.17,
+        "fieldOfViewDegrees": 65.1,
+        "asOf": "2026-11-07",
+        "observedAt": null,
+        "basis": "workbook_reports_public_camera_list_snapshot",
+        "dynamic": true
+      },
+      "workbookGeometry": {
+        "basis": "workbook_cached_formulas",
+        "recalculatedDuringImport": false,
+        "originRef": "us-ca-dixie-2021#historical.origin",
+        "values": {
+          "distanceToOriginKm": 39.9926490200624,
+          "bearingToOriginDegrees": 299.141429207829
+        },
+        "formulaCells": [
+          "H11",
+          "I11"
+        ],
+        "originInHorizontalView": true,
+        "withinConfiguredRange": true,
+        "classificationCells": [
+          "J11",
+          "K11"
+        ],
+        "terrainLineOfSightVerified": false,
+        "notEvidenceOfDetection": true
+      },
+      "availability": null,
+      "detectionTimestamp": null,
+      "verification": {
+        "status": "not_independently_verified",
+        "inventoryAsOf": null,
+        "workbookSnapshotAsOf": "2026-11-07",
+        "workbookConfidence": {
+          "sheet": "Summary",
+          "cell": "D10",
+          "text": "Confirmed positions; view can change (cameras pan)"
+        },
+        "notes": [
+          "Positions and facing from the public camera list, read Nov 7, 2026. Cameras pan, so 'Facing' is a snapshot. List may be incomplete (file was read partially).",
+          "The list was only partially read. Facing and field of view are snapshots, not current coverage guarantees.",
+          "Horizontal alignment does not establish terrain visibility or smoke detection."
+        ]
+      },
+      "provenance": {
+        "workbookId": "dixie-reference-workbook",
+        "sheet": "Cameras",
+        "row": 11,
+        "range": "A11:K11",
+        "sourceRefs": [
+          "source-c2da81094ab5"
+        ],
+        "sourceText": [
+          "Source: ALERTCalifornia public camera list (read Nov 7, 2026), https://cameras.alertcalifornia.org/public-camera-data/all_cameras-v3.json"
+        ],
+        "inheritedNotes": [
+          {
+            "cell": "A2",
+            "text": "Positions and facing from the public camera list, read Nov 7, 2026. Cameras pan, so 'Facing' is a snapshot. List may be incomplete (file was read partially)."
+          },
+          {
+            "cell": "A13",
+            "text": "Source: ALERTCalifornia public camera list (read Nov 7, 2026), https://cameras.alertcalifornia.org/public-camera-data/all_cameras-v3.json"
+          },
+          {
+            "cell": "A14",
+            "text": "Blue = recorded values; black = formulas."
+          }
+        ],
+        "cellComments": []
+      }
+    }
+  ]
+}

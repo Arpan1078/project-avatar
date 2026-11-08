@@ -1,0 +1,542 @@
+{
+  "schemaVersion": "1.0.0",
+  "regionId": "us-ca",
+  "kind": "aviation",
+  "workbookId": "dixie-reference-workbook",
+  "records": [
+    {
+      "id": "us-ca:aviation:chico-regional-airport",
+      "category": "real_geographic_location",
+      "recordType": "base",
+      "name": "Chico Regional Airport",
+      "typeFromWorkbook": "CAL FIRE air attack / airtanker base",
+      "locationName": "Chico",
+      "location": {
+        "latitude": 39.7954,
+        "longitude": -121.8584,
+        "pointMeaning": "airport_reference_point_not_dispatch_location",
+        "verificationStatus": "approximate_team_estimate",
+        "datumInWorkbook": null
+      },
+      "workbookGeometry": {
+        "basis": "workbook_cached_formulas",
+        "recalculatedDuringImport": false,
+        "originRef": "us-ca-dixie-2021#historical.origin",
+        "values": {
+          "distanceToOriginKm": 40.9234041951236
+        },
+        "formulaCells": [
+          "F5"
+        ]
+      },
+      "capabilityClaim": {
+        "category": "unknown_unverified",
+        "text": "Initial attack airtankers; one of 14 California airtanker bases",
+        "verified": false
+      },
+      "aircraftCount": null,
+      "tailNumbers": null,
+      "availability": null,
+      "contractedForFireResponse": null,
+      "cardedForFireResponse": null,
+      "responseTimeMinutes": null,
+      "verification": {
+        "status": "not_independently_verified",
+        "inventoryAsOf": null,
+        "workbookSnapshotAsOf": "2026-11-07",
+        "workbookConfidence": {
+          "sheet": "Summary",
+          "cell": "D8",
+          "text": "Confirmed bases; operator fleets unverified"
+        },
+        "notes": [
+          "Ag operators are from business directories; current fleets and fire contracts are not verified. In California, ag aircraft help only when carded and contracted as single engine air tankers.",
+          "Aircraft!D5 cell comment marks airport coordinates as approximate (team estimate). No fleet or operational readiness established."
+        ]
+      },
+      "provenance": {
+        "workbookId": "dixie-reference-workbook",
+        "sheet": "Aircraft",
+        "row": 5,
+        "range": "A5:H5",
+        "sourceRefs": [
+          "source-a63fcb5459fd"
+        ],
+        "sourceText": [
+          "Butte County, Chico Air Attack Base, https://www.buttecounty.ca.gov/563/Chico-Air-Attack-Base"
+        ],
+        "inheritedNotes": [
+          {
+            "cell": "A2",
+            "text": "Ag operators are from business directories; current fleets and fire contracts are not verified. In California, ag aircraft help only when carded and contracted as single engine air tankers."
+          },
+          {
+            "cell": "A13",
+            "text": "Single engine air tanker (AT-802): about 800 gal per load. Fire Boss version can scoop from large lakes (e.g. Lake Oroville, Lake Almanor)."
+          }
+        ],
+        "cellComments": [
+          {
+            "cell": "D5",
+            "author": "Unknown Author",
+            "text": "Approximate airport coordinates (team estimate)."
+          }
+        ]
+      }
+    },
+    {
+      "id": "us-ca:aviation:aero-flite",
+      "category": "unknown_unverified",
+      "recordType": "operator",
+      "name": "Aero-Flite",
+      "typeFromWorkbook": "Airtanker operator (hangar)",
+      "locationName": "Chico Regional Airport",
+      "location": {
+        "latitude": null,
+        "longitude": null,
+        "pointMeaning": "operator_location",
+        "verificationStatus": "coordinates_missing",
+        "datumInWorkbook": null
+      },
+      "workbookGeometry": {
+        "basis": "workbook_cached_formulas",
+        "recalculatedDuringImport": false,
+        "originRef": "us-ca-dixie-2021#historical.origin",
+        "values": {
+          "distanceToOriginKm": null
+        },
+        "formulaCells": [
+          "F6"
+        ]
+      },
+      "capabilityClaim": {
+        "category": "unknown_unverified",
+        "text": "Large airtankers (RJ85, Dash 8-400AT, CL-415 fleet)",
+        "verified": false
+      },
+      "aircraftCount": null,
+      "tailNumbers": null,
+      "availability": null,
+      "contractedForFireResponse": null,
+      "cardedForFireResponse": null,
+      "responseTimeMinutes": null,
+      "verification": {
+        "status": "not_independently_verified",
+        "inventoryAsOf": null,
+        "workbookSnapshotAsOf": "2026-11-07",
+        "workbookConfidence": {
+          "sheet": "Summary",
+          "cell": "D8",
+          "text": "Confirmed bases; operator fleets unverified"
+        },
+        "notes": [
+          "Ag operators are from business directories; current fleets and fire contracts are not verified. In California, ag aircraft help only when carded and contracted as single engine air tankers.",
+          "This is an operator listing, not a verified aircraft or dispatchable resource. Do not copy Chico airport coordinates into an operator record."
+        ]
+      },
+      "provenance": {
+        "workbookId": "dixie-reference-workbook",
+        "sheet": "Aircraft",
+        "row": 6,
+        "range": "A6:H6",
+        "sourceRefs": [
+          "source-e5e4e7143215"
+        ],
+        "sourceText": [
+          "Aerial Fire Magazine, Aero-Flite hangar in Chico (2024), https://aerialfiremag.com/2024/03/11/aero-flite-establishes-hangar-base-in-chico-california"
+        ],
+        "inheritedNotes": [
+          {
+            "cell": "A2",
+            "text": "Ag operators are from business directories; current fleets and fire contracts are not verified. In California, ag aircraft help only when carded and contracted as single engine air tankers."
+          },
+          {
+            "cell": "A13",
+            "text": "Single engine air tanker (AT-802): about 800 gal per load. Fire Boss version can scoop from large lakes (e.g. Lake Oroville, Lake Almanor)."
+          }
+        ],
+        "cellComments": []
+      }
+    },
+    {
+      "id": "us-ca:aviation:porter-flying-services",
+      "category": "unknown_unverified",
+      "recordType": "operator",
+      "name": "Porter Flying Services",
+      "typeFromWorkbook": "Ag aviation operator",
+      "locationName": "Chico",
+      "location": {
+        "latitude": null,
+        "longitude": null,
+        "pointMeaning": "operator_location",
+        "verificationStatus": "coordinates_missing",
+        "datumInWorkbook": null
+      },
+      "workbookGeometry": {
+        "basis": "workbook_cached_formulas",
+        "recalculatedDuringImport": false,
+        "originRef": "us-ca-dixie-2021#historical.origin",
+        "values": {
+          "distanceToOriginKm": null
+        },
+        "formulaCells": [
+          "F7"
+        ]
+      },
+      "capabilityClaim": {
+        "category": "unknown_unverified",
+        "text": "Possible single engine air tanker if carded/contracted",
+        "verified": false
+      },
+      "aircraftCount": null,
+      "tailNumbers": null,
+      "availability": null,
+      "contractedForFireResponse": null,
+      "cardedForFireResponse": null,
+      "responseTimeMinutes": null,
+      "verification": {
+        "status": "not_independently_verified",
+        "inventoryAsOf": null,
+        "workbookSnapshotAsOf": "2026-11-07",
+        "workbookConfidence": {
+          "sheet": "Summary",
+          "cell": "D8",
+          "text": "Confirmed bases; operator fleets unverified"
+        },
+        "notes": [
+          "Ag operators are from business directories; current fleets and fire contracts are not verified. In California, ag aircraft help only when carded and contracted as single engine air tankers.",
+          "This is an operator listing, not a verified aircraft or dispatchable resource. Do not copy Chico airport coordinates into an operator record."
+        ]
+      },
+      "provenance": {
+        "workbookId": "dixie-reference-workbook",
+        "sheet": "Aircraft",
+        "row": 7,
+        "range": "A7:H7",
+        "sourceRefs": [
+          "source-b37a68a90690"
+        ],
+        "sourceText": [
+          "https://naicslist.com/company-profile/porter-flying-services-inc-chico-ca-95928"
+        ],
+        "inheritedNotes": [
+          {
+            "cell": "A2",
+            "text": "Ag operators are from business directories; current fleets and fire contracts are not verified. In California, ag aircraft help only when carded and contracted as single engine air tankers."
+          },
+          {
+            "cell": "A13",
+            "text": "Single engine air tanker (AT-802): about 800 gal per load. Fire Boss version can scoop from large lakes (e.g. Lake Oroville, Lake Almanor)."
+          }
+        ],
+        "cellComments": []
+      }
+    },
+    {
+      "id": "us-ca:aviation:jones-aviation",
+      "category": "unknown_unverified",
+      "recordType": "operator",
+      "name": "Jones Aviation",
+      "typeFromWorkbook": "Ag aviation operator (private airstrip CL23)",
+      "locationName": "Biggs",
+      "location": {
+        "latitude": null,
+        "longitude": null,
+        "pointMeaning": "operator_location",
+        "verificationStatus": "coordinates_missing",
+        "datumInWorkbook": null
+      },
+      "workbookGeometry": {
+        "basis": "workbook_cached_formulas",
+        "recalculatedDuringImport": false,
+        "originRef": "us-ca-dixie-2021#historical.origin",
+        "values": {
+          "distanceToOriginKm": null
+        },
+        "formulaCells": [
+          "F8"
+        ]
+      },
+      "capabilityClaim": {
+        "category": "unknown_unverified",
+        "text": "Possible single engine air tanker if carded/contracted",
+        "verified": false
+      },
+      "aircraftCount": null,
+      "tailNumbers": null,
+      "availability": null,
+      "contractedForFireResponse": null,
+      "cardedForFireResponse": null,
+      "responseTimeMinutes": null,
+      "verification": {
+        "status": "not_independently_verified",
+        "inventoryAsOf": null,
+        "workbookSnapshotAsOf": "2026-11-07",
+        "workbookConfidence": {
+          "sheet": "Summary",
+          "cell": "D8",
+          "text": "Confirmed bases; operator fleets unverified"
+        },
+        "notes": [
+          "Ag operators are from business directories; current fleets and fire contracts are not verified. In California, ag aircraft help only when carded and contracted as single engine air tankers.",
+          "This is an operator listing, not a verified aircraft or dispatchable resource. Do not copy Chico airport coordinates into an operator record."
+        ]
+      },
+      "provenance": {
+        "workbookId": "dixie-reference-workbook",
+        "sheet": "Aircraft",
+        "row": 8,
+        "range": "A8:H8",
+        "sourceRefs": [
+          "source-3143929f814d"
+        ],
+        "sourceText": [
+          "https://naicslist.com/company-profile/jones-aviation-biggs-ca-95917"
+        ],
+        "inheritedNotes": [
+          {
+            "cell": "A2",
+            "text": "Ag operators are from business directories; current fleets and fire contracts are not verified. In California, ag aircraft help only when carded and contracted as single engine air tankers."
+          },
+          {
+            "cell": "A13",
+            "text": "Single engine air tanker (AT-802): about 800 gal per load. Fire Boss version can scoop from large lakes (e.g. Lake Oroville, Lake Almanor)."
+          }
+        ],
+        "cellComments": []
+      }
+    },
+    {
+      "id": "us-ca:aviation:c-and-j-applicators",
+      "category": "unknown_unverified",
+      "recordType": "operator",
+      "name": "C & J Applicators",
+      "typeFromWorkbook": "Ag aviation operator",
+      "locationName": "Gridley",
+      "location": {
+        "latitude": null,
+        "longitude": null,
+        "pointMeaning": "operator_location",
+        "verificationStatus": "coordinates_missing",
+        "datumInWorkbook": null
+      },
+      "workbookGeometry": {
+        "basis": "workbook_cached_formulas",
+        "recalculatedDuringImport": false,
+        "originRef": "us-ca-dixie-2021#historical.origin",
+        "values": {
+          "distanceToOriginKm": null
+        },
+        "formulaCells": [
+          "F9"
+        ]
+      },
+      "capabilityClaim": {
+        "category": "unknown_unverified",
+        "text": "Possible single engine air tanker if carded/contracted",
+        "verified": false
+      },
+      "aircraftCount": null,
+      "tailNumbers": null,
+      "availability": null,
+      "contractedForFireResponse": null,
+      "cardedForFireResponse": null,
+      "responseTimeMinutes": null,
+      "verification": {
+        "status": "not_independently_verified",
+        "inventoryAsOf": null,
+        "workbookSnapshotAsOf": "2026-11-07",
+        "workbookConfidence": {
+          "sheet": "Summary",
+          "cell": "D8",
+          "text": "Confirmed bases; operator fleets unverified"
+        },
+        "notes": [
+          "Ag operators are from business directories; current fleets and fire contracts are not verified. In California, ag aircraft help only when carded and contracted as single engine air tankers.",
+          "This is an operator listing, not a verified aircraft or dispatchable resource. Do not copy Chico airport coordinates into an operator record."
+        ]
+      },
+      "provenance": {
+        "workbookId": "dixie-reference-workbook",
+        "sheet": "Aircraft",
+        "row": 9,
+        "range": "A9:H9",
+        "sourceRefs": [
+          "source-d10ba0b03c0c"
+        ],
+        "sourceText": [
+          "https://naicslist.com/company-profile/c-j-applicators-inc-gridley-ca-95948"
+        ],
+        "inheritedNotes": [
+          {
+            "cell": "A2",
+            "text": "Ag operators are from business directories; current fleets and fire contracts are not verified. In California, ag aircraft help only when carded and contracted as single engine air tankers."
+          },
+          {
+            "cell": "A13",
+            "text": "Single engine air tanker (AT-802): about 800 gal per load. Fire Boss version can scoop from large lakes (e.g. Lake Oroville, Lake Almanor)."
+          }
+        ],
+        "cellComments": []
+      }
+    },
+    {
+      "id": "us-ca:aviation:pacific-valley-aviation",
+      "category": "unknown_unverified",
+      "recordType": "operator",
+      "name": "Pacific Valley Aviation",
+      "typeFromWorkbook": "Ag aviation operator",
+      "locationName": "Colusa",
+      "location": {
+        "latitude": null,
+        "longitude": null,
+        "pointMeaning": "operator_location",
+        "verificationStatus": "coordinates_missing",
+        "datumInWorkbook": null
+      },
+      "workbookGeometry": {
+        "basis": "workbook_cached_formulas",
+        "recalculatedDuringImport": false,
+        "originRef": "us-ca-dixie-2021#historical.origin",
+        "values": {
+          "distanceToOriginKm": null
+        },
+        "formulaCells": [
+          "F10"
+        ]
+      },
+      "capabilityClaim": {
+        "category": "unknown_unverified",
+        "text": "Possible single engine air tanker if carded/contracted",
+        "verified": false
+      },
+      "aircraftCount": null,
+      "tailNumbers": null,
+      "availability": null,
+      "contractedForFireResponse": null,
+      "cardedForFireResponse": null,
+      "responseTimeMinutes": null,
+      "verification": {
+        "status": "not_independently_verified",
+        "inventoryAsOf": null,
+        "workbookSnapshotAsOf": "2026-11-07",
+        "workbookConfidence": {
+          "sheet": "Summary",
+          "cell": "D8",
+          "text": "Confirmed bases; operator fleets unverified"
+        },
+        "notes": [
+          "Ag operators are from business directories; current fleets and fire contracts are not verified. In California, ag aircraft help only when carded and contracted as single engine air tankers.",
+          "This is an operator listing, not a verified aircraft or dispatchable resource. Do not copy Chico airport coordinates into an operator record."
+        ]
+      },
+      "provenance": {
+        "workbookId": "dixie-reference-workbook",
+        "sheet": "Aircraft",
+        "row": 10,
+        "range": "A10:H10",
+        "sourceRefs": [
+          "source-92bb57b7e976"
+        ],
+        "sourceText": [
+          "https://naicslist.com/company-profile/pacific-valley-aviation-inc-colusa-ca-95932"
+        ],
+        "inheritedNotes": [
+          {
+            "cell": "A2",
+            "text": "Ag operators are from business directories; current fleets and fire contracts are not verified. In California, ag aircraft help only when carded and contracted as single engine air tankers."
+          },
+          {
+            "cell": "A13",
+            "text": "Single engine air tanker (AT-802): about 800 gal per load. Fire Boss version can scoop from large lakes (e.g. Lake Oroville, Lake Almanor)."
+          }
+        ],
+        "cellComments": []
+      }
+    },
+    {
+      "id": "us-ca:aviation:andersons-flying-service",
+      "category": "unknown_unverified",
+      "recordType": "operator",
+      "name": "Anderson's Flying Service",
+      "typeFromWorkbook": "Ag aviation operator",
+      "locationName": "Yuba City",
+      "location": {
+        "latitude": null,
+        "longitude": null,
+        "pointMeaning": "operator_location",
+        "verificationStatus": "coordinates_missing",
+        "datumInWorkbook": null
+      },
+      "workbookGeometry": {
+        "basis": "workbook_cached_formulas",
+        "recalculatedDuringImport": false,
+        "originRef": "us-ca-dixie-2021#historical.origin",
+        "values": {
+          "distanceToOriginKm": null
+        },
+        "formulaCells": [
+          "F11"
+        ]
+      },
+      "capabilityClaim": {
+        "category": "unknown_unverified",
+        "text": "Possible single engine air tanker if carded/contracted",
+        "verified": false
+      },
+      "aircraftCount": null,
+      "tailNumbers": null,
+      "availability": null,
+      "contractedForFireResponse": null,
+      "cardedForFireResponse": null,
+      "responseTimeMinutes": null,
+      "verification": {
+        "status": "not_independently_verified",
+        "inventoryAsOf": null,
+        "workbookSnapshotAsOf": "2026-11-07",
+        "workbookConfidence": {
+          "sheet": "Summary",
+          "cell": "D8",
+          "text": "Confirmed bases; operator fleets unverified"
+        },
+        "notes": [
+          "Ag operators are from business directories; current fleets and fire contracts are not verified. In California, ag aircraft help only when carded and contracted as single engine air tankers.",
+          "This is an operator listing, not a verified aircraft or dispatchable resource. Do not copy Chico airport coordinates into an operator record."
+        ]
+      },
+      "provenance": {
+        "workbookId": "dixie-reference-workbook",
+        "sheet": "Aircraft",
+        "row": 11,
+        "range": "A11:H11",
+        "sourceRefs": [
+          "source-afdbb2e864a1"
+        ],
+        "sourceText": [
+          "https://naicslist.com/company-profile/andersons-flying-service-inc-yuba-city-ca-95991"
+        ],
+        "inheritedNotes": [
+          {
+            "cell": "A2",
+            "text": "Ag operators are from business directories; current fleets and fire contracts are not verified. In California, ag aircraft help only when carded and contracted as single engine air tankers."
+          },
+          {
+            "cell": "A13",
+            "text": "Single engine air tanker (AT-802): about 800 gal per load. Fire Boss version can scoop from large lakes (e.g. Lake Oroville, Lake Almanor)."
+          }
+        ],
+        "cellComments": []
+      }
+    }
+  ],
+  "verifiedCurrentInventory": [],
+  "inventoryNote": "No individually identified aircraft or current fleet/availability verified in Phase 1. Records are bases/operators, not aircraft assets.",
+  "generalCapabilityClaim": {
+    "category": "unknown_unverified",
+    "text": "Single engine air tanker (AT-802): about 800 gal per load. Fire Boss version can scoop from large lakes (e.g. Lake Oroville, Lake Almanor).",
+    "provenance": {
+      "sheet": "Aircraft",
+      "cell": "A13"
+    }
+  }
+}
