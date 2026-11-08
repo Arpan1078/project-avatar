@@ -12,28 +12,40 @@
 
    MAP STATE (built in index.html, one per scenario step):
      {
-       layers:      { spread, houses, water, stations, power, burns, risk, wind }  chip on/off
+       layers:      { spread, houses, water, stations, power, burns, risk, wind, sat, help }  chip on/off
        view:        'district' | 'burn'          which CAMERAS preset to use
        wind:        { towardDeg, mph }           direction the wind blows TO, speed
        fires: {
-         A: { place, acres, cones, card } | null    fire with forecast cones
-         B: { place, acres, card } | null           a second fire (e.g. the planned burn)
+         A: { place, acres, type, path, card } | null   main fire; path = show the "Likely path, next hour" zone
+         B: { place, acres, type, card } | null         a second fire (e.g. the planned burn)
        }
-         place = a key of PLACES; card = { tone: 'orange'|'cream', title, sub }
+         place = a key of PLACES; type = a key of FIRE_TYPES (fire-types.js), default 'wildfire'
+         card = { tone: a FIRE_TYPES key | 'cream', title, sub }
          (sub 'lineDistance' = live distance of the fire head from the power line)
        firebreak, reporter, route, lineFault, burnArea:  true/false
-       homesInPath: a key of HOME_GROUPS or null (those homes turn orange)
-       homesCard:   { group, title, sub } | null
-       goes:        GOES detections from satellite.js (drawn as ~2 km squares)
+       burnAreaTone: 'planned' | 'escaped'       registered area outline: amber, or red once broken
+       homesCard:   { title, sub } | null        card over the homes in the path
+       goes:        GOES detections from satellite.js (drawn as soft ~2 km heat glows)
        firms:       FIRMS VIIRS hotspots from satellite.js (drawn as ~375 m squares + ring)
+       help:        { from: [e, n] | null, status: { deptId: 'available'|'headsup'|'busy' }, lineTo: [deptId] }
+                    real fire departments: status dots, dashed lines from `from` to `lineTo`
      }
+   Real buildings are "in the path" when they are inside fire A's likely-path
+   zone (or inside the fire itself). Map3D.pathHomes(fireA, towardDeg) gives
+   the same answer to the dashboard (homes only), so the counts match the map.
+
+   WHAT IS REAL AND WHAT IS SIMULATED
+   Real (data/*.geojson via mapdata.js): water, creeks, power lines, roads
+   (the station route), buildings, towns and fire departments.
+   Simulated (story.js): the fire start (on a real power line), the district
+   station, the planned burn, the neighbor, the water truck, the district
+   boundary and the weekend burns.
 
    HOW TO MOVE THINGS
-   Every feature is placed in MILES EAST and MILES NORTH of the Cottonwood
-   Creek fire start, written as [east, north]. Negative east = west,
-   negative north = south.
-   - To move the whole district somewhere else, change ORIGIN only.
-   - To move one feature, change its [east, north] pair in section 2.
+   Story positions are in MILES EAST and MILES NORTH of the fire start,
+   written as [east, north] (negative east = west, negative north = south).
+   They are all in story.js. Moving ORIGIN moves the whole story; the real
+   data then needs re-downloading for the new area (scripts/fetch-data.py).
    Fire shapes and the firebreak are built in the WIND FRAME: "along" =
    miles downwind of the fire's start point, "across" = miles to the right.
    ===================================================================== */
@@ -42,22 +54,17 @@
 
   /* ---------- 1. Anchor point and unit conversion ---------- */
 
-  // The Cottonwood Creek fire start (where the power line drops into the grass).
-  // Real terrain: Red Hills / Gyp Hills, western Barber County, Kansas.
-  // Creek valleys here sit around 520 m with ridges at 560 to 600 m.
-  const ORIGIN = { lat: 37.200, lon: -98.985 };
-
-  const METERS_PER_MILE = 1609.344;
-  const METERS_PER_DEG_LAT = 111320;
+  // The story's anchor (the fire start on a real power line) and every story
+  // position come from story.js; the real map features come from mapdata.js
+  // (data/*.geojson). Positions are miles [east, north] of the fire start.
+  const STORY = window.STORY;
+  const MD = window.MapData;
+  const ORIGIN = STORY.ORIGIN;
+  const METERS_PER_MILE = STORY.METERS_PER_MILE;
+  const METERS_PER_DEG_LAT = STORY.METERS_PER_DEG_LAT;
 
   // [east, north] in miles  ->  [lon, lat] in degrees.
-  // A flat approximation; accurate to well under 1% over a 25-mile district.
-  function lonLat(p) {
-    const lat = ORIGIN.lat + (p[1] * METERS_PER_MILE) / METERS_PER_DEG_LAT;
-    const lon = ORIGIN.lon + (p[0] * METERS_PER_MILE) /
-      (METERS_PER_DEG_LAT * Math.cos(ORIGIN.lat * Math.PI / 180));
-    return [lon, lat];
-  }
+  const lonLat = STORY.toLonLat;
   // [east, north] in miles -> Cesium position (height 0; entities are
   // clamped to the terrain, so the height is ignored).
   function pos(p) {
@@ -65,81 +72,35 @@
     return Cesium.Cartesian3.fromDegrees(lon, lat);
   }
   const posList = list => list.map(pos);
+  const posLL = ll => Cesium.Cartesian3.fromDegrees(ll[0], ll[1]);
 
 
-  /* ---------- 2. Map features (all in miles [east, north] of the fire start) ---------- */
+  /* ---------- 2. Map features ---------- */
 
-  // District boundary, roughly 24 x 19 mi, so about 450 sq mi.
-  const DISTRICT_CORNERS = [[-10.0, 8.2], [14.0, 8.6], [14.3, -10.9], [-9.8, -10.5]];
+  // Simulated story positions (story.js).
+  const DISTRICT_CORNERS = STORY.DISTRICT_CORNERS;
+  const STATION = STORY.STATION;
+  const REPORTER = STORY.REPORTER;
+  const BURNS = STORY.BURNS;
+  const SECTION_22 = STORY.SECTION_22;
+  const PLACES = STORY.PLACES;
+  const CAMERAS = STORY.CAMERAS;
 
-  // Oil-lease power line, running WSW to ENE through the fire start.
-  const POWER_LINE = {
-    from: [-9.6, -0.96],
-    to:   [13.8,  1.38],
-    poleEveryMi: 1,          // one pole marker per mile
-    riskHalfWidthMi: 0.55    // "Fire risk today" band, each side of the line
-  };
-
-  // Fire station: 11 mi straight-line SE of the fire start,
-  // so the fire start is 11 mi NW of the station (7.78 = 11 / sqrt 2).
-  const STATION = [7.78, -7.78];
-  const MUTUAL_AID = [-9.3, -5.6];   // neighboring department, near the west edge
-
-  // Gravel route from the station to the back of the fire (shown from 2:04).
-  // Winds NW along ridge and creek roads. About 12 road miles.
-  const ROUTE = [
-    STATION, [6.80, -7.78], [6.55, -7.20], [6.10, -6.70], [5.70, -6.05],
-    [5.05, -5.40], [4.45, -4.70], [3.95, -4.20], [3.50, -3.60], [3.50, -2.00],
-    [2.80, -1.75], [2.10, -1.40], [1.40, -1.10], [0.80, -0.90], [0.40, -0.55],
-    [0.15, -0.20]
-  ];
-
-  // Homes. HOME_GROUPS below says which ones turn orange ("in the path").
-  const HOMES = [
-    [0.48, 2.45],     // 0  \
-    [0.95, 2.02],     // 1   > 3 homes ~2.2 to 2.5 mi downwind (NNE) of the
-    [0.62, 2.20],     // 2  /  Cottonwood Creek fire start (1 = the rancher)
-    [5.80, -1.60],    // 3
-    [-5.60, 0.40],    // 4
-    [10.50, 4.00],    // 5
-    [-7.60, 4.60],    // 6
-    [5.90, -4.40],    // 7  \  2 homes ~1.2 and ~1.6 mi NE (downwind) of the
-    [6.20, -4.15]     // 8  /  planned-burn escape
-  ];
-  const HOME_GROUPS = { fire: [0, 1, 2], escape: [7, 8] };
-
-  // Water sources.
-  const STOCK_POND = { at: [-0.55, 1.15], semiMajorM: 130, semiMinorM: 85 };
-  const TANK = [-2.4, 0.75];
-  const WATER_TRUCK = [1.5, -0.3];
-
-  // Neighbor who sends the photo at 1:59. A dashed line runs to the fire.
-  const REPORTER = [3.1, 0.55];
-
-  // Permitted burns from the weekend (both out).
-  const BURNS = [
-    { at: [6.6, -3.4],  radiusMi: 0.45, label: 'Permitted burn, Sat (out)' },
-    { at: [-4.4, -3.6], radiusMi: 0.35, label: 'Permitted burn, Sun (out)' }
-  ];
-
-  // "Planned burn" scenario: the registered burn area. A half-mile square
-  // (160 acres) of pasture about 4 mi NW of the fire station, just SW of the
-  // gravel road, so an escape to the NE "jumps the road".
-  const SECTION_22 = {
-    center: [4.6, -5.6],
-    halfMi: 0.25,                          // 0.5 mi x 0.5 mi = 160 acres
-    label: 'Registered burn: Section 22, 10:00 am to 2:00 pm'
-  };
-
-  // Where each fire starts (a fire grows downwind from its start point).
-  const PLACES = {
-    line:   [0, 0],                                                        // Cottonwood Creek fire
-    burn:   [SECTION_22.center[0] - 0.18, SECTION_22.center[1] - 0.18],     // lit in the SW of Section 22
-    escape: [SECTION_22.center[0] + 0.42, SECTION_22.center[1] + 0.42]      // 0.6 mi NE of the section center, across the road
+  // Real features (mapdata.js): drawing settings.
+  const REAL = {
+    water: { fill: '#A8D4F2', alpha: 0.85, edge: '#6FAED9', edgeWidth: 1.5 },
+    creek: { color: '#7FBDEB', alpha: 0.9, width: 1.5 },
+    power: { color: '#EDE3CF', alpha: 0.85, width: 2, transmissionWidth: 2.8, poleEveryMi: 0.5, riskHalfWidthMi: 0.55 },
+    building: { size: 6 },
+    // Real fire departments ("Help nearby"): status dot colors, how many get a
+    // dashed line from the fire, and how many get an edge arrow when off screen.
+    // (Status colors: STORY.HELP_STATUS in story.js.)
+    help: { lines: 3, arrows: 6, labelMaxDistanceM: 140000 },
+    waterLabelMaxDistanceM: 30000
   };
 
   // Wind (defaults; each scenario sets its own direction and speed).
-  // The fire shapes, forecast cones, streaks and compass all follow the
+  // The fire shapes, likely-path zone, streaks and compass all follow the
   // direction set here, so they always agree.
   const WIND = {
     towardDeg: 20,           // direction the wind blows TO (clockwise from north)
@@ -174,27 +135,19 @@
     smokePuffs: 36      // smoke billboards drifting downwind from a head
   };
 
-  // Fire path forecast cones. They start at the HEAD of fire A and point
-  // downwind. The facts panel says the head moves 2 to 3 mph, so ~1.25 mi per 30 min.
+  // "Likely path, next hour": one zone from the HEAD of fire A, pointing
+  // downwind. The facts panel says the head moves 2 to 3 mph, so ~2.5 mi in 60 min.
   // widen/extraMi: half-width at the far edge = fire half-width * widen + extraMi.
-  const CONES = [
-    { key: 'c60', label: 'in 60 min', aheadMi: 2.5,  widen: 2.4, extraMi: 0.6, fill: 0.08, edge: 0.45, z: 2 },
-    { key: 'c30', label: 'in 30 min', aheadMi: 1.25, widen: 1.6, extraMi: 0.3, fill: 0.14, edge: 0.7,  z: 3 }
-  ];
+  const ZONE = {
+    label: 'Likely path, next hour',
+    aheadMi: 2.5, widen: 2.4, extraMi: 0.6,
+    color: '#F26B2E', fill: 0.17, edge: 0.75, edgeWidth: 1.5, z: 3
+  };
 
   // Firebreak the rancher discs (Cottonwood Creek fire, from 1:59). WIND FRAME:
   // it runs across the fire's path, perpendicular to the wind, between the fire
-  // head (~1.5 mi downwind at 2:22) and the 3 homes (~2.2 to 2.5 mi downwind).
+  // head (~1.5 mi downwind at 2:22) and the real buildings ~2.0 to 2.4 mi downwind.
   const FIREBREAK_WIND = { alongMi: 1.85, halfLengthMi: 0.75, wobbleMi: 0.025 };
-
-  // Starting cameras, looking downwind, tilted 45 degrees down.
-  //   district: the fire, the station and the area the fire spreads into
-  //             (fits on a 1440 x 900 screen in Simple and Full view).
-  //   burn:     closer view of Section 22, the escape and the homes downwind.
-  const CAMERAS = {
-    district: { target: [3.5, -2.8], headingDeg: 20, pitchDeg: -45, rangeM: 32000 },
-    burn:     { target: [5.1, -5.6], headingDeg: 30, pitchDeg: -45, rangeM: 12500 }
-  };
 
   // Scene look.
   const LOOK = {
@@ -222,9 +175,22 @@
     burn: '#6E665C', bg: '#15120F'
   };
   const col = (hex, a = 1) => Cesium.Color.fromCssColorString(hex).withAlpha(a);
-  // GOES pixel color by fire mask: low = yellow, medium = amber, high = orange,
-  // processed / saturated = red (cloud-contaminated = muted amber).
-  const GOES_MASK_COLOR = { 15: '#F2D13A', 14: '#F2A93A', 13: '#F26B2E', 10: '#E0352B', 11: '#E0352B', 12: '#B9A27A' };
+  // GOES heat glow color by fire mask: low = pale yellow, medium = amber,
+  // high = orange, processed / saturated = orange-red with a brighter center
+  // (cloud-contaminated = muted amber).
+  const GOES_MASK_COLOR = { 15: '#F5E08A', 14: '#F2A93A', 13: '#F26B2E', 10: '#FF4A1C', 11: '#FF4A1C', 12: '#B9A27A' };
+  const GOES_HOT_MASKS = [10, 11];
+  // Glow shape. The glow is a soft round blob centered on the pixel, fully
+  // transparent at radiusFactor x the pixel size (2 km). Neighboring pixels
+  // (2 km apart) overlap enough that they blend into one patch, with no seam.
+  const GOES_GLOW = {
+    radiusFactor: 1.0,     // glow radius = 1 pixel width (it fades long before that)
+    peakAlpha: 0.38,       // translucent, so the fire and terrain show through
+    sigma: 0.46,           // softness (share of the radius)
+    hotCenter: '#FFD27A',  // brighter center for processed / saturated fire
+    hitRadiusFactor: 0.6   // click / hover counts within 0.6 x radius of the center (or inside the pixel)
+  };
+  const fireType = key => (window.FIRE_TYPES && window.FIRE_TYPES[key]) || window.FIRE_TYPES.wildfire;
   const NO_TOKEN_TITLE = 'Add your Cesium ion token to config.js';
 
 
@@ -325,18 +291,21 @@
     };
   }
 
-  // Forecast cone from the fire head out to a curved front edge.
-  function coneGeometry(g, cone) {
+  // Likely-path zone from the fire head out to a curved front edge. It starts
+  // a little behind the tip and as wide as the fire, so it overlaps the head
+  // (it is drawn under the fire) and homes right beside the head count as in the path.
+  function zoneGeometry(g) {
     const [h0, hc] = g.headW, o = g.origin;
-    const base = Math.max(g.s.b * 0.5, 0.04);
-    const far = h0 + cone.aheadMi;
-    const hw = g.s.b * cone.widen + cone.extraMi;
+    const base = Math.max(g.s.b, 0.04);
+    const start = h0 - g.s.a * 0.3;
+    const far = h0 + ZONE.aheadMi;
+    const hw = g.s.b * ZONE.widen + ZONE.extraMi;
     const front = [];
     for (let j = 0; j <= 12; j++) {
       const u = -1 + j / 6;                       // -1 .. 1 across the front
       front.push(fireFrame(far - 0.25 * hw * u * u, hc + hw * u, o));
     }
-    const left = fireFrame(h0, hc - base, o), right = fireFrame(h0, hc + base, o);
+    const left = fireFrame(start, hc - base, o), right = fireFrame(start, hc + base, o);
     return {
       fill: [left].concat(front, [right]),
       edge: [left].concat(front, [right]),   // open: no line across the fire head
@@ -344,20 +313,71 @@
     };
   }
 
-  // Perpendicular distance (miles) from a point to the power line.
-  function distanceToPowerLine(p) {
-    const [x1, y1] = POWER_LINE.from, [x2, y2] = POWER_LINE.to;
-    return Math.abs((x2 - x1) * (y1 - p[1]) - (x1 - p[0]) * (y2 - y1)) / Math.hypot(x2 - x1, y2 - y1);
-  }
+  // Distance (miles) from a point to the nearest real power line.
+  const distanceToPowerLine = p => MD.distanceToPower(p);
 
-  function insideDistrict(p) {
+  // Is point p inside polygon c (both in [east, north] miles)?
+  function insidePolygon(p, c) {
     let inside = false;
-    const c = DISTRICT_CORNERS;
     for (let i = 0, j = c.length - 1; i < c.length; j = i++) {
       if ((c[i][1] > p[1]) !== (c[j][1] > p[1]) &&
           p[0] < ((c[j][0] - c[i][0]) * (p[1] - c[i][1])) / (c[j][1] - c[i][1]) + c[i][0]) inside = !inside;
     }
     return inside;
+  }
+  const insideDistrict = p => insidePolygon(p, DISTRICT_CORNERS);
+
+  // Real buildings in the path of fire A (indices into MapData.buildings):
+  // inside its likely-path zone, or inside the fire itself. Pure math, so it
+  // also works without a token. Uses the fire's final size for the step.
+  //   pathBuildings: every building in the path (drawn orange)
+  //   pathHomes:     only those that count as homes (houses + unlabeled buildings)
+  function pathBuildings(specA, towardDeg) {
+    if (!specA || !specA.path || !PLACES[specA.place] || !MD.loaded) return [];
+    const keep = WIND.towardDeg;
+    setBearing(towardDeg ?? keep);
+    const g = fireGeometry(fireSize(specA.acres), PLACES[specA.place]);
+    const zone = zoneGeometry(g).fill;
+    setBearing(keep);
+    const box = bboxOf(zone.concat(g.outline));
+    const out = [];
+    MD.buildings.forEach((b, i) => {
+      const [x, y] = b.p;
+      if (x < box[0] || x > box[2] || y < box[1] || y > box[3]) return;
+      if (insidePolygon(b.p, zone) || insidePolygon(b.p, g.outline)) out.push(i);
+    });
+    return out;
+  }
+  const pathHomes = (specA, towardDeg) => pathBuildings(specA, towardDeg).filter(i => MD.buildings[i].home);
+  function bboxOf(pts) {
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const [x, y] of pts) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }
+    return [x0, y0, x1, y1];
+  }
+
+  // Points every `step` miles along a polyline (pole dots).
+  function alongLine(pts, step) {
+    const out = [];
+    let carry = step / 2;
+    for (let i = 1; i < pts.length; i++) {
+      const a = pts[i - 1], b = pts[i], L = Math.hypot(b[0] - a[0], b[1] - a[1]);
+      let t = carry;
+      while (t <= L) { out.push([a[0] + ((b[0] - a[0]) * t) / L, a[1] + ((b[1] - a[1]) * t) / L]); t += step; }
+      carry = t - L;
+    }
+    return out;
+  }
+  // Left and right copies of a polyline, `d` miles to each side (for the risk band).
+  function offsetLine(pts, d) {
+    const left = [], right = [];
+    for (let i = 0; i < pts.length; i++) {
+      const a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)];
+      const dx = b[0] - a[0], dy = b[1] - a[1], L = Math.hypot(dx, dy) || 1;
+      const nx = -dy / L * d, ny = dx / L * d;
+      left.push([pts[i][0] + nx, pts[i][1] + ny]);
+      right.push([pts[i][0] - nx, pts[i][1] - ny]);
+    }
+    return [left, right];
   }
 
   // Firebreak points for the current wind direction (in front of the line fire).
@@ -398,6 +418,20 @@
     g.strokeStyle = stroke; g.lineWidth = 1; g.strokeRect(1, 1, w, h);
   });
 
+  // Small fire station icon: a dark house shape with a cream outline and an orange flame.
+  function fireStationIcon() {
+    return canvas(18, 18, g => {
+      g.beginPath();
+      g.moveTo(9, 1.5); g.lineTo(16.5, 7.5); g.lineTo(16.5, 16.5); g.lineTo(1.5, 16.5); g.lineTo(1.5, 7.5); g.closePath();
+      g.fillStyle = '#221E19'; g.fill();
+      g.strokeStyle = HEX.cream; g.lineWidth = 1.5; g.stroke();
+      g.beginPath();
+      g.moveTo(9, 6.5); g.bezierCurveTo(12, 9.5, 12.5, 11.5, 11.8, 13.2); g.bezierCurveTo(11, 15.2, 7, 15.2, 6.2, 13.2);
+      g.bezierCurveTo(5.6, 11.6, 6.8, 10.4, 7.6, 9.4); g.bezierCurveTo(7.9, 10.6, 8.4, 11, 8.9, 11.2); g.bezierCurveTo(9.4, 9.8, 9.4, 8.2, 9, 6.5);
+      g.fillStyle = HEX.fire; g.fill();
+    });
+  }
+
   // Burned-area fill: dark char with soft gray smoke mottling and a few faint red specks.
   function smokyTexture() {
     const rnd = seeded(5);
@@ -426,6 +460,37 @@
         g.fillStyle = gr; g.fillRect(0, 0, 128, 128);
       }
     }, 1);
+  }
+
+
+  // Soft round heat glow for a GOES pixel: a Gaussian blob that reaches fully
+  // transparent at the edge. `hot` adds a brighter center (processed / saturated).
+  const glowTextures = {};
+  function goesGlowTexture(hex, hot) {
+    const key = hex + (hot ? '*' : '');
+    if (glowTextures[key]) return glowTextures[key];
+    const N = 128, c = document.createElement('canvas');
+    c.width = c.height = N;
+    const g = c.getContext('2d'), img = g.createImageData(N, N);
+    const base = Cesium.Color.fromCssColorString(hex), core = Cesium.Color.fromCssColorString(GOES_GLOW.hotCenter);
+    const s2 = 2 * GOES_GLOW.sigma * GOES_GLOW.sigma;
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+      const u = Math.hypot(x + 0.5 - N / 2, y + 0.5 - N / 2) / (N / 2);   // 0 center .. 1 edge
+      let a = 0, r = base.red, gr = base.green, b = base.blue;
+      if (u < 1) {
+        const t = Math.min(1, Math.max(0, (u - 0.75) / 0.25));
+        a = GOES_GLOW.peakAlpha * Math.exp(-(u * u) / s2) * (1 - t * t * (3 - 2 * t));   // fade to 0 at the edge
+        if (hot) {
+          const h = Math.exp(-(u * u) / (2 * 0.16 * 0.16));
+          r += (core.red - r) * h; gr += (core.green - gr) * h; b += (core.blue - b) * h;
+          a = Math.min(0.6, a * (1 + 0.3 * h));
+        }
+      }
+      const i = (y * N + x) * 4;
+      img.data[i] = r * 255; img.data[i + 1] = gr * 255; img.data[i + 2] = b * 255; img.data[i + 3] = a * 255;
+    }
+    g.putImageData(img, 0, 0);
+    return (glowTextures[key] = c);
   }
 
 
@@ -506,7 +571,7 @@
 
   function buildEntities() {
     // Parent entity per chip: hiding the parent hides all its children.
-    for (const key of ['spread', 'houses', 'water', 'stations', 'power', 'burns', 'risk', 'sat']) {
+    for (const key of ['spread', 'houses', 'water', 'stations', 'power', 'burns', 'risk', 'sat', 'help']) {
       layers[key] = add({ id: 'layer-' + key });
     }
     // Groups switched by the scenario / step, not by a chip.
@@ -517,64 +582,112 @@
     // --- District boundary (always on) ---
     add({ polyline: groundLine(closed(DISTRICT_CORNERS), col(HEX.cream, 0.55), 2, { length: 16 }) });
 
-    // --- Fire risk today: band along the power line ---
-    const dx = POWER_LINE.to[0] - POWER_LINE.from[0], dy = POWER_LINE.to[1] - POWER_LINE.from[1];
-    const len = Math.hypot(dx, dy);
-    const nx = (-dy / len) * POWER_LINE.riskHalfWidthMi, ny = (dx / len) * POWER_LINE.riskHalfWidthMi;
-    const north = [[POWER_LINE.from[0] + nx, POWER_LINE.from[1] + ny], [POWER_LINE.to[0] + nx, POWER_LINE.to[1] + ny]];
-    const south = [[POWER_LINE.from[0] - nx, POWER_LINE.from[1] - ny], [POWER_LINE.to[0] - nx, POWER_LINE.to[1] - ny]];
-    add({ parent: layers.risk, polygon: { hierarchy: posList([north[0], north[1], south[1], south[0]]), material: col(HEX.brk, 0.13), zIndex: 0 } });
-    add({ parent: layers.risk, polyline: groundLine(north, col(HEX.brk, 0.4), 1.5, { length: 8 }) });
-    add({ parent: layers.risk, polyline: groundLine(south, col(HEX.brk, 0.4), 1.5, { length: 8 }) });
-    E.riskLabelAt = lerp(south[0], south[1], 0.72);
+    // --- Real power lines (mapdata.js), with small pole dots ---
+    // The line the fire starts on is the one nearest the fire start.
+    E.fireLine = null;
+    let fireLineDist = Infinity;
+    for (const line of MD.power) {
+      const width = line.transmission ? REAL.power.transmissionWidth : REAL.power.width;
+      for (const part of line.parts) {
+        add({ parent: layers.power, polyline: { positions: part.map(posLL), clampToGround: true, width, zIndex: 2, material: col(REAL.power.color, REAL.power.alpha) } });
+      }
+      for (const part of line.local) {
+        for (const q of alongLine(part, REAL.power.poleEveryMi)) {
+          add({ parent: layers.power, position: pos(q), point: Object.assign(ON_GROUND(), { pixelSize: 4, color: col(REAL.power.color), outlineColor: col(HEX.bg), outlineWidth: 1 }) });
+        }
+        for (const q of part) { const d = Math.hypot(q[0], q[1]); if (d < fireLineDist) { fireLineDist = d; E.fireLine = line; } }
+      }
+    }
 
-    // --- Permitted burns ---
+    // --- Fire risk today: band along the power line the fire starts on (inside the district) ---
+    E.riskLabelAt = null;
+    if (E.fireLine) {
+      const box = bboxOf(DISTRICT_CORNERS);
+      for (const part of E.fireLine.local) {
+        const pieces = [];
+        let cur = [];
+        for (const q of part) {
+          const inBox = q[0] >= box[0] && q[0] <= box[2] && q[1] >= box[1] && q[1] <= box[3];
+          if (inBox) cur.push(q); else if (cur.length) { pieces.push(cur); cur = []; }
+        }
+        if (cur.length) pieces.push(cur);
+        for (const piece of pieces.filter(x => x.length > 1)) {
+          const [left, right] = offsetLine(piece, REAL.power.riskHalfWidthMi);
+          add({ parent: layers.risk, polygon: { hierarchy: posList(left.concat(right.slice().reverse())), material: col(HEX.brk, 0.13), zIndex: 0 } });
+          add({ parent: layers.risk, polyline: groundLine(left, col(HEX.brk, 0.4), 1.5, { length: 8 }) });
+          add({ parent: layers.risk, polyline: groundLine(right, col(HEX.brk, 0.4), 1.5, { length: 8 }) });
+          if (!E.riskLabelAt) E.riskLabelAt = right[Math.floor(right.length * 0.3)];
+        }
+      }
+      // Label spot for the line: on the line, about 3 mi south of the fire.
+      E.powerLabelAt = E.fireLine.local.flat().reduce((b, q) => (Math.hypot(q[0], q[1] + 3) < Math.hypot(b[0], b[1] + 3) ? q : b));
+    }
+
+    // --- Permitted burns (simulated weekend burns) ---
     for (const b of BURNS) {
       add({ parent: layers.burns, position: pos(b.at), ellipse: { semiMajorAxis: b.radiusMi * METERS_PER_MILE, semiMinorAxis: b.radiusMi * METERS_PER_MILE, material: col(HEX.burn, 0.35), zIndex: 1 } });
       add({ parent: layers.burns, polyline: groundLine(closed(circle(b.at, b.radiusMi)), col(HEX.muted), 1.5, { length: 8 }) });
     }
-    // Registered burn area (Planned burn scenario): gray dashed square.
+    // Registered burn area (Planned burn scenario): dashed square, amber while
+    // the burn follows its registration, red once it breaks it (burnAreaTone).
     add({ parent: E.burnAreaGroup, polygon: { hierarchy: posList(SECTION_22_CORNERS), material: col(HEX.burn, 0.22), zIndex: 1 } });
-    add({ parent: E.burnAreaGroup, polyline: groundLine(closed(SECTION_22_CORNERS), col('#C9C2B6'), 2, { length: 10 }, 1) });
+    E.burnAreaEdge = add({ parent: E.burnAreaGroup, polyline: groundLine(closed(SECTION_22_CORNERS), col(fireType('planned').color), 2, { length: 10 }, 1) });
+    E.burnAreaTone = 'planned';
 
-    // --- Power line with pole markers ---
-    add({ parent: layers.power, polyline: groundLine([POWER_LINE.from, POWER_LINE.to], col(HEX.power), 2) });
-    const poles = Math.floor(len / POWER_LINE.poleEveryMi);
-    for (let i = 1; i < poles; i++) {
-      add({ parent: layers.power, position: pos(lerp(POWER_LINE.from, POWER_LINE.to, (i * POWER_LINE.poleEveryMi) / len)),
-        point: Object.assign(ON_GROUND(), { pixelSize: 5, color: col(HEX.power), outlineColor: col(HEX.bg), outlineWidth: 1 }) });
+    // --- District station (simulated) and its route to the fire on real roads ---
+    add({ parent: layers.stations, position: pos(STATION), billboard: billboard(squareIcon(18, HEX.cream, null, 1)) });
+    E.route = add({ parent: layers.stations, polyline: groundLine(MD.route ? MD.route.points : [STATION, PLACES.line],
+      col(HEX.cream, 0.95), 3, { length: 12, pattern: 0xF0F0 }, 2) });
+    E.routeLabelAt = MD.route ? MD.route.points[Math.floor(MD.route.points.length * 0.45)] : STATION;
+
+    // --- Real fire departments ("Help nearby"): icon per station, dashed lines to the fire ---
+    const stationIcon = fireStationIcon();
+    E.depts = MD.departments.map(d => add({ parent: layers.help, position: posLL(d.ll), billboard: billboard(stationIcon) }));
+    E.helpLines = [];
+    for (let i = 0; i < REAL.help.lines; i++) {
+      E.helpLines.push(add({ parent: layers.help, show: false, polyline: groundLine(PLACEHOLDER, col(HEX.cream, 0.75), 1.5, { length: 14 }, 2) }));
     }
 
-    // --- Fire stations and route ---
-    add({ parent: layers.stations, position: pos(STATION), billboard: billboard(squareIcon(18, HEX.cream, null, 1)) });
-    add({ parent: layers.stations, position: pos(MUTUAL_AID), billboard: billboard(squareIcon(12, null, HEX.cream, 1.5)) });
-    E.route = add({ parent: layers.stations, polyline: groundLine(ROUTE, col(HEX.cream, 0.95), 3, { length: 12, pattern: 0xF0F0 }, 2) });
-
-    // --- Homes (orange when in the path, see HOME_GROUPS) ---
-    E.homeIcons = { path: squareIcon(9, HEX.fireSoft, HEX.fire, 1.5), safe: squareIcon(9, HEX.cream, HEX.cream, 1.5) };
-    E.homes = HOMES.map(h => add({ parent: layers.houses, position: pos(h), billboard: billboard(E.homeIcons.safe) }));
-    E.homesPath = undefined;
+    // --- Real buildings (orange when in the likely path, see pathBuildings) ---
+    const s = REAL.building.size;
+    E.homeIcons = { path: squareIcon(s, HEX.fireSoft, HEX.fire, 1.25), safe: squareIcon(s, HEX.cream, HEX.bg, 1) };
+    E.homes = MD.buildings.map(b => add({ parent: layers.houses, position: posLL(b.ll), billboard: billboard(E.homeIcons.safe) }));
+    E.homesPath = undefined;   // key of the current set
+    E.pathHomes = [];          // indices of buildings in the path (all kinds)
 
     // --- Firebreak (Cottonwood Creek fire), across the wind ahead of the fire ---
     E.firebreak = add({ parent: E.breakGroup, polyline: groundLine(firebreakPoints(), col(HEX.brk), 4, { length: 18, pattern: 0xFFF0 }, 3) });
 
-    // --- Water ---
-    add({ parent: layers.water, position: pos(STOCK_POND.at), ellipse: { semiMajorAxis: STOCK_POND.semiMajorM, semiMinorAxis: STOCK_POND.semiMinorM, material: col(HEX.water, 0.8), zIndex: 7 } });
-    add({ parent: layers.water, position: pos(WATER_TRUCK), billboard: billboard(rectIcon(16, 9, HEX.water, HEX.waterText)) });
-    add({ parent: layers.water, position: pos(TANK), billboard: billboard(ringIcon(6, HEX.water, 2)) });
+    // --- Real water: ponds, lakes, reservoirs (filled) and creeks (lines) ---
+    for (const w of MD.water) {
+      const ring = w.rings[0].map(posLL);
+      const holes = w.rings.slice(1).map(r => new Cesium.PolygonHierarchy(r.map(posLL)));
+      add({ parent: layers.water, polygon: { hierarchy: new Cesium.PolygonHierarchy(ring, holes), material: col(REAL.water.fill, REAL.water.alpha), zIndex: 7 } });
+      add({ parent: layers.water, polyline: { positions: ring, clampToGround: true, width: REAL.water.edgeWidth, zIndex: 7, material: col(REAL.water.edge, 0.95) } });
+    }
+    for (const c of MD.creeks) {
+      for (const part of c.parts) {
+        add({ parent: layers.water, polyline: { positions: part.map(posLL), clampToGround: true, width: REAL.creek.width, zIndex: 1, material: col(REAL.creek.color, REAL.creek.alpha) } });
+      }
+    }
+    // Lease water truck (simulated), parked on a real road.
+    E.waterTruckAt = MD.waterTruck || STORY.WATER_TRUCK;
+    add({ parent: layers.water, position: pos(E.waterTruckAt), billboard: billboard(rectIcon(16, 9, HEX.water, HEX.waterText)) });
 
     // --- Neighbor photo report (Cottonwood Creek fire, from 1:59) ---
     E.reporterLine = add({ parent: E.reporterGroup, polyline: groundLine([REPORTER, [0, 0]], col(HEX.cream, 0.85), 1.5, { length: 8 }, 4) });
     add({ parent: E.reporterGroup, position: pos(REPORTER), point: Object.assign(ON_GROUND(), { pixelSize: 11, color: col(HEX.cream), outlineColor: col(HEX.bg), outlineWidth: 1 }) });
 
     // --- Satellite detections: fixed pools, filled from the map state ---
-    // GOES: big translucent squares (coarse, ~2 km). FIRMS VIIRS: small bright
-    // squares (~375 m) with a white ring, so they read as sharper and more precise.
+    // GOES: soft translucent heat glows (coarse, ~2 km), under the fire shapes.
+    // FIRMS VIIRS: small bright squares (~375 m) with a white ring, so they
+    // read as sharper and more precise.
     E.goes = [];
     for (let i = 0; i < 8; i++) {
       E.goes.push({
-        fill: add({ parent: layers.sat, show: false, polygon: { hierarchy: posList(PLACEHOLDER), material: col(HEX.fire, 0.2), zIndex: 1 } }),
-        edge: add({ parent: layers.sat, show: false, polyline: { positions: posList(PLACEHOLDER), clampToGround: true, width: 1.5, zIndex: 5, material: col(HEX.fire, 0.95) } }),
+        glow: add({ parent: layers.sat, show: false, rectangle: {
+          coordinates: Cesium.Rectangle.fromDegrees(ORIGIN.lon, ORIGIN.lat, ORIGIN.lon + 0.001, ORIGIN.lat + 0.001),
+          material: new Cesium.ImageMaterialProperty({ image: goesGlowTexture(HEX.fire, false), transparent: true }), zIndex: 2 } }),
         key: ''
       });
     }
@@ -597,7 +710,7 @@
     for (const key in layers) layers[key].show = !!u.layers[key];
     setWindVisible(u.layers.wind !== false);
 
-    // Wind direction and speed. A new direction re-shapes fires, cones and the firebreak.
+    // Wind direction and speed. A new direction re-shapes fires, the path zone and the firebreak.
     if (u.wind && u.wind.towardDeg !== WIND.towardDeg) {
       setBearing(u.wind.towardDeg);
       wind.domain = windDomain();
@@ -615,12 +728,29 @@
     E.route.show = !!u.route;
     E.faultDot.show = !!u.lineFault;
     E.burnAreaGroup.show = !!u.burnArea;
-
-    if (u.homesInPath !== E.homesPath) {
-      E.homesPath = u.homesInPath;
-      const inPath = new Set(HOME_GROUPS[u.homesInPath] || []);
-      E.homes.forEach((h, i) => { h.billboard.image = inPath.has(i) ? E.homeIcons.path : E.homeIcons.safe; });
+    const areaTone = u.burnAreaTone === 'escaped' ? 'escaped' : 'planned';
+    if (areaTone !== E.burnAreaTone) {
+      E.burnAreaTone = areaTone;
+      E.burnAreaEdge.polyline.material = new Cesium.PolylineDashMaterialProperty({
+        color: col(fireType(areaTone).color), gapColor: Cesium.Color.TRANSPARENT, dashLength: 10 });
     }
+
+    // Real buildings in the likely path of fire A turn orange.
+    E.pathHomes = pathBuildings(u.fires.A, WIND.towardDeg);
+    const homesKey = E.pathHomes.join();
+    if (homesKey !== E.homesPath) {
+      const before = new Set(E.homesPath ? E.homesPath.split(',').map(Number) : []), now = new Set(E.pathHomes);
+      E.homesPath = homesKey;
+      for (const i of new Set([...before, ...now])) E.homes[i].billboard.image = now.has(i) ? E.homeIcons.path : E.homeIcons.safe;
+    }
+
+    // Help nearby: dashed lines from the fire to the nearest available departments.
+    const help = u.help || {};
+    E.helpLines.forEach((line, i) => {
+      const d = help.from && help.lineTo && MD.departments.find(x => x.id === help.lineTo[i]);
+      line.show = !!d;
+      if (d) line.polyline.positions = [pos(help.from), posLL(d.ll)];
+    });
 
     setSatellite(u.goes || [], u.firms || []);
 
@@ -649,17 +779,17 @@
     satInfo.firms = firms;
     E.goes.forEach((g, i) => {
       const d = goes[i];
-      g.fill.show = g.edge.show = !!d;
+      g.glow.show = !!d;
       if (!d) return;
-      const key = [d.latitude, d.longitude, d.fire_mask, d.frp_mw, d.scan_time].join();
+      const key = [d.latitude, d.longitude, d.fire_mask].join();
       if (key === g.key) return;
       g.key = key;
-      const sq = squareAround(d.latitude, d.longitude, goesSizeM());
-      const c = GOES_MASK_COLOR[d.fire_mask] || HEX.fire;
-      g.fill.polygon.hierarchy = new Cesium.PolygonHierarchy(sq);
-      g.fill.polygon.material = col(c, 0.2);
-      g.edge.polyline.positions = sq.concat([sq[0]]);
-      g.edge.polyline.material = col(c, 0.95);
+      // Glow square (2 x radius per side) centered on the pixel; the texture is round.
+      const r = goesSizeM() * GOES_GLOW.radiusFactor;
+      const dLat = r / METERS_PER_DEG_LAT, dLon = r / (METERS_PER_DEG_LAT * Math.cos(d.latitude * Math.PI / 180));
+      g.glow.rectangle.coordinates = Cesium.Rectangle.fromDegrees(d.longitude - dLon, d.latitude - dLat, d.longitude + dLon, d.latitude + dLat);
+      g.glow.rectangle.material = new Cesium.ImageMaterialProperty({
+        image: goesGlowTexture(GOES_MASK_COLOR[d.fire_mask] || HEX.fire, GOES_HOT_MASKS.includes(d.fire_mask)), transparent: true });
     });
     E.firms.forEach((f, i) => {
       const h = firms[i];
@@ -674,31 +804,42 @@
     if (satInfo.el && !satInfo.el.hidden) { satInfo.el.hidden = true; satInfo.pinned = false; }   // data changed: close the info card
   }
 
-  // Hover (mouse) or click (touch) a GOES square / FIRMS point to see its fields in plain words.
-  // Hit test on the ground (not object picking), so fires, cones or smoke drawn
-  // on top of a square never block it.
+  // Hover (mouse) or click (touch) a GOES glow / FIRMS point to see its fields in plain words.
+  // Hit test on the ground (not object picking), so fires, the path zone or smoke
+  // drawn on top of a glow never block it.
   const satInfo = { el: null, pinned: false, lastMove: 0, goes: [], firms: [] };
 
   function satAt(p) {
-    if (!cur || !cur.layers.sat) return null;
+    if (!cur) return null;
     const scene = viewer.scene;
+    // Fire departments (Help nearby): within ~12 px of the station icon.
+    if (cur.layers.help) {
+      for (const d of MD.departments) {
+        const w = Cesium.SceneTransforms.worldToWindowCoordinates(scene, groundPos(d.p), scratchWin);
+        if (w && Math.hypot(w.x - p.x, w.y - p.y) < 12) return { html: deptCardHtml(d) };
+      }
+    }
+    if (!cur.layers.sat) return null;
     // FIRMS first (small, on top): within ~10 px of the hotspot on screen.
     for (const h of satInfo.firms) {
       const w = Cesium.SceneTransforms.worldToWindowCoordinates(scene, groundPosLL(h.latitude, h.longitude), scratchWin);
       if (w && Math.hypot(w.x - p.x, w.y - p.y) < 10) return describe(h);
     }
-    // GOES: is the ground point under the cursor inside a pixel square?
+    // GOES: is the ground point under the cursor inside a glow (or its pixel)?
+    // Where glows overlap, the nearest pixel center wins.
     const hit = scene.globe.pick(scene.camera.getPickRay(p), scene);
     if (!hit) return null;
     const c = Cesium.Cartographic.fromCartesian(hit);
     const lat = Cesium.Math.toDegrees(c.latitude), lon = Cesium.Math.toDegrees(c.longitude);
-    const half = goesSizeM() / 2;
+    const half = goesSizeM() / 2, reach = goesSizeM() * GOES_GLOW.radiusFactor * GOES_GLOW.hitRadiusFactor;
+    let best = null, bestDist = Infinity;
     for (const d of satInfo.goes) {
       const dy = (lat - d.latitude) * METERS_PER_DEG_LAT;
       const dx = (lon - d.longitude) * METERS_PER_DEG_LAT * Math.cos(d.latitude * Math.PI / 180);
-      if (Math.abs(dx) <= half && Math.abs(dy) <= half) return describe(d);
+      const dist = Math.hypot(dx, dy);
+      if ((dist <= reach || (Math.abs(dx) <= half && Math.abs(dy) <= half)) && dist < bestDist) { best = d; bestDist = dist; }
     }
-    return null;
+    return best ? describe(best) : null;
   }
 
   function buildSatInfo() {
@@ -710,7 +851,7 @@
     const showAt = (p, click) => {
       const text = satAt(p);
       if (text) {
-        satInfo.el.textContent = text;
+        if (text.html) satInfo.el.innerHTML = text.html; else satInfo.el.textContent = text;
         satInfo.el.hidden = false;
         const W = viewer.scene.canvas.clientWidth;
         const w = satInfo.el.offsetWidth;
@@ -736,13 +877,17 @@
   /* ---------- 7. Fires: shape, growth, glowing edge, embers, smoke ---------- */
 
   // A fire "slot" is one complete fire (fill, glowing edge, head glow, embers,
-  // smoke, and for slot A the forecast cones). Slot A is the main fire
+  // smoke, and for slot A the likely-path zone). Slot A is the main fire
   // (Cottonwood Creek, or the escape); slot B is a second fire (the planned burn).
-  function makeFireSlot(id, withCones) {
+  // The edge, glow and embers take their colors from FIRE_TYPES (fire-types.js).
+  function makeFireSlot(id, withZone) {
     const sl = {
-      id, withCones, on: false, placeKey: null, origin: [0, 0], spec: null,
+      id, withZone, on: false, placeKey: null, origin: [0, 0], spec: null,
       size: null, from: null, to: null, t0: 0, lastGeomT: 0, geom: null, reshape: false,
-      emberA: NaN, emberCount: 0, embers: [], smoke: [], cones: {}
+      emberA: NaN, emberCount: 0, embers: [], smoke: [], zone: null,
+      type: null, ft: fireType('wildfire'),
+      // Edge colors; changed in place each frame when the type pulses.
+      glowColor: col(fireType('wildfire').color, 0.85), coreColor: col(fireType('wildfire').color)
     };
     sl.group = add({ id: 'fire-' + id, show: false });
     sl.headGlow = add({ parent: sl.group, position: pos([0, 0]), ellipse: { semiMajorAxis: 1, semiMinorAxis: 1, material: col(HEX.fireEdge, 0.14), zIndex: 4 } });
@@ -750,17 +895,18 @@
       material: new Cesium.ImageMaterialProperty({ image: smokyTexture(), transparent: true }) } });
     // Edge: a wide soft glow under a thin bright core line.
     sl.glow = add({ parent: sl.group, polyline: { positions: posList(PLACEHOLDER), clampToGround: true, width: 16, zIndex: 10,
-      material: new Cesium.PolylineGlowMaterialProperty({ color: col(HEX.fireEdge, 0.85), glowPower: 0.2, taperPower: 1 }) } });
-    sl.core = add({ parent: sl.group, polyline: groundLine(PLACEHOLDER, col(HEX.fireEdge), 2.5, null, 11) });
+      material: new Cesium.PolylineGlowMaterialProperty({
+        color: new Cesium.CallbackProperty(() => sl.glowColor, false),
+        glowPower: new Cesium.CallbackProperty(() => sl.ft.glow.power, false), taperPower: 1 }) } });
+    sl.core = add({ parent: sl.group, polyline: Object.assign(groundLine(PLACEHOLDER, HEX.fireEdge, 2.5, null, 11),
+      { material: new Cesium.ColorMaterialProperty(new Cesium.CallbackProperty(() => sl.coreColor, false)) }) });
 
-    if (withCones) {
-      for (const c of CONES) {
-        sl.cones[c.key] = {
-          fill: add({ parent: layers.spread, show: false, polygon: { hierarchy: posList(PLACEHOLDER), material: col(HEX.fire, c.fill), zIndex: c.z } }),
-          edge: add({ parent: layers.spread, show: false, polyline: groundLine(PLACEHOLDER, col(HEX.fire, c.edge), 1.5, { length: 12 }, 1) }),
-          tip: [0, 0], pts: null
-        };
-      }
+    if (withZone) {
+      sl.zone = {
+        fill: add({ parent: layers.spread, show: false, polygon: { hierarchy: posList(PLACEHOLDER), material: col(ZONE.color, ZONE.fill), zIndex: ZONE.z } }),
+        edge: add({ parent: layers.spread, show: false, polyline: groundLine(PLACEHOLDER, col(ZONE.color, ZONE.edge), ZONE.edgeWidth, { length: 12 }, 1) }),
+        tip: [0, 0], pts: null
+      };
     }
 
     // Embers: fixed spots inside the fire shape (denser near the edge).
@@ -807,7 +953,7 @@
       if (sl.on) {
         sl.on = false;
         sl.group.show = false;
-        for (const k in sl.cones) sl.cones[k].fill.show = sl.cones[k].edge.show = false;
+        if (sl.zone) sl.zone.fill.show = sl.zone.edge.show = false;
         sl.emberColl.show = false;
         sl.smokeColl.show = false;
       }
@@ -830,14 +976,28 @@
       sl.t0 = now;
       sl.lastGeomT = 0;
     }
+    setFireType(sl, spec.type || 'wildfire');
     sl.on = true;
     sl.group.show = true;
     sl.emberColl.show = true;
     sl.smokeColl.show = true;
-    for (const k in sl.cones) sl.cones[k].fill.show = sl.cones[k].edge.show = !!spec.cones;
+    if (sl.zone) sl.zone.fill.show = sl.zone.edge.show = !!spec.path;
   }
 
-  // Update the ground shapes of one fire (fill, edge, head glow, cones).
+  // Colors and glow of one fire from its FIRE_TYPES entry.
+  function setFireType(sl, type) {
+    if (type === sl.type) return;
+    sl.type = type;
+    sl.ft = fireType(type);
+    sl.glowColor = col(sl.ft.color, sl.ft.glow.alpha);
+    sl.coreColor = col(sl.ft.color);
+    sl.glow.polyline.width = sl.ft.glow.width;
+    sl.headGlow.ellipse.material = col(sl.ft.color, 0.14);
+    sl.emberColors = { ember: Cesium.Color.fromCssColorString(sl.ft.ember), hot: Cesium.Color.fromCssColorString(sl.ft.emberHot), edge: col(sl.ft.color, 0.3) };
+    for (const em of sl.embers) em.point.outlineColor = sl.emberColors.edge;
+  }
+
+  // Update the ground shapes of one fire (fill, edge, head glow, zone).
   function setFireGeometry(sl, g) {
     sl.fill.polygon.hierarchy = new Cesium.PolygonHierarchy(posList(g.outline));
     const ring = posList(closed(g.outline));
@@ -849,13 +1009,12 @@
     sl.headGlow.ellipse.semiMajorAxis = glowR;
     sl.headGlow.ellipse.semiMinorAxis = glowR;
 
-    for (const c of CONES) {
-      if (!sl.cones[c.key]) continue;
-      const cg = coneGeometry(g, c);
-      sl.cones[c.key].fill.polygon.hierarchy = new Cesium.PolygonHierarchy(posList(cg.fill));
-      sl.cones[c.key].edge.polyline.positions = posList(cg.edge);
-      sl.cones[c.key].tip = cg.tip;
-      sl.cones[c.key].pts = cg.fill;
+    if (sl.zone) {
+      const zg = zoneGeometry(g);
+      sl.zone.fill.polygon.hierarchy = new Cesium.PolygonHierarchy(posList(zg.fill));
+      sl.zone.edge.polyline.positions = posList(zg.edge);
+      sl.zone.tip = zg.tip;
+      sl.zone.pts = zg.fill;
     }
     if (sl.id === 'A') E.reporterLine.polyline.positions = posList([REPORTER, g.center]);
   }
@@ -907,12 +1066,20 @@
       }
       const f = 0.5 + 0.5 * Math.sin(now * em.speed + em.phase);
       const g = 0.7 + 0.3 * Math.sin(now * em.speed * 2.3 + em.phase * 1.7);
-      Cesium.Color.fromCssColorString(em.hot ? '#FFC07A' : HEX.ember, scratchColor);
+      Cesium.Color.clone(em.hot ? sl.emberColors.hot : sl.emberColors.ember, scratchColor);
       scratchColor.alpha = 0.35 + 0.65 * f * g;
       em.point.color = scratchColor;
     }
     sl.emberA = s.a;
     sl.emberCount = visible;
+
+    // Slow pulse of the edge (escaped burn): glow and core breathe together.
+    const pulse = sl.ft.glow.pulseSeconds;
+    if (pulse > 0) {
+      const w = 0.5 + 0.5 * Math.sin((2 * Math.PI * now) / pulse);   // 0..1
+      sl.glowColor.alpha = sl.ft.glow.alpha * (0.35 + 0.65 * w);
+      sl.coreColor.alpha = 0.6 + 0.4 * w;
+    }
 
     // 3. Smoke: puffs rise from the head and drift downwind, growing and fading.
     const life = 9;
@@ -958,7 +1125,7 @@
       text: () => {
         const sl = slots[id], c = sl.spec && sl.spec.card;
         if (!c) return null;
-        return { tone: c.tone || 'orange', title: c.title, sub: c.sub === 'lineDistance' ? headText(sl) : c.sub };
+        return { tone: c.tone || 'wildfire', title: c.title, sub: c.sub === 'lineDistance' ? headText(sl) : c.sub };
       },
       at: () => (slots[id].on && slots[id].geom ? slots[id].geom.head : null)
     });
@@ -969,29 +1136,78 @@
     card({ id: 'homes', pref: ['right', 'up', 'left'],
       show: c => L(c).houses && !!c.homesCard,
       text: () => ({ tone: 'cream', title: cur.homesCard.title, sub: cur.homesCard.sub }),
-      at: () => centerOf(HOME_GROUPS[cur.homesCard.group].map(i => HOMES[i])) });
+      at: () => (E.pathHomes.length ? centerOf(E.pathHomes.map(i => MD.buildings[i].p)) : null) });
     card({ id: 'station', pref: ['up', 'left', 'right'], show: c => L(c).stations,
-      text: () => ({ tone: 'cream', title: 'Cottonwood Creek station', sub: '18 on the roster, 5 who can leave work' }),
+      text: () => ({ tone: 'cream', title: STORY.STATION_NAME, sub: '18 on the roster, 5 who can leave work' }),
       at: () => STATION });
 
     // Small labels, highest priority first.
-    const conesOn = c => L(c).spread && !!c.fires.A && !!c.fires.A.cones;
-    tag({ text: 'in 30 min', tone: 'fire', at: () => slots.A.cones.c30.tip, show: conesOn, pref: ['up', 'right', 'left', 'down'], far: 70000 });
-    tag({ text: 'in 60 min', tone: 'fire', at: () => slots.A.cones.c60.tip, show: conesOn, pref: ['up', 'left', 'right', 'down'], far: 70000 });
+    // One label at the outer edge of the likely-path zone.
+    tag({ text: ZONE.label, tone: 'fire', at: () => slots.A.zone.tip, show: c => L(c).spread && !!c.fires.A && !!c.fires.A.path,
+      pref: ['up', 'left', 'right', 'down'], far: 70000 });
     tag({ text: SECTION_22.label, tone: 'muted', at: () => [SECTION_22.center[0] - SECTION_22.halfMi, SECTION_22.center[1] - SECTION_22.halfMi],
       show: c => L(c).burns && c.burnArea, pref: ['down', 'left', 'up'], far: 70000 });
     tag({ text: 'Firebreak', tone: 'brk', at: () => firebreakPoints()[0], alt: () => firebreakPoints()[8], show: c => c.firebreak, pref: ['left', 'down', 'right', 'up'], far: 70000 });
     tag({ text: 'Neighbor photo, 1:59', tone: 'cream', at: () => REPORTER, show: c => c.reporter, pref: ['right', 'down', 'up'] });
-    tag({ text: 'Lease water truck', tone: 'water', at: () => WATER_TRUCK, show: c => L(c).water, pref: ['right', 'down', 'left'] });
-    tag({ text: 'Stock pond', tone: 'water', at: () => STOCK_POND.at, show: c => L(c).water, pref: ['left', 'down', 'up'] });
-    tag({ text: 'Tank', tone: 'water', at: () => TANK, show: c => L(c).water, pref: ['left', 'down', 'right'] });
-    tag({ text: '11 mi of gravel to the fire', tone: 'muted', at: () => ROUTE[7], show: c => L(c).stations && c.route, pref: ['left', 'right', 'down'] });
-    tag({ text: 'Oil-lease power line', tone: 'power', at: () => lerp(POWER_LINE.from, POWER_LINE.to, 0.25), show: c => L(c).power, pref: ['down', 'up'] });
-    tag({ text: 'Mutual aid, 30 to 40 min', tone: 'muted', at: () => MUTUAL_AID, show: c => L(c).stations, pref: ['right', 'down', 'up'] });
+    // Real fire departments: name, distance and drive time from the fire, status dot.
+    for (const d of MD.departments) {
+      tag({ dept: d, tone: 'cream', html: () => deptTagHtml(d), at: () => d.p, show: c => L(c).help, pref: ['right', 'left', 'down', 'up'],
+        far: REAL.help.labelMaxDistanceM });
+    }
+    // Drive time on each dashed help line (at its middle).
+    E.helpLines.forEach((line, i) => tag({ tone: 'muted', html: () => (helpLineDept(i) ? `about ${helpRow(helpLineDept(i)).minutes} min` : ''),
+      at: () => { const d = helpLineDept(i); return d ? lerp(cur.help.from, d.p, 0.5) : null; },
+      show: c => L(c).help && !!helpLineDept(i), pref: ['right', 'left', 'up', 'down'], far: REAL.help.labelMaxDistanceM }));
+    tag({ text: 'Lease water truck', tone: 'water', at: () => E.waterTruckAt, show: c => L(c).water, pref: ['right', 'down', 'left'] });
+    tag({ tone: 'muted', html: () => (MD.route ? `${MD.route.miles.toFixed(0)} road miles to the fire` : 'Road to the fire'),
+      at: () => E.routeLabelAt, show: c => L(c).stations && c.route, pref: ['left', 'right', 'down'] });
+    tag({ tone: 'power', html: () => (E.fireLine ? E.fireLine.label : 'Power line'), at: () => E.powerLabelAt || null, show: c => L(c).power, pref: ['down', 'up', 'right', 'left'] });
     tag({ text: 'High risk today: power line over dry grass', tone: 'brk', at: () => E.riskLabelAt, show: c => L(c).risk, pref: ['down', 'up'] });
     for (const b of BURNS) tag({ text: b.label, tone: 'muted', at: () => [b.at[0], b.at[1] - b.radiusMi], show: c => L(c).burns, pref: ['down', 'right', 'left'] });
+    // Names of real water features (only named ones), hidden when zoomed far out.
+    for (const w of MD.water.filter(x => x.name)) {
+      tag({ text: w.name, tone: 'water', at: () => w.center, show: c => L(c).water, pref: ['up', 'down', 'right', 'left'], far: REAL.waterLabelMaxDistanceM });
+    }
+    for (const c of MD.creeks.filter(x => x.name && x.labelAt)) {
+      tag({ text: c.name, tone: 'water', at: () => c.labelAt, show: s => L(s).water, pref: ['right', 'left', 'up', 'down'], far: REAL.waterLabelMaxDistanceM });
+    }
+
+    // Edge arrows: the nearest departments that are off screen.
+    labels.arrows = [];
+    for (let i = 0; i < REAL.help.arrows; i++) {
+      const el = document.createElement('div');
+      el.className = 'edgearrow';
+      el.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M1 6 L10 6 M6 2 L10 6 L6 10" fill="none" stroke="currentColor" stroke-width="1.8"/></svg><span></span>';
+      el.style.display = 'none';
+      labels.root.appendChild(el);
+      labels.arrows.push({ el, svg: el.querySelector('svg'), text: el.querySelector('span'), key: '' });
+    }
 
     viewer.scene.postRender.addEventListener(layoutLabels);
+  }
+
+  /* Help nearby: department rows and status (statuses are set by the dashboard). */
+  const HELP_STATUS = Object.fromEntries(Object.entries(STORY.HELP_STATUS).map(([k, s]) => [k, { text: s.text, color: () => s.color }]));
+  const helpFromPoint = () => (cur && cur.help && cur.help.from) || PLACES.line;
+  function helpRow(d) {
+    const mi = Math.hypot(d.p[0] - helpFromPoint()[0], d.p[1] - helpFromPoint()[1]);
+    return { miles: mi, minutes: MD.driveMinutes(mi), status: HELP_STATUS[(cur && cur.help && cur.help.status && cur.help.status[d.id]) || 'available'] };
+  }
+  function helpLineDept(i) {
+    const id = cur && cur.help && cur.help.from && cur.help.lineTo && cur.help.lineTo[i];
+    return id ? MD.departments.find(d => d.id === id) : null;
+  }
+  const escHtml = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  function deptTagHtml(d) {
+    const r = helpRow(d);
+    return `<i class="sdot" style="background:${r.status.color()}"></i>${escHtml(d.label)} · ${Math.round(r.miles)} mi · about ${r.minutes} min`;
+  }
+  function deptCardHtml(d) {
+    const r = helpRow(d);
+    return `<b>${escHtml(d.name)}</b>${d.town && !d.name.includes(d.town) ? ` <span class="muted">${escHtml(d.town)}</span>` : ''}<br>` +
+      `Equipment (simulated): ${escHtml(d.equipment)}<br>` +
+      `${r.miles.toFixed(1)} mi · about ${r.minutes} min <span class="muted">(estimate: straight line × ${MD.DRIVE.roadFactor} at ${MD.DRIVE.mph} mph)</span><br>` +
+      `<i class="sdot" style="background:${r.status.color()}"></i>${r.status.text} <span class="muted">(simulated)</span>`;
   }
 
   function headText(sl) {
@@ -1014,7 +1230,7 @@
   function tag(o) {
     const el = document.createElement('div');
     el.className = 'maptag ' + o.tone;
-    el.textContent = o.text;
+    if (o.text) el.textContent = o.text;   // fixed text; o.html() = text that can change
     labels.root.appendChild(el);
     labels.items.push(Object.assign({ kind: 'tag', el, size: null, shown: false, far: SMALL_LABEL_MAX_DISTANCE_M }, o));
   }
@@ -1076,6 +1292,11 @@
     for (const it of labels.items) {
       let p = it.show(cur) ? it.at() : null;
       if (p && it.kind === 'card' && !setCardText(it)) p = null;
+      if (p && it.html) {                       // tags whose text can change
+        const h = it.html();
+        if (!h) p = null;
+        else if (h !== it.htmlKey) { it.htmlKey = h; it.el.innerHTML = h; it.size = null; }
+      }
       if (!p) { setShown(it, false); continue; }
       const world = groundPos(p);
       const win = Cesium.SceneTransforms.worldToWindowCoordinates(scene, world, scratchWin);
@@ -1095,17 +1316,17 @@
     // 2. Things labels must not cover: on-map controls and every label's own point.
     const rootRect = labels.root.getBoundingClientRect();
     const blocks = [];
-    for (const sel of ['.resetview', '#windCompass', '#cesiumCredits', '.confcard', '.outcome']) {
+    for (const sel of ['.resetview', '#windCompass', '.credits', '.confcard', '.outcome', '.mapflag']) {
       const el = mapRoot.querySelector(sel);
       if (!el || el.hidden || !el.offsetParent) continue;
       const r = el.getBoundingClientRect();
       if (r.width && r.height) blocks.push({ x: r.left - rootRect.left, y: r.top - rootRect.top, w: r.width, h: r.height });
     }
     const dots = live.map(l => ({ x: l.x - 5, y: l.y - 5, w: 10, h: 10, owner: l.it }));
-    // Cards must not cover the fires or the forecast cones.
+    // Cards must not cover the fires or the likely-path zone.
     const keepOut = [];
     for (const id in slots) if (slots[id].on && slots[id].geom) keepOut.push(screenBox(slots[id].geom.outline.filter((_, i) => i % 10 === 0)));
-    if (cur.layers.spread && cur.fires.A && cur.fires.A.cones && slots.A.cones.c60.pts) keepOut.push(screenBox(slots.A.cones.c60.pts));
+    if (cur.layers.spread && cur.fires.A && cur.fires.A.path && slots.A.zone.pts) keepOut.push(screenBox(slots.A.zone.pts));
     const clearOfFire = box => !keepOut.some(b => b && overlaps(box, b, 4));
     const placed = [];
     const free = (box, owner, pad) =>
@@ -1150,6 +1371,52 @@
       placed.push(box);
       place(it, box);
     }
+
+    // 5. Edge arrows for the nearest departments that are off screen.
+    layoutArrows(W, H, placed.concat(blocks));
+  }
+
+  // An arrow at the map edge pointing toward each of the nearest departments
+  // (by drive time) whose station is off screen: "Medicine Lodge · 14 min".
+  function layoutArrows(W, H, taken) {
+    const on = cur.layers.help;
+    const rows = on ? MD.helpFrom(helpFromPoint()).slice(0, REAL.help.arrows) : [];
+    const cam = viewer.scene.camera, scratch = new Cesium.Cartesian3();
+    const used = [];
+    labels.arrows.forEach((a, i) => {
+      const row = rows[i];
+      let show = false;
+      if (row) {
+        const d = row.dept, world = groundPos(d.p);
+        const win = Cesium.SceneTransforms.worldToWindowCoordinates(viewer.scene, world, scratchWin);
+        const inView = win && win.x >= 0 && win.y >= 0 && win.x <= W && win.y <= H &&
+          Cesium.Cartesian3.dot(Cesium.Cartesian3.subtract(world, cam.positionWC, scratch), cam.directionWC) > 0;
+        if (!inView) {
+          // Direction to the station in screen space (works behind the camera too).
+          Cesium.Cartesian3.subtract(world, cam.positionWC, scratch);
+          const dx = Cesium.Cartesian3.dot(scratch, cam.rightWC), dy = -Cesium.Cartesian3.dot(scratch, cam.upWC);
+          const len = Math.hypot(dx, dy) || 1, ux = dx / len, uy = dy / len;
+          const m = 14, t = Math.min((W / 2 - m) / Math.max(Math.abs(ux), 1e-6), (H / 2 - m) / Math.max(Math.abs(uy), 1e-6));
+          const tipX = W / 2 + ux * t, tipY = H / 2 + uy * t;
+          const text = `${d.label} · ${row.minutes} min`;
+          if (text !== a.key) { a.key = text; a.text.textContent = text; a.size = null; }
+          const r = HELP_STATUS[(cur.help && cur.help.status && cur.help.status[d.id]) || 'available'];
+          a.el.style.borderColor = r.color();
+          a.svg.style.transform = `rotate(${Math.atan2(uy, ux)}rad)`;
+          if (!a.size) { a.el.style.display = 'block'; a.size = { w: a.el.offsetWidth, h: a.el.offsetHeight }; }
+          // Box inside the map, on the side the arrow points to; slide along the edge if blocked.
+          const base = { x: Math.min(Math.max(tipX - (ux > 0 ? a.size.w : 0), 4), W - a.size.w - 4),
+                         y: Math.min(Math.max(tipY - a.size.h / 2, 4), H - a.size.h - 4), w: a.size.w, h: a.size.h };
+          const vertical = Math.abs(tipX - W / 2) > Math.abs(tipY - H / 2) - 1;   // on a left/right edge: slide up/down
+          for (const s of [0, 26, -26, 52, -52, 78, -78, 104, -104]) {
+            const b = Object.assign({}, base);
+            if (vertical) b.y = Math.min(Math.max(base.y + s, 4), H - b.h - 4); else b.x = Math.min(Math.max(base.x + s * 3, 4), W - b.w - 4);
+            if (!taken.concat(used).some(o => overlaps(b, o, 4))) { used.push(b); show = true; a.el.style.transform = `translate(${Math.round(b.x)}px, ${Math.round(b.y)}px)`; break; }
+          }
+        }
+      }
+      a.el.style.display = show ? 'block' : 'none';
+    });
   }
 
   function measure(it) {
@@ -1404,6 +1671,13 @@
       return;
     }
 
+    // The real map data (data/*.geojson). Usually already loaded by the dashboard.
+    await MD.load();
+    if (MD.error) {
+      showMsg('The map data in data/ did not load', 'Open the dashboard through a web server (VS Code Live Server) so the browser can read the data files. Details are in the browser console.');
+      return;
+    }
+
     // Card and label sizes are measured, so the fonts must be loaded first.
     try { await Promise.all([document.fonts.load('600 14px Barlow'), document.fonts.load('500 12px Barlow')]); } catch (e) { /* fall back */ }
 
@@ -1473,5 +1747,5 @@
     applyState(u);
   }
 
-  window.Map3D = { init, update, resetView: () => resetView(1.5) };
+  window.Map3D = { init, update, resetView: () => resetView(1.5), pathHomes, pathBuildings };
 })();

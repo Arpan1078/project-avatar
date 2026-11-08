@@ -81,21 +81,20 @@
 
   /* ---------- Where the simulated pixels are ---------- */
 
-  // Same anchor and units as map3d.js (miles east/north of the Cottonwood Creek fire start).
-  const ORIGIN = { lat: 37.200, lon: -98.985 };
-  const METERS_PER_MILE = 1609.344, METERS_PER_DEG_LAT = 111320;
+  // Same anchor and units as the map: miles east/north of the fire start (story.js).
+  const STORY = window.STORY;
   function latLon(e, n) {
-    return {
-      latitude: +(ORIGIN.lat + (n * METERS_PER_MILE) / METERS_PER_DEG_LAT).toFixed(5),
-      longitude: +(ORIGIN.lon + (e * METERS_PER_MILE) / (METERS_PER_DEG_LAT * Math.cos(ORIGIN.lat * Math.PI / 180))).toFixed(5)
-    };
+    const [lon, lat] = STORY.toLonLat([e, n]);
+    return { latitude: +lat.toFixed(5), longitude: +lon.toFixed(5) };
   }
 
-  // GOES pixels sit on one fixed grid about 2 km (1.243 mi) apart. Cell [0, 0]
-  // contains the Cottonwood Creek fire start; cell [3, -5] contains Section 22
-  // (the planned burn); cell [4, -4] is its NE neighbor, where the escape is.
-  const GOES_PIXEL_MI = 1.243;
-  const GOES_CELL_00 = [0.50, 0.245];   // center of cell [0, 0], miles east/north
+  // GOES pixels sit on one fixed grid about 2 km (1.243 mi) apart (story.js).
+  // Cell [0, 0] contains the Cottonwood Creek fire start; BURN is the cell
+  // holding Section 22 (the planned burn); ESC is the cell north of it, where
+  // the escape is.
+  const GOES_PIXEL_MI = STORY.GOES.pixelMi;
+  const GOES_CELL_00 = STORY.GOES.cell00;   // center of cell [0, 0], miles east/north
+  const BURN = STORY.GOES.burnCell, ESC = STORY.GOES.escapeCell;
   const goesCell = (i, j) => latLon(GOES_CELL_00[0] + i * GOES_PIXEL_MI, GOES_CELL_00[1] + j * GOES_PIXEL_MI);
 
   /* ---------- Simulated GOES timelines ----------
@@ -143,10 +142,10 @@
       scans: { first: '8:58 am', last: '1:03 pm', everyMin: 5 },
       changes: [
         ['8:58 am',  []],
-        ['10:03 am', [[3, -5, 14, 4.2]]],
-        ['10:18 am', [[3, -5, 13, 9.7]]],
-        ['12:28 pm', [[3, -5, 10, 31.5]]],
-        ['12:48 pm', [[3, -5, 10, 33.0], [4, -4, 15, 5.4]]]
+        ['10:03 am', [[...BURN, 14, 4.2]]],
+        ['10:18 am', [[...BURN, 13, 9.7]]],
+        ['12:28 pm', [[...BURN, 10, 31.5]]],
+        ['12:48 pm', [[...BURN, 10, 33.0], [...ESC, 15, 5.4]]]
       ]
     }
   };
@@ -170,7 +169,7 @@
     burn: {
       passes: [
         ['1:45 am', []],
-        ['12:50 pm', [[5.10, -5.10, 'nominal', 6.2, 'D']]]   // afternoon pass over the escape
+        ['12:50 pm', [[...STORY.FIRMS_ESCAPE, 'nominal', 6.2, 'D']]]   // afternoon pass over the escape
       ],
       note: 'Last VIIRS pass about 1:45 am (assumed). Next pass about 12:50 pm (assumed).'
     }
