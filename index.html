@@ -308,6 +308,31 @@
   .minimized #droneContent, .minimized .window-resize { display: none; }
   #mapWindow.floating .confcard { max-width: calc(100% - 24px); }
   .camera-open #mapWindow.primary .windcard { top: 50px; bottom: auto; }
+
+  .legend-section { min-height: 0; border-top: 1px solid var(--line); }
+  .legend-toggle { display: flex; align-items: center; gap: 6px; padding: 3px 12px; border: 0; background: transparent; color: var(--text-2); font-size: 12px; }
+  .legend-toggle span { display: inline-block; transition: transform 180ms ease; }
+  .legend-toggle[aria-expanded="true"] span { transform: rotate(90deg); }
+  .legend-collapse { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows 180ms ease, opacity 180ms ease; }
+  .legend-collapse.expanded { grid-template-rows: 1fr; opacity: 1; }
+  .legend-clip { min-height: 0; overflow: hidden; }
+  .legend { border-top: 0; gap: 4px 14px; padding: 4px 12px 7px; }
+  .weather { gap: 10px; }
+  .tiles { gap: 8px; }
+  .tile { padding: 5px 8px; justify-content: center; min-width: 0; }
+  .tile .tl { font-size: 12px; line-height: 1.2; }
+  .tile .tv { font-size: clamp(24px, 2.5vw, 34px); line-height: 1.1; white-space: nowrap; }
+  .tile .tv span { font-size: 0.55em; }
+  footer { padding: 7px 12px; gap: 6px 12px; }
+  .compare, .body.full .compare { font-size: 11px; gap: 1px 8px; padding-left: 10px; color: var(--muted); }
+  .compare span { max-width: 86px; line-height: 1.2; }
+  @media (max-width: 900px) {
+    .tiles { gap: 4px; }
+    .tile { padding: 4px; }
+    .tile .tl { font-size: 11px; }
+    .compare, .body.full .compare { gap: 1px 5px; padding-left: 6px; }
+  }
+  @media (prefers-reduced-motion: reduce) { .legend-collapse, .legend-toggle span { transition: none; } }
 </style>
 </head>
 <body>
@@ -379,7 +404,9 @@
         </section>
       </main>
 
-      <div class="legend">
+      <section class="legend-section" aria-label="Map legend">
+        <button type="button" class="legend-toggle" aria-expanded="false" aria-controls="legendItems" data-act="legend">Legend <span aria-hidden="true">&#8250;</span></button>
+        <div id="legendItems" class="legend-collapse" inert><div class="legend-clip"><div class="legend">
         <!-- Wildfire / Planned burn / Escaped burn entries are filled in from FIRE_TYPES (see the script). -->
         <span id="legendFireTypes" style="display:contents"></span>
         <span title="Shown with Help nearby"><i style="color:#aaa">&#10021;</i>Drone (simulated)</span>
@@ -394,7 +421,7 @@
         <span><svg width="18" height="8" viewBox="0 0 18 8" aria-hidden="true"><defs><linearGradient id="windGrad" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="13" y2="0"><stop offset="0" stop-color="#EDE3CF" stop-opacity="0"/><stop offset="1" stop-color="#EDE3CF" stop-opacity="0.9"/></linearGradient></defs><line x1="0" y1="4" x2="13" y2="4" stroke="url(#windGrad)" stroke-width="2"/><path d="M12 1 L17 4 L12 7 Z" fill="#EDE3CF"/></svg>Wind direction</span>
         <span><i style="width:16px;height:16px;border-radius:50%;background:radial-gradient(circle, rgba(255,160,90,0.95) 0, rgba(242,107,46,0.55) 35%, rgba(242,107,46,0) 70%)"></i>GOES heat (coarse, about 2 km)</span>
         <span><i style="width:7px;height:7px;border-radius:50%;background:#FFD23F;box-shadow:0 0 0 2px #FFFFFF"></i>VIIRS hotspot (about 375 m)</span>
-      </div>
+      </div></div></div></section>
 
       <footer id="footer"></footer>
     </div>
@@ -920,7 +947,8 @@ function escapeCaughtMinutes() {
 const timeTile = v => ({ label: 'Time', value: v.now.time, unit: v.ampm, color: 'var(--text)', note: 'Simulated clock' });
 // Homes inside the likely-path zone on the map (Map3D.pathHomes), so the number always matches.
 const homesTile = v => ({ label: 'Homes in path', value: v.pathHomes.length, unit: '', color: v.pathHomes.length ? 'var(--fire-soft)' : 'var(--text)', note: 'Next 60 min' });
-const confTile = v => ({ label: v.sc.confLabel || 'Confidence', value: v.conf, unit: '%', color: v.conf >= 70 ? 'var(--fire)' : 'var(--text)', note: 'Alerts go out at 70%' });
+const confidenceColor = score => score < 40 ? '#F26B2E' : score < 70 ? '#E8B04A' : '#5FBF77';
+const confTile = v => ({ label: 'Confidence', value: v.conf, unit: '%', color: confidenceColor(v.conf), note: 'Alerts go out at 70%' });
 
 const TONE = { fire: 'var(--fire)', calm: 'var(--calm)', text: 'var(--text)' };
 
@@ -965,7 +993,7 @@ function storyTokens(v) {
   t.Homes = t.homes;
   // Nearest available help.
   const h = v.help.nearest;
-  t.help = h ? `${h.dept.label}, about ${h.minutes} min` : 'none in range';
+  t.help = h ? `${h.dept.label}, ~${h.minutes} min` : 'none in range';
   // Where the fire is, from the district station.
   if (ok) {
     const road = MapData.nearestNamedRoad(fire), line = MapData.nearestPower(fire);
@@ -1056,7 +1084,7 @@ function compute() {
   });
 
   const v = { sc, k, now, ampm, full, conf, reasons, statusLabel, statusColor, peopleRows, alertRows, responding, fireType, typeColor };
-  v.ringColor = typeColor || '#F26B2E';
+  v.ringColor = confidenceColor(conf);
   v.wind = pickFrom(sc.wind, k);
   // Map state for this step. Homes "in the path" come from the map's likely-path
   // zone, so the tile, the card and the orange homes always agree.
@@ -1177,6 +1205,15 @@ function startThermal(v) {
   thermalFrame=requestAnimationFrame(draw);
 }
 
+// Display abbreviations only; scenario values and timings are unchanged.
+function compactComparison(text) {
+  return ({ 'Fire known': 'Known', 'Truck leaves': 'Leaves', 'Truck arrives': 'Arrives',
+    'District paged': 'Paged', 'Volunteers pulled from work': 'Volunteers',
+    'Smoke reports': 'Reports', 'District paged for the planned burn': 'Burn paged', 'Escape noticed': 'Known',
+    'Answered automatically': 'Auto-reply', 'Each one paged or called back': 'Page / callback',
+    'Maybe, if someone calls in': 'Maybe (call)', 'When someone calls': 'On call' })[text] || text;
+}
+
 /* ---------- Pieces ---------- */
 function ring(conf, size, fontSize, color) {
   const dash = (conf / 100 * 314.16).toFixed(1);
@@ -1186,7 +1223,7 @@ function ring(conf, size, fontSize, color) {
         <circle cx="60" cy="60" r="50" fill="none" stroke="#3A332B" stroke-width="14"/>
         <circle cx="60" cy="60" r="50" fill="none" stroke="${color}" stroke-width="14" stroke-dasharray="${dash} 400" transform="rotate(-90 60 60)"/>
       </svg>
-      <div class="center"><span class="num" style="font-size:${fontSize}px;line-height:1">${conf}%</span><small>confidence</small></div>
+      <div class="center"><span class="num" style="font-size:${fontSize}px;line-height:1;color:${color}">${conf}%</span><small>confidence</small></div>
     </div>`;
 }
 
@@ -1341,15 +1378,14 @@ function render(focusAct) {
       <span class="condnote muted">${c.note}</span>
     </div>
     <div class="weather">
-      ${c.weather.map(([label, value]) => `<div><span class="muted">${label} </span><b>${value}</b></div>`).join('')}
+      ${c.weather.filter(([label]) => label !== 'Wind').map(([label, value]) => `<div><span class="muted">${label} </span><b>${value}</b></div>`).join('')}
     </div>`;
   regions.windText.innerHTML = `<b>Wind from ${v.wind.dir},</b><br>${v.wind.text}`;
 
   regions.tiles.innerHTML = v.tiles.map(t => `
     <div class="tile">
-      <div class="tl">${t.label}</div>
-      <div class="tv num" style="color:${t.color}">${t.value}<span> ${t.unit}</span></div>
-      <div class="tn">${t.note}</div>
+      <div class="tl">${/^Volunteers/.test(t.label) ? 'Volunteer Response' : t.label === 'Ahead of 911' ? 'Ahead of 911 Responder' : t.label}</div>
+      <div class="tv num" style="color:${t.color}">${t.value}<span>${t.unit === 'of 5' ? '/5' : (t.unit === '%' || !t.unit ? '' : ' ') + t.unit}</span></div>
     </div>`).join('');
 
   regions.body.classList.toggle('full', v.full);
@@ -1392,14 +1428,14 @@ function render(focusAct) {
       ${v.now.real ? `<div class="real">What really happened at ${v.now.time}: ${v.now.real}</div>` : ''}
       ${sc.extraLine ? `<div class="offnote">${sc.extraLine}</div>` : ''}
     </div>
-    <div class="compare">
+    <div class="compare" aria-label="${sc.compareCols.join(' versus ')}" title="${sc.compareCols.join(' vs ')}">
       <span></span>
-      <span style="font-size:12px;font-weight:600;color:var(--fire)">${sc.compareCols[0]}</span>
-      <span class="muted" style="font-size:12px">${sc.compareCols[1]}</span>
+      <span style="font-size:12px;font-weight:600;color:var(--fire)">FW</span>
+      <span class="muted" style="font-size:12px">Real</span>
       ${v.compare.map(c => `
-        <span class="muted">${c.label}</span>
-        <span style="font-weight:600;color:${c.color}">${c.ours}</span>
-        <span class="muted">${c.other}</span>`).join('')}
+        <span class="muted" title="${escHtml(c.label)}">${compactComparison(c.label)}</span>
+        <span style="font-weight:600;color:${c.color}">${compactComparison(c.ours)}</span>
+        <span class="muted">${compactComparison(c.other)}</span>`).join('')}
     </div>`, v);
 
   // 3D map: only moves/resizes/hides existing objects.
@@ -1450,6 +1486,13 @@ app.addEventListener('click', e => {
   const act = btn.dataset.act;
   const [name, arg] = act.split(':');
 
+  if (name === 'legend') {
+    const expanded = btn.getAttribute('aria-expanded') !== 'true';
+    btn.setAttribute('aria-expanded', String(expanded));
+    document.getElementById('legendItems').classList.toggle('expanded', expanded);
+    document.getElementById('legendItems').inert = !expanded;
+    return;
+  }
   if (name === 'resetView') { Map3D.resetView(); return; }   // camera only, no re-render
 
   if (name === 'mode') { state.mode = arg; state.view = 'dashboard'; }

@@ -764,9 +764,6 @@
         add({ parent: layers.water, polyline: { positions: part.map(posLL), clampToGround: true, width: REAL.creek.width, zIndex: 1, material: col(REAL.creek.color, REAL.creek.alpha) } });
       }
     }
-    // Lease water truck (simulated), parked on a real road.
-    E.waterTruckAt = MD.waterTruck || STORY.WATER_TRUCK;
-    add({ parent: layers.water, position: pos(E.waterTruckAt), billboard: billboard(rectIcon(16, 9, HEX.water, HEX.waterText)) });
 
     // --- Neighbor photo report (Cottonwood Creek fire, from 1:59) ---
     E.reporterLine = add({ parent: E.reporterGroup, polyline: groundLine([REPORTER, [0, 0]], col(HEX.cream, 0.85), 1.5, { length: 8 }, 4) });
@@ -1302,10 +1299,9 @@
     tag({ tone: 'cream', html: () => (E.droneMoving ? 'County drone: en route' : cur.drone.label), at: () => E.droneNow,
       show: c => L(c).help && !!c.drone, pref: ['right', 'left', 'down', 'up'], far: REAL.help.labelMaxDistanceM });
     // Drive time on each dashed help line (at its middle).
-    E.helpLines.forEach((line, i) => tag({ tone: 'muted', html: () => (helpLineDept(i) ? `about ${helpRow(helpLineDept(i)).minutes} min` : ''),
+    E.helpLines.forEach((line, i) => tag({ tone: 'muted', html: () => (helpLineDept(i) ? `~${helpRow(helpLineDept(i)).minutes} min` : ''),
       at: () => { const d = helpLineDept(i); return d ? lerp(cur.help.from, d.p, 0.5) : null; },
       show: c => L(c).help && !!helpLineDept(i), pref: ['right', 'left', 'up', 'down'], far: REAL.help.labelMaxDistanceM }));
-    tag({ text: 'Lease water truck', tone: 'water', at: () => E.waterTruckAt, show: c => L(c).water, pref: ['right', 'down', 'left'] });
     tag({ tone: 'muted', html: () => (MD.route ? `${MD.route.miles.toFixed(0)} road miles to the fire` : 'Road to the fire'),
       at: () => E.routeLabelAt, show: c => L(c).stations && c.route, pref: ['left', 'right', 'down'] });
     tag({ tone: 'power', html: () => (E.fireLine ? E.fireLine.label : 'Power line'), at: () => E.powerLabelAt || null, show: c => L(c).power, pref: ['down', 'up', 'right', 'left'] });
@@ -1347,13 +1343,13 @@
   const escHtml = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   function deptTagHtml(d) {
     const r = helpRow(d);
-    return `<i class="sdot" style="background:${r.status.color()}"></i>${escHtml(d.label)} · ${Math.round(r.miles)} mi · about ${r.minutes} min`;
+    return `<i class="sdot" style="background:${r.status.color()}"></i>${escHtml(d.label)} · ${Math.round(r.miles)} mi · ~${r.minutes} min`;
   }
   function deptCardHtml(d) {
     const r = helpRow(d);
     return `<b>${escHtml(d.name)}</b>${d.town && !d.name.includes(d.town) ? ` <span class="muted">${escHtml(d.town)}</span>` : ''}<br>` +
       `Equipment (simulated): ${escHtml(d.equipment)}<br>` +
-      `${r.miles.toFixed(1)} mi · about ${r.minutes} min <span class="muted">(estimate: straight line × ${MD.DRIVE.roadFactor} at ${MD.DRIVE.mph} mph)</span><br>` +
+      `${r.miles.toFixed(1)} mi · ~${r.minutes} min <span class="muted">(estimate: straight line × ${MD.DRIVE.roadFactor} at ${MD.DRIVE.mph} mph)</span><br>` +
       `<i class="sdot" style="background:${r.status.color()}"></i>${r.status.text} <span class="muted">(simulated)</span>`;
   }
 
@@ -1545,7 +1541,7 @@
           const len = Math.hypot(dx, dy) || 1, ux = dx / len, uy = dy / len;
           const m = 14, t = Math.min((W / 2 - m) / Math.max(Math.abs(ux), 1e-6), (H / 2 - m) / Math.max(Math.abs(uy), 1e-6));
           const tipX = W / 2 + ux * t, tipY = H / 2 + uy * t;
-          const text = `${d.label} · ${row.minutes} min`;
+          const text = `${d.label} · ~${row.minutes} min`;
           if (text !== a.key) { a.key = text; a.text.textContent = text; a.size = null; }
           const r = HELP_STATUS[(cur.help && cur.help.status && cur.help.status[d.id]) || 'available'];
           a.el.style.borderColor = r.color();

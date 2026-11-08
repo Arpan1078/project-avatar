@@ -322,7 +322,7 @@
   function helpFrom(p) {
     return MD.departments.map(d => {
       const mi = dist(p, d.p);
-      return { dept: d, miles: mi, minutes: driveMinutes(mi), text: `${Math.round(mi)} mi · about ${driveMinutes(mi)} min` };
+      return { dept: d, miles: mi, minutes: driveMinutes(mi), text: `${Math.round(mi)} mi · ~${driveMinutes(mi)} min` };
     }).sort((a, b) => a.minutes - b.minutes || a.miles - b.miles);
   }
 
